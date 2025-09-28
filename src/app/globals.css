@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+:root {
+  --font-noto-sans-kr: var(--font-noto-sans-kr);
+}
+@theme {
+  --primary: #c4b5f7;
+  --secondary: #8bb5ff;
+
+  --breakpoint-mob-sm: 320px;
+  --breakpoint-mob-md: 375px;
+  --breakpoint-mob-lg: 425px;
+  --breakpoint-tab: 768px;
+  --breakpoint-desk: 1024px;
+  --breakpoint-desk-lg: 1440px;
+
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-primary-pale: var(--color-blue-50);
+  --color-primary-pale-border: var(--primary);
+  --color-primary-border-hover: var(--primary);
+  --color-primary-light: var(--primary);
+
+  --color-black-pale: var(--color-gray-600);
+
+  --color-gray-pale: var(--color-gray-100);
+  --color-gray-pale-border: var(--color-gray-200);
+  --color-gray-dark: var(--color-gray-800);
+}
+
+@theme inline {
+  --font-noto-sans-kr: var(--font-noto-sans-kr);
+  --font-sans: var(--font-noto-sans-kr);
+}
+
+button {
+  cursor: pointer;
+}
+
+@plugin "tailwind-scrollbar-hide";
