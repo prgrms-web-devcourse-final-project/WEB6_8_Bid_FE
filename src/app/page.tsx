@@ -1,14 +1,29 @@
-export default function HomePage() {
+import { HomeClient } from '@/components/features/home/HomeClient'
+import { HomeLayout } from '@/components/layout/HomeLayout'
+import { statsApi } from '@/lib/api'
+
+export default async function HomePage() {
+  // 홈페이지 통계 데이터 가져오기
+  const { data: stats, success } = await statsApi.getHomeStats()
+
+  if (!success || !stats) {
+    return (
+      <HomeLayout>
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="mb-4 text-2xl font-bold text-neutral-900">
+              데이터를 불러올 수 없습니다
+            </h1>
+            <p className="text-neutral-600">잠시 후 다시 시도해주세요.</p>
+          </div>
+        </div>
+      </HomeLayout>
+    )
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold text-gray-900">
-          새 프로젝트 시작
-        </h1>
-        <p className="text-gray-600">
-          API 통신 구조는 준비되었습니다. 새로운 UI를 만들어보세요!
-        </p>
-      </div>
-    </div>
+    <HomeLayout>
+      <HomeClient stats={stats} />
+    </HomeLayout>
   )
 }
