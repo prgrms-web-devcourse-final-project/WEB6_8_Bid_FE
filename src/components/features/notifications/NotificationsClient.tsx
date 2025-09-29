@@ -11,71 +11,14 @@ interface NotificationsClientProps {
   initialNotifications: Notification[]
 }
 
-// 임시 알림 데이터
-const mockNotifications = [
-  {
-    id: '1',
-    type: 'bid',
-    title: '입찰 성공 알림',
-    message: '갤럭시 S23 Ultra 경매에서 낙찰되었습니다!',
-    isRead: false,
-    createdAt: '2024-01-15T14:30:00Z',
-    relatedId: 'product1',
-  },
-  {
-    id: '2',
-    type: 'payment',
-    title: '결제 완료',
-    message: 'iPad Pro 11인치 3세대 결제가 완료되었습니다.',
-    isRead: false,
-    createdAt: '2024-01-15T12:15:00Z',
-    relatedId: 'payment1',
-  },
-  {
-    id: '3',
-    type: 'system',
-    title: '시스템 점검 안내',
-    message: '1월 20일 새벽 2시~4시 시스템 점검이 있을 예정입니다.',
-    isRead: true,
-    createdAt: '2024-01-14T09:00:00Z',
-    relatedId: null,
-  },
-  {
-    id: '4',
-    type: 'bid',
-    title: '입찰 실패 알림',
-    message: 'MacBook Air M2 경매에서 입찰에 실패했습니다.',
-    isRead: true,
-    createdAt: '2024-01-14T18:00:00Z',
-    relatedId: 'product2',
-  },
-  {
-    id: '5',
-    type: 'event',
-    title: '신규 이벤트',
-    message: '신규 회원 대상 경매 수수료 50% 할인 이벤트가 시작되었습니다!',
-    isRead: true,
-    createdAt: '2024-01-13T10:00:00Z',
-    relatedId: 'event1',
-  },
-]
-
-const notificationTypes = [
-  { id: 'all', label: '전체' },
-  { id: 'bid', label: '입찰' },
-  { id: 'payment', label: '결제' },
-  { id: 'system', label: '시스템' },
-  { id: 'event', label: '이벤트' },
-]
-
 export function NotificationsClient({
   initialNotifications,
 }: NotificationsClientProps) {
   const [selectedType, setSelectedType] = useState('all')
-  const [notifications, setNotifications] = useState(mockNotifications)
+  const [notifications] = useState(initialNotifications || [])
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('ko-KR', {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -92,10 +35,8 @@ export function NotificationsClient({
         return { label: '결제', variant: 'success' as const }
       case 'system':
         return { label: '시스템', variant: 'warning' as const }
-      case 'event':
-        return { label: '이벤트', variant: 'secondary' as const }
       default:
-        return { label: '알림', variant: 'neutral' as const }
+        return { label: '기타', variant: 'neutral' as const }
     }
   }
 
@@ -104,65 +45,76 @@ export function NotificationsClient({
     return notification.type === selectedType
   })
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id
-          ? { ...notification, isRead: true }
-          : notification,
-      ),
-    )
+  const stats = {
+    total: notifications.length,
+    unread: notifications.filter((n) => !n.isRead).length,
+    bid: notifications.filter((n) => n.type === 'bid').length,
+    payment: notifications.filter((n) => n.type === 'payment').length,
+    system: notifications.filter((n) => n.type === 'system').length,
   }
 
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, isRead: true })),
-    )
-  }
-
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
-  }
+  const typeTabs = [
+    { id: 'all', label: '전체', count: stats.total },
+    { id: 'bid', label: '입찰', count: stats.bid },
+    { id: 'payment', label: '결제', count: stats.payment },
+    { id: 'system', label: '시스템', count: stats.system },
+  ]
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      {/* 알림 요약 */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Bell className="text-primary-500 h-5 w-5" />
-            <h2 className="text-lg font-semibold text-neutral-900">
-              알림 ({notifications.length})
-            </h2>
-            {unreadCount > 0 && (
-              <Badge variant="error">{unreadCount}개 읽지 않음</Badge>
-            )}
-          </div>
-          {unreadCount > 0 && (
-            <Button size="sm" variant="outline" onClick={markAllAsRead}>
-              <Check className="mr-2 h-4 w-4" />
-              모두 읽음
-            </Button>
-          )}
-        </div>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* 알림 현황 요약 */}
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Card variant="outlined">
+          <CardContent className="p-4 text-center">
+            <div className="text-primary-500 text-2xl font-bold">
+              {stats.total}
+            </div>
+            <div className="text-sm text-neutral-600">전체 알림</div>
+          </CardContent>
+        </Card>
+
+        <Card variant="outlined">
+          <CardContent className="p-4 text-center">
+            <div className="text-warning-500 text-2xl font-bold">
+              {stats.unread}
+            </div>
+            <div className="text-sm text-neutral-600">읽지 않음</div>
+          </CardContent>
+        </Card>
+
+        <Card variant="outlined">
+          <CardContent className="p-4 text-center">
+            <div className="text-success-500 text-2xl font-bold">
+              {stats.bid}
+            </div>
+            <div className="text-sm text-neutral-600">입찰 알림</div>
+          </CardContent>
+        </Card>
+
+        <Card variant="outlined">
+          <CardContent className="p-4 text-center">
+            <div className="text-lg font-bold text-neutral-900">
+              {stats.payment}
+            </div>
+            <div className="text-sm text-neutral-600">결제 알림</div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 알림 타입 필터 */}
+      {/* 알림 목록 탭 */}
       <div className="mb-6">
         <div className="flex space-x-1 rounded-lg bg-neutral-100 p-1">
-          {notificationTypes.map((type) => (
+          {typeTabs.map((tab) => (
             <button
-              key={type.id}
-              onClick={() => setSelectedType(type.id)}
+              key={tab.id}
+              onClick={() => setSelectedType(tab.id)}
               className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                selectedType === type.id
+                selectedType === tab.id
                   ? 'text-primary-600 bg-white shadow-sm'
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              {type.label}
+              {tab.label} ({tab.count})
             </button>
           ))}
         </div>
@@ -181,7 +133,10 @@ export function NotificationsClient({
                   알림이 없습니다
                 </h3>
                 <p className="text-neutral-600">
-                  새로운 알림이 오면 여기에 표시됩니다
+                  {selectedType === 'all' && '아직 받은 알림이 없습니다.'}
+                  {selectedType === 'bid' && '입찰 관련 알림이 없습니다.'}
+                  {selectedType === 'payment' && '결제 관련 알림이 없습니다.'}
+                  {selectedType === 'system' && '시스템 알림이 없습니다.'}
                 </p>
               </div>
             </CardContent>
@@ -194,67 +149,51 @@ export function NotificationsClient({
               <Card
                 key={notification.id}
                 variant="outlined"
-                className={`transition-colors ${
-                  !notification.isRead
-                    ? 'border-primary-200 bg-primary-50'
-                    : 'bg-white'
-                }`}
+                className={
+                  !notification.isRead ? 'border-primary-200 bg-primary-50' : ''
+                }
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-3">
-                    {/* 알림 아이콘 */}
+                <CardContent className="p-6">
+                  <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
-                      <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                          !notification.isRead
-                            ? 'bg-primary-100 text-primary-600'
-                            : 'bg-neutral-100 text-neutral-500'
-                        }`}
-                      >
-                        <Bell className="h-4 w-4" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                        <Bell className="h-5 w-5 text-neutral-600" />
                       </div>
                     </div>
 
-                    {/* 알림 내용 */}
                     <div className="min-w-0 flex-1">
                       <div className="mb-2 flex items-center space-x-2">
                         <Badge variant={typeBadge.variant}>
                           {typeBadge.label}
                         </Badge>
                         {!notification.isRead && (
-                          <div className="bg-primary-500 h-2 w-2 rounded-full"></div>
+                          <Badge variant="warning">새 알림</Badge>
                         )}
                       </div>
 
-                      <h3 className="mb-1 text-sm font-semibold text-neutral-900">
+                      <h3 className="mb-2 text-lg font-semibold text-neutral-900">
                         {notification.title}
                       </h3>
 
-                      <p className="mb-2 text-sm text-neutral-600">
+                      <p className="mb-3 text-sm text-neutral-600">
                         {notification.message}
                       </p>
 
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-neutral-500">
-                          {formatDateTime(notification.createdAt)}
+                        <span className="text-sm text-neutral-500">
+                          {formatDate(notification.createdAt)}
                         </span>
 
-                        <div className="flex items-center space-x-2">
+                        <div className="flex space-x-2">
                           {!notification.isRead && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => markAsRead(notification.id)}
-                            >
-                              <Check className="h-4 w-4" />
+                            <Button size="sm" variant="outline">
+                              <Check className="mr-1 h-3 w-3" />
+                              읽음
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => deleteNotification(notification.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
+                          <Button size="sm" variant="outline">
+                            <Trash2 className="mr-1 h-3 w-3" />
+                            삭제
                           </Button>
                         </div>
                       </div>
@@ -266,6 +205,16 @@ export function NotificationsClient({
           })
         )}
       </div>
+
+      {/* 전체 읽음 처리 버튼 */}
+      {stats.unread > 0 && (
+        <div className="mt-8 text-center">
+          <Button variant="outline">
+            <Check className="mr-2 h-4 w-4" />
+            전체 읽음 처리
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

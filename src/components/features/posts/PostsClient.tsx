@@ -9,83 +9,32 @@ import { Search } from 'lucide-react'
 import { useState } from 'react'
 
 interface PostsClientProps {
-  initialPosts: Post[]
+  initialPosts?: Post[]
 }
-
-const categories = [
-  { id: 'notice', label: '공지사항', count: 5 },
-  { id: 'qna', label: 'Q&A', count: 5 },
-  { id: 'faq', label: 'FAQ', count: 7 },
-]
-
-// 임시 데이터
-const mockPosts: Post[] = [
-  {
-    id: '1',
-    title: '비드 앱 버전 2.0 업데이트 안내',
-    content: '실시간 알림 기능과 새로운 UI가 추가되었습니다.',
-    author: '관리자',
-    category: 'notice',
-    createdAt: '2024-01-15T00:00:00Z',
-    isImportant: true,
-    isPinned: false,
-    viewCount: 1234,
-    commentCount: 0,
-  },
-  {
-    id: '2',
-    title: '설날 연휴 고객센터 운영시간 안내',
-    content: '2월 9일~12일 고객센터 운영시간이 단축됩니다.',
-    author: '관리자',
-    category: 'notice',
-    createdAt: '2024-01-12T00:00:00Z',
-    isImportant: false,
-    isPinned: false,
-    viewCount: 567,
-    commentCount: 0,
-  },
-  {
-    id: '3',
-    title: "신규 카테고리 '반려동물용품' 추가",
-    content: '반려동물 관련 상품을 더욱 쉽게 찾으실 수 있습니다.',
-    author: '관리자',
-    category: 'notice',
-    createdAt: '2024-01-10T00:00:00Z',
-    isImportant: false,
-    isPinned: false,
-    viewCount: 234,
-    commentCount: 0,
-  },
-  {
-    id: '4',
-    title: '시스템 점검 안내',
-    content: '1월 20일 새벽 2시~4시 시스템 점검이 있을 예정입니다.',
-    author: '관리자',
-    category: 'notice',
-    createdAt: '2024-01-08T00:00:00Z',
-    isImportant: true,
-    isPinned: false,
-    viewCount: 890,
-    commentCount: 0,
-  },
-  {
-    id: '5',
-    title: '개인정보 처리방침 개정 안내',
-    content: '개인정보 처리방침이 개정되어 안내드립니다.',
-    author: '관리자',
-    category: 'notice',
-    createdAt: '2024-01-05T00:00:00Z',
-    isImportant: false,
-    isPinned: false,
-    viewCount: 345,
-    commentCount: 0,
-  },
-]
 
 export function PostsClient({ initialPosts }: PostsClientProps) {
   const [selectedCategory, setSelectedCategory] = useState('notice')
   const [searchQuery, setSearchQuery] = useState('')
-  const [posts] = useState(initialPosts)
+  const [posts] = useState(initialPosts || [])
+
+  // 실제 데이터에서 카운트 계산
+  const categories = [
+    {
+      id: 'notice',
+      label: '공지사항',
+      count: posts.filter((p) => p.category === 'notice').length,
+    },
+    {
+      id: 'qna',
+      label: 'Q&A',
+      count: posts.filter((p) => p.category === 'qna').length,
+    },
+    {
+      id: 'faq',
+      label: 'FAQ',
+      count: posts.filter((p) => p.category === 'faq').length,
+    },
+  ]
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR', {

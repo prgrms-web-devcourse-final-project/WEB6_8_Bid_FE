@@ -3,12 +3,21 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { User } from '@/types'
 import { Clock, Edit, Package, TrendingUp, Trophy } from 'lucide-react'
 import { useState } from 'react'
 
 interface MyInfoClientProps {
-  user: User
+  user: {
+    id?: number
+    email?: string
+    nickname?: string
+    phone?: string
+    address?: string
+    profileImage?: string
+    creditScore?: number
+    createDate?: string
+    modifyDate?: string
+  }
 }
 
 export function MyInfoClient({ user }: MyInfoClientProps) {
@@ -27,11 +36,11 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
     { id: 'reviews', label: '리뷰' },
   ]
 
-  // 임시 통계 데이터
+  // 실제 사용자 데이터에서 통계 계산 (현재는 0으로 표시, 추후 API 연동)
   const stats = {
-    totalSales: 47,
-    totalPurchases: 15,
-    activeBids: 8,
+    totalSales: 0,
+    totalPurchases: 0,
+    activeBids: 0,
   }
 
   return (
@@ -49,33 +58,32 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
             </Button>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <div className="relative">
-              <div className="bg-primary-100 flex h-20 w-20 items-center justify-center rounded-full">
-                <span className="text-primary-600 text-2xl font-bold">
-                  {user.name.charAt(0)}
+              <div className="bg-primary-100 flex h-16 w-16 items-center justify-center rounded-full">
+                <span className="text-primary-600 text-xl font-bold">
+                  {user.nickname?.charAt(0) || 'U'}
                 </span>
               </div>
-              <button className="bg-primary-500 absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full">
-                <Edit className="h-3 w-3 text-white" />
+              <button className="bg-primary-500 absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full">
+                <Edit className="h-2.5 w-2.5 text-white" />
               </button>
             </div>
 
             <div className="flex-1">
-              <div className="mb-2 flex items-center space-x-2">
-                <h3 className="text-xl font-semibold text-neutral-900">
-                  {user.name}
+              <div className="mb-3 flex items-center space-x-2">
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  {user.nickname || '사용자'}
                 </h3>
                 <Badge variant="success">인증됨</Badge>
               </div>
 
-              <div className="space-y-1 text-sm text-neutral-600">
+              <div className="space-y-2 text-sm text-neutral-600">
                 <p>{user.email}</p>
                 <p>{user.phone}</p>
-                <p>
-                  신뢰도 {user.trustScore}점 · {user.reviewCount}개 리뷰
-                </p>
-                <p>{formatJoinDate(user.joinDate)}</p>
+                <p>{user.address}</p>
+                <p>신뢰도 {user.creditScore || 0}점</p>
+                <p>{formatJoinDate(user.createDate || '')}</p>
               </div>
             </div>
           </div>
@@ -94,9 +102,11 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
 
           <div className="text-center">
             <div className="text-primary-500 mb-2 text-4xl font-bold">
-              {user.trustScore}점
+              {user.creditScore ? `${user.creditScore}점` : '-'}
             </div>
-            <div className="text-sm text-neutral-600">상위 15% 신뢰도</div>
+            <div className="text-sm text-neutral-600">
+              {user.creditScore ? '신뢰도 점수' : '신뢰도 점수가 없습니다'}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -166,44 +176,11 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
               최근 활동
             </h3>
 
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4 rounded-lg bg-neutral-50 p-4">
-                <div className="bg-primary-100 flex h-12 w-12 items-center justify-center rounded-lg">
-                  <Package className="text-primary-500 h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <div className="mb-1 flex items-center space-x-2">
-                    <span className="text-primary-500 text-sm font-medium">
-                      입찰
-                    </span>
-                    <span className="text-sm text-neutral-500">
-                      • 2024-01-15
-                    </span>
-                  </div>
-                  <p className="text-sm text-neutral-900">아이폰 14 Pro</p>
-                  <p className="text-sm text-neutral-600">950,000원</p>
-                </div>
-                <Badge variant="neutral">진행중</Badge>
+            <div className="py-8 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
+                <Package className="h-8 w-8 text-neutral-400" />
               </div>
-
-              <div className="flex items-center space-x-4 rounded-lg bg-neutral-50 p-4">
-                <div className="bg-success-100 flex h-12 w-12 items-center justify-center rounded-lg">
-                  <Trophy className="text-success-500 h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <div className="mb-1 flex items-center space-x-2">
-                    <span className="text-success-500 text-sm font-medium">
-                      판매
-                    </span>
-                    <span className="text-sm text-neutral-500">
-                      • 2024-01-14
-                    </span>
-                  </div>
-                  <p className="text-sm text-neutral-900">맥북 에어 M2</p>
-                  <p className="text-sm text-neutral-600">1,200,000원</p>
-                </div>
-                <Badge variant="success">낙찰</Badge>
-              </div>
+              <p className="text-neutral-500">최근 활동이 없습니다.</p>
             </div>
           </CardContent>
         </Card>
@@ -236,9 +213,7 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
           <div className="flex h-48 items-center justify-center rounded-lg bg-neutral-100">
             <div className="text-center">
               <TrendingUp className="mx-auto mb-2 h-12 w-12 text-neutral-400" />
-              <p className="text-neutral-500">
-                차트 데이터가 여기에 표시됩니다
-              </p>
+              <p className="text-neutral-500">활동 데이터가 없습니다</p>
             </div>
           </div>
         </CardContent>

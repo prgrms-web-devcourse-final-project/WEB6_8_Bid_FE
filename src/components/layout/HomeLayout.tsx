@@ -6,7 +6,7 @@ interface HomeLayoutProps {
   children: ReactNode
   isLoggedIn?: boolean
   user?: {
-    name: string
+    nickname: string
     profileImage?: string
   }
   notificationCount?: number
@@ -26,7 +26,7 @@ export function HomeLayout({
         notificationCount={notificationCount}
       />
 
-      <main className="pb-16">{children}</main>
+      <main className="pb-16 md:pb-0">{children}</main>
 
       <BottomNavigation notificationCount={notificationCount} />
     </div>

@@ -8,16 +8,16 @@ import { Camera, Edit, Trophy } from 'lucide-react'
 import { useState } from 'react'
 
 interface MyInfoEditClientProps {
-  initialProfile: User
+  initialProfile?: User
 }
 
 export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
-    name: initialProfile.name,
-    email: initialProfile.email,
-    phone: initialProfile.phone || '',
-    profileImage: initialProfile.profileImage || '',
+    name: initialProfile?.name || '',
+    email: initialProfile?.email || '',
+    phone: initialProfile?.phone || '',
+    profileImage: initialProfile?.profileImage || '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -82,10 +82,10 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
 
   const handleCancel = () => {
     setFormData({
-      name: initialProfile.name,
-      email: initialProfile.email,
-      phone: initialProfile.phone || '',
-      profileImage: initialProfile.profileImage || '',
+      name: initialProfile?.name || '',
+      email: initialProfile?.email || '',
+      phone: initialProfile?.phone || '',
+      profileImage: initialProfile?.profileImage || '',
     })
     setErrors({})
     setIsEditing(false)

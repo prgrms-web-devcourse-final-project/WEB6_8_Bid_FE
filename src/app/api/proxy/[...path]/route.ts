@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://43.202.206.47:8080'
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 )
   .replace(/\/api\/proxy$/, '')
   .replace(/\/+$/, '')
@@ -22,27 +22,39 @@ const getCommonHeaders = (request: NextRequest, hasBody: boolean = false) => {
   const authHeader = request.headers.get('authorization')
   if (authHeader) {
     headers['Authorization'] = authHeader
+    console.log(
+      '🔑 전달된 Authorization 헤더:',
+      authHeader.substring(0, 20) + '...',
+    )
+  } else {
+    console.log('⚠️ Authorization 헤더가 없습니다')
   }
 
   // 쿠키 전달 (모든 관련 쿠키 포함)
   const cookieHeader = request.headers.get('cookie')
 
   if (cookieHeader) {
-    // JSESSIONID, _ga 등 백엔드 관련 쿠키만 필터링
+    // 백엔드 관련 쿠키들만 필터링하여 전달
     const relevantCookies = cookieHeader
       .split(';')
       .map((c) => c.trim())
-      // .filter(
-      //   (c) =>
-      //     c.startsWith('JSESSIONID=') ||
-      //     c.startsWith('_ga=') ||
-      //     c.startsWith('__next_hmr_refresh_hash__='),
-      // )
+      .filter(
+        (c) =>
+          c.startsWith('JSESSIONID=') ||
+          c.startsWith('_ga=') ||
+          c.startsWith('_gid=') ||
+          c.startsWith('connect.sid=') ||
+          c.startsWith('sessionid=') ||
+          c.startsWith('accessToken=') ||
+          c.startsWith('refreshToken='),
+      )
       .join('; ')
 
     if (relevantCookies) {
       headers['Cookie'] = relevantCookies
+      console.log('🍪 전달된 쿠키:', relevantCookies)
     } else {
+      console.log('⚠️ 전달할 쿠키가 없습니다. 원본 쿠키:', cookieHeader)
     }
   }
 
@@ -64,6 +76,13 @@ const createErrorResponse = (message: string, status: number = 500) => {
 const handleBackendResponse = async (response: Response) => {
   const contentType = response.headers.get('content-type')
   const responseText = await response.text()
+
+  // 백엔드 응답 로깅 개선
+  console.log('🔍 백엔드 응답 상세 정보:')
+  console.log('📊 상태 코드:', response.status)
+  console.log('📋 Content-Type:', contentType)
+  console.log('📄 응답 본문:', responseText)
+  console.log('🔗 응답 URL:', response.url)
 
   // 204 No Content 응답 처리
   if (response.status === 204) {
@@ -145,9 +164,13 @@ const handleBackendResponse = async (response: Response) => {
       // Set-Cookie 헤더가 있으면 클라이언트에 전달
       const responseHeaders = new Headers()
       const setCookieHeaders = response.headers.getSetCookie()
+      console.log(
+        '🍪 백엔드에서 받은 Set-Cookie 헤더 개수:',
+        setCookieHeaders.length,
+      )
       if (setCookieHeaders && setCookieHeaders.length > 0) {
-        setCookieHeaders.forEach((cookie) => {
-          console.log('프록시 - Original cookie:', cookie)
+        setCookieHeaders.forEach((cookie, index) => {
+          console.log(`🍪 프록시 - Original cookie ${index + 1}:`, cookie)
 
           // 쿠키 속성 수정
           let modifiedCookie = cookie
@@ -162,8 +185,15 @@ const handleBackendResponse = async (response: Response) => {
             modifiedCookie = modifiedCookie.replace(/;\s*Secure/gi, '')
           }
 
+          console.log(
+            `🍪 프록시 - Modified cookie ${index + 1}:`,
+            modifiedCookie,
+          )
           responseHeaders.append('Set-Cookie', modifiedCookie)
         })
+        console.log('🍪 총 전달된 쿠키 개수:', setCookieHeaders.length)
+      } else {
+        console.log('⚠️ 백엔드에서 Set-Cookie 헤더가 없습니다')
       }
 
       return NextResponse.json(data, {

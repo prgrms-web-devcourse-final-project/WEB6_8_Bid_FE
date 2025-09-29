@@ -208,6 +208,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 지갑 충전 요청
+         * @description idempotencyKey로 중복 충전 방지
+         */
+        post: operations["charge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payments/payments": {
         parameters: {
             query?: never;
@@ -221,7 +241,7 @@ export interface paths {
          * 결제 요청(충전)
          * @description 돈을 충전합니다.
          */
-        post: operations["charge"];
+        post: operations["charge_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -659,7 +679,7 @@ export interface components {
         RsData: {
             resultCode: string;
             msg: string;
-            data: Record<string, never>;
+            data?: Record<string, never>;
         };
         /** @description 상품 수정 요청 정보 */
         ProductModifyRequest: {
@@ -729,7 +749,7 @@ export interface components {
         RsDataPaymentMethodEditResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["PaymentMethodEditResponse"];
+            data?: components["schemas"]["PaymentMethodEditResponse"];
         };
         PaymentMethodEditRequest: {
             alias?: string;
@@ -750,6 +770,7 @@ export interface components {
             type?: string;
             alias?: string;
             isDefault?: boolean;
+            provider?: string;
             brand?: string;
             last4?: string;
             /** Format: int32 */
@@ -837,12 +858,12 @@ export interface components {
         RsDataMemberMyInfoResponseDto: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["MemberMyInfoResponseDto"];
+            data?: components["schemas"]["MemberMyInfoResponseDto"];
         };
         RsDataString: {
             resultCode: string;
             msg: string;
-            data: string;
+            data?: string;
         };
         /** @description 상품 등록 요청 정보 */
         ProductCreateRequest: {
@@ -890,6 +911,13 @@ export interface components {
              */
             location?: string;
         };
+        PaymentRequest: {
+            /** Format: int64 */
+            paymentMethodId: number;
+            /** Format: int64 */
+            amount: number;
+            idempotencyKey: string;
+        };
         PaymentResponse: {
             /** Format: int64 */
             paymentId?: number;
@@ -903,7 +931,7 @@ export interface components {
             methodType?: string;
             transactionId?: string;
             createdAt?: string;
-            modifyDate?: string;
+            paidAt?: string;
             idempotencyKey?: string;
             /** Format: int64 */
             cashTransactionId?: number;
@@ -913,16 +941,16 @@ export interface components {
         RsDataPaymentResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["PaymentResponse"];
+            data?: components["schemas"]["PaymentResponse"];
         };
         RsDataPaymentMethodResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["PaymentMethodResponse"];
+            data?: components["schemas"]["PaymentMethodResponse"];
         };
         PaymentMethodCreateRequest: {
-            type?: string;
-            token?: string;
+            type: string;
+            token: string;
             alias?: string;
             isDefault?: boolean;
             brand?: string;
@@ -934,6 +962,7 @@ export interface components {
             bankCode?: string;
             bankName?: string;
             acctLast4?: string;
+            provider: string;
         };
         BoardWriteRequest: {
             title?: string;
@@ -952,7 +981,7 @@ export interface components {
         RsDataBoardWriteResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["BoardWriteResponse"];
+            data?: components["schemas"]["BoardWriteResponse"];
         };
         /** @description 입찰 요청 정보 */
         BidRequestDto: {
@@ -999,7 +1028,7 @@ export interface components {
         RsDataMemberSignUpResponseDto: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["MemberSignUpResponseDto"];
+            data?: components["schemas"]["MemberSignUpResponseDto"];
         };
         LoginResponseDto: {
             /** @description Access Token */
@@ -1010,7 +1039,7 @@ export interface components {
         RsDataLoginResponseDto: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["LoginResponseDto"];
+            data?: components["schemas"]["LoginResponseDto"];
         };
         /** @description 로그아웃 응답 DTO */
         LogoutResponseDto: {
@@ -1063,7 +1092,7 @@ export interface components {
         RsDataMyPaymentsResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["MyPaymentsResponse"];
+            data?: components["schemas"]["MyPaymentsResponse"];
         };
         MyPaymentResponse: {
             /** Format: int64 */
@@ -1088,12 +1117,12 @@ export interface components {
         RsDataMyPaymentResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["MyPaymentResponse"];
+            data?: components["schemas"]["MyPaymentResponse"];
         };
         RsDataListPaymentMethodResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["PaymentMethodResponse"][];
+            data?: components["schemas"]["PaymentMethodResponse"][];
         };
         MemberInfoResponseDto: {
             /**
@@ -1137,7 +1166,7 @@ export interface components {
         RsDataMemberInfoResponseDto: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["MemberInfoResponseDto"];
+            data?: components["schemas"]["MemberInfoResponseDto"];
         };
         CashResponse: {
             /** Format: int64 */
@@ -1152,7 +1181,7 @@ export interface components {
         RsDataCashResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["CashResponse"];
+            data?: components["schemas"]["CashResponse"];
         };
         CashTransactionItemResponse: {
             /** Format: int64 */
@@ -1192,7 +1221,7 @@ export interface components {
         RsDataCashTransactionsResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["CashTransactionsResponse"];
+            data?: components["schemas"]["CashTransactionsResponse"];
         };
         CashTransactionResponse: {
             /** Format: int64 */
@@ -1210,7 +1239,7 @@ export interface components {
         RsDataCashTransactionResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["CashTransactionResponse"];
+            data?: components["schemas"]["CashTransactionResponse"];
         };
         PaymentMethodDeleteResponse: {
             /** Format: int64 */
@@ -1223,7 +1252,7 @@ export interface components {
         RsDataPaymentMethodDeleteResponse: {
             resultCode: string;
             msg: string;
-            data: components["schemas"]["PaymentMethodDeleteResponse"];
+            data?: components["schemas"]["PaymentMethodDeleteResponse"];
         };
     };
     responses: never;
@@ -1812,6 +1841,30 @@ export interface operations {
         };
     };
     charge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["PaymentResponse"];
+                };
+            };
+        };
+    };
+    charge_1: {
         parameters: {
             query?: never;
             header?: never;

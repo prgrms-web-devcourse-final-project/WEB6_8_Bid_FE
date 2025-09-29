@@ -7,7 +7,7 @@ export default function SignupPage() {
     <HomeLayout>
       <PageHeader
         title="회원가입"
-        description="비드에 오신 것을 환영합니다"
+        description="Bid에 오신 것을 환영합니다"
         showBackButton
       />
       <SignupClient />

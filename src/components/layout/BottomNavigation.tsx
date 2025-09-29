@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, Home, MessageSquare, Plus, User } from 'lucide-react'
+import { Bell, Home, Plus, User } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -20,12 +20,12 @@ export function BottomNavigation({
       label: '홈',
       isActive: pathname === '/',
     },
-    {
-      href: '/posts',
-      icon: MessageSquare,
-      label: '게시판',
-      isActive: pathname.startsWith('/posts'),
-    },
+    // {
+    //   href: '/posts',
+    //   icon: MessageSquare,
+    //   label: '게시판',
+    //   isActive: pathname.startsWith('/posts'),
+    // },
     {
       href: '/register-product',
       icon: Plus,
@@ -49,7 +49,7 @@ export function BottomNavigation({
   ]
 
   return (
-    <nav className="fixed right-0 bottom-0 left-0 z-50 border-t border-neutral-200 bg-white">
+    <nav className="fixed right-0 bottom-0 left-0 z-50 border-t border-neutral-200 bg-white md:hidden">
       <div className="flex h-16 items-center justify-around px-4">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -67,11 +67,6 @@ export function BottomNavigation({
             >
               <div className="relative">
                 <Icon className="h-5 w-5" />
-                {item.badge && item.badge > 0 && (
-                  <span className="bg-error-500 absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full text-xs text-white">
-                    {item.badge > 9 ? '9+' : item.badge}
-                  </span>
-                )}
               </div>
               <span className="text-xs font-medium">{item.label}</span>
             </Link>

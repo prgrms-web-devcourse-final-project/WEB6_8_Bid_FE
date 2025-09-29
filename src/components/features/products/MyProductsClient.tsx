@@ -7,67 +7,12 @@ import { Product } from '@/types'
 import { useState } from 'react'
 
 interface MyProductsClientProps {
-  initialProducts: Product[]
+  initialProducts?: Product[]
 }
 
-// 임시 내 상품 데이터
-const mockMyProducts = [
-  {
-    id: '1',
-    name: '갤럭시 S23 Ultra 256GB',
-    description:
-      '갤럭시 S23 Ultra 256GB 스마트폰입니다. 상태 양호하며 박스와 액세서리 포함입니다.',
-    startingPrice: 800000,
-    currentPrice: 850000,
-    images: ['/images/galaxy-s23.jpg'],
-    category: 'electronics',
-    status: 'sold',
-    endTime: '2024-01-10T18:00:00Z',
-    bidCount: 18,
-    winner: '낙찰자A',
-    createdAt: '2024-01-05T00:00:00Z',
-  },
-  {
-    id: '2',
-    name: '애플워치 SE 2세대',
-    description:
-      '애플워치 SE 2세대 44mm GPS 모델입니다. 사용감 적고 상태 양호합니다.',
-    startingPrice: 250000,
-    currentPrice: 280000,
-    images: ['/images/apple-watch-se.jpg'],
-    category: 'electronics',
-    status: 'sold',
-    endTime: '2024-01-08T15:30:00Z',
-    bidCount: 12,
-    winner: '낙찰자B',
-    createdAt: '2024-01-03T00:00:00Z',
-  },
-  {
-    id: '3',
-    name: '나이키 에어맥스 270',
-    description:
-      '나이키 에어맥스 270 화이트 컬러 270mm입니다. 몇 번 신었지만 상태 양호합니다.',
-    startingPrice: 80000,
-    currentPrice: 95000,
-    images: ['/images/nike-airmax.jpg'],
-    category: 'fashion',
-    status: 'active',
-    endTime: '2024-01-20T20:00:00Z',
-    bidCount: 5,
-    winner: null,
-    createdAt: '2024-01-15T00:00:00Z',
-  },
-]
-
-const statusTabs = [
-  { id: 'active', label: '판매중', count: 1 },
-  { id: 'sold', label: '판매완료', count: 2 },
-  { id: 'failed', label: '유찰', count: 0 },
-]
-
 export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
-  const [selectedTab, setSelectedTab] = useState('sold')
-  const [products] = useState(mockMyProducts)
+  const [selectedTab, setSelectedTab] = useState('active')
+  const [products] = useState(initialProducts || [])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
@@ -111,6 +56,12 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
     failed: products.filter((p) => p.status === 'failed').length,
     totalSales,
   }
+
+  const statusTabs = [
+    { id: 'active', label: '판매중', count: stats.active },
+    { id: 'sold', label: '판매완료', count: stats.sold },
+    { id: 'failed', label: '유찰', count: stats.failed },
+  ]
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -210,7 +161,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                     {/* 상품 이미지 */}
                     <div className="flex-shrink-0">
                       <div className="h-20 w-20 rounded-lg bg-neutral-200">
-                        {product.images[0] ? (
+                        {product.images && product.images[0] ? (
                           <img
                             src={product.images[0]}
                             alt={product.name}
