@@ -42,7 +42,41 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     try {
       const response = await productApi.getProduct(product.id)
       if (response.success && response.data) {
-        setProductData(response.data)
+        // API 응답을 컴포넌트에서 사용하는 형식으로 매핑
+        const mappedProduct: Product = {
+          id: response.data.productId || response.data.id,
+          title: response.data.name || response.data.title,
+          description: response.data.description || '',
+          category: response.data.category,
+          images: response.data.images || [],
+          startingPrice:
+            response.data.initialPrice || response.data.startingPrice,
+          currentPrice: response.data.currentPrice,
+          seller: {
+            id: response.data.seller?.id || '1',
+            email: response.data.seller?.email || '',
+            name:
+              response.data.seller?.name ||
+              response.data.sellerName ||
+              '판매자',
+            phone: response.data.seller?.phone || '',
+            profileImage: response.data.seller?.profileImage,
+            trustScore:
+              response.data.seller?.trustScore ||
+              response.data.sellerTrustScore ||
+              0,
+            reviewCount: response.data.seller?.reviewCount || 0,
+            joinDate: response.data.seller?.joinDate || '',
+            isVerified: response.data.seller?.isVerified || false,
+          },
+          status: response.data.status || 'BIDDING',
+          location: response.data.location || '',
+          createdAt: response.data.createdAt || '',
+          endTime: response.data.endTime || '',
+          bidCount: response.data.bidCount || 0,
+          isLiked: response.data.isLiked || false,
+        }
+        setProductData(mappedProduct)
       }
     } catch (error) {
       console.error('상품 정보 새로고침 실패:', error)
@@ -50,6 +84,35 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   }
 
   useEffect(() => {
+    // 초기 상품 데이터도 매핑
+    const mappedInitialProduct: Product = {
+      id: product.id,
+      title: product.title,
+      description: product.description || '',
+      category: product.category,
+      images: product.images || [],
+      startingPrice: product.startingPrice,
+      currentPrice: product.currentPrice,
+      seller: {
+        id: product.seller.id,
+        email: product.seller.email,
+        name: product.seller.name,
+        phone: product.seller.phone,
+        profileImage: product.seller.profileImage,
+        trustScore: product.seller.trustScore,
+        reviewCount: product.seller.reviewCount,
+        joinDate: product.seller.joinDate,
+        isVerified: product.seller.isVerified,
+      },
+      status: product.status || 'BIDDING',
+      location: product.location || '',
+      createdAt: product.createdAt || '',
+      endTime: product.endTime || '',
+      bidCount: product.bidCount || 0,
+      isLiked: product.isLiked || false,
+    }
+    setProductData(mappedInitialProduct)
+
     fetchBidStatus()
     refreshProduct()
   }, [])
@@ -139,7 +202,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {productData.images && productData.images[0] ? (
               <img
                 src={productData.images[0]}
-                alt={productData.name}
+                alt={productData.title}
                 className="h-full w-full rounded-lg object-cover"
               />
             ) : (
@@ -159,7 +222,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 >
                   <img
                     src={image}
-                    alt={`${productData.name} ${index + 2}`}
+                    alt={`${productData.title} ${index + 2}`}
                     className="h-full w-full rounded-lg object-cover"
                   />
                 </div>
@@ -174,13 +237,22 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           <div>
             <div className="mb-2 flex items-center space-x-2">
               <Badge variant="primary">{productData.category}</Badge>
-              {productData.status === 'active' && (
-                <Badge variant="success">진행중</Badge>
+              {productData.status === 'BIDDING' && (
+                <Badge variant="success">경매중</Badge>
+              )}
+              {productData.status === 'BEFORE_START' && (
+                <Badge variant="secondary">시작전</Badge>
+              )}
+              {productData.status === 'SUCCESSFUL' && (
+                <Badge variant="primary">완료</Badge>
+              )}
+              {productData.status === 'FAILED' && (
+                <Badge variant="error">실패</Badge>
               )}
             </div>
 
             <h1 className="mb-4 text-2xl font-bold text-neutral-900">
-              {productData.name}
+              {productData.title}
             </h1>
 
             <div className="space-y-3 text-sm text-neutral-600">
@@ -234,7 +306,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           </Card>
 
           {/* 입찰 섹션 */}
-          {productData.status === 'active' && (
+          {productData.status === 'BIDDING' && (
             <Card variant="outlined">
               <CardContent className="p-4">
                 <h3 className="mb-3 text-lg font-semibold text-neutral-900">
@@ -314,6 +386,47 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                       )}
                     </span>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 상품 상태별 메시지 */}
+          {productData.status !== 'BIDDING' && (
+            <Card variant="outlined">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  {productData.status === 'BEFORE_START' && (
+                    <div className="text-amber-600">
+                      <Clock className="mx-auto mb-2 h-8 w-8" />
+                      <p className="font-semibold">경매 시작 전</p>
+                      <p className="text-sm">
+                        경매가 시작되면 입찰할 수 있습니다.
+                      </p>
+                    </div>
+                  )}
+                  {productData.status === 'SUCCESSFUL' && (
+                    <div className="text-green-600">
+                      <p className="font-semibold">경매 완료</p>
+                      <p className="text-sm">
+                        이 상품의 경매가 성공적으로 완료되었습니다.
+                      </p>
+                    </div>
+                  )}
+                  {productData.status === 'PAID' && (
+                    <div className="text-blue-600">
+                      <p className="font-semibold">결제 완료</p>
+                      <p className="text-sm">
+                        이 상품의 결제가 완료되었습니다.
+                      </p>
+                    </div>
+                  )}
+                  {productData.status === 'FAILED' && (
+                    <div className="text-red-600">
+                      <p className="font-semibold">경매 실패</p>
+                      <p className="text-sm">이 상품의 경매가 실패했습니다.</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

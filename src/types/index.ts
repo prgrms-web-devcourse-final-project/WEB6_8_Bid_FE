@@ -13,7 +13,7 @@ export interface User {
 
 // 상품 관련 타입
 export interface Product {
-  id: string
+  id: number
   title: string
   description: string
   category: ProductCategory
@@ -38,20 +38,25 @@ export type ProductCategory =
   | 'books'
   | 'other'
 
-export type ProductStatus = 'active' | 'completed' | 'cancelled' | 'sold'
+export type ProductStatus =
+  | 'BEFORE_START'
+  | 'BIDDING'
+  | 'SUCCESSFUL'
+  | 'PAID'
+  | 'FAILED'
 
 // 입찰 관련 타입
 export interface Bid {
-  id: string
-  productId: string
-  userId: string
+  id: number
+  productId: number
+  userId: number
   amount: number
   createdAt: string
   isWinning: boolean
 }
 
 export interface BidHistory {
-  id: string
+  id: number
   product: Product
   bidAmount: number
   status: BidStatus
@@ -64,21 +69,21 @@ export type BidStatus = 'active' | 'won' | 'lost' | 'cancelled'
 
 // 알림 관련 타입
 export interface Notification {
-  id: string
+  id: number
   type: NotificationType
   title: string
   message: string
   isRead: boolean
   createdAt: string
-  productId?: string
-  bidId?: string
+  productId?: number
+  bidId?: number
 }
 
 export type NotificationType = 'bid' | 'win' | 'payment' | 'system'
 
 // 게시판 관련 타입
 export interface Post {
-  id: string
+  id: number
   title: string
   content: string
   author: string

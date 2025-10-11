@@ -212,11 +212,22 @@ export const authApi = {
 
 // 상품 관련 API
 export const productApi = {
-  // 상품 목록 조회
+  // 상품 목록 조회 (일반 DB)
   getProducts: async (params?: ProductListParams) => {
     const response = await apiClient.get<ApiResponse<any>>('/api/v1/products', {
       params,
     })
+    return normalizeApiResponse(response.data)
+  },
+
+  // 상품 검색 (Elasticsearch)
+  searchProducts: async (params?: ProductListParams) => {
+    const response = await apiClient.get<ApiResponse<any>>(
+      '/api/v1/products/es',
+      {
+        params,
+      },
+    )
     return normalizeApiResponse(response.data)
   },
 

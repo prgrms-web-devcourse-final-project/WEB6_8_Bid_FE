@@ -279,11 +279,11 @@ export function LoginClient() {
         {/* 앱 로고 및 제목 */}
         <div className="text-center">
           <div className="bg-primary-500 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg">
-            <span className="text-xl font-bold text-white">경</span>
+            <span className="text-xl font-bold text-white">B</span>
           </div>
-          <h1 className="text-2xl font-bold text-neutral-900">경매마켓</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">Bid</h1>
           <p className="mt-2 text-sm text-neutral-600">
-            실시간 경매 플랫폼에 오신 것을 환영합니다
+            실시간 경매 플랫폼에 비드에 오신 것을 환영합니다
           </p>
         </div>
 
