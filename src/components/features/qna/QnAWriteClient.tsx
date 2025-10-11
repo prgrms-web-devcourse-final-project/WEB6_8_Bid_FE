@@ -2,7 +2,10 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
+import { boardApi } from '@/lib/api'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 const categories = [
@@ -14,6 +17,7 @@ const categories = [
 ]
 
 export function QnAWriteClient() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -21,6 +25,8 @@ export function QnAWriteClient() {
     images: [] as File[],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(false)
+  const [apiError, setApiError] = useState('')
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -50,8 +56,10 @@ export function QnAWriteClient() {
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
+    setApiError('')
 
     // 유효성 검사
     const newErrors: Record<string, string> = {}
@@ -67,14 +75,51 @@ export function QnAWriteClient() {
     setErrors(newErrors)
 
     if (Object.keys(newErrors).length === 0) {
-      // TODO: API 호출
-      console.log('Q&A 작성:', formData)
+      try {
+        // 게시글 작성 API 호출
+        const response = await boardApi.writeBoard({
+          title: formData.title,
+          content: formData.content,
+          boardType: 'QNA',
+        })
+
+        console.log('🔍 게시글 작성 API 응답 전체:', response)
+
+        if (response.success) {
+          console.log('✅ 게시글 작성 성공:', response.data)
+          alert('질문이 성공적으로 등록되었습니다.')
+          router.push('/qna')
+        } else {
+          console.log('❌ 게시글 작성 실패:', response)
+          setApiError('질문 등록에 실패했습니다. 다시 시도해주세요.')
+        }
+      } catch (error: any) {
+        console.error('API 에러:', error)
+        if (error.response?.status === 400) {
+          const errorMessage =
+            error.response.data?.errorMessage || '입력 정보를 확인해주세요.'
+          setApiError(`요청 실패: ${errorMessage}`)
+        } else {
+          setApiError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+        }
+      }
     }
+
+    setIsLoading(false)
   }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:px-8">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* API 에러 메시지 */}
+        {apiError && (
+          <ErrorAlert
+            title="요청 실패"
+            message={apiError}
+            onClose={() => setApiError('')}
+          />
+        )}
+
         {/* 제목 */}
         <Card variant="outlined">
           <CardContent className="p-6">
@@ -191,10 +236,19 @@ export function QnAWriteClient() {
 
         {/* 제출 버튼 */}
         <div className="flex justify-end space-x-4">
-          <Button type="button" variant="outline">
+          <Button type="button" variant="outline" onClick={() => router.back()}>
             취소
           </Button>
-          <Button type="submit">질문 등록</Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? (
+              <div className="flex items-center">
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                등록 중...
+              </div>
+            ) : (
+              '질문 등록'
+            )}
+          </Button>
         </div>
       </form>
     </div>

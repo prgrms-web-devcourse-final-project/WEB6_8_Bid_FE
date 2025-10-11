@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
+import { productApi } from '@/lib/api'
 import { Product } from '@/types'
 import { Clock, Filter, Heart, MapPin, Search, User } from 'lucide-react'
-import Link from 'next/link'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 interface HomeStats {
   activeAuctions: number
@@ -33,10 +34,46 @@ const categories = [
 ]
 
 export function HomeClient({ stats }: HomeClientProps) {
+  const router = useRouter()
   const { isLoggedIn } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [products] = useState<Product[]>([]) // 실제 API에서 가져올 데이터
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // 상품 목록 로드
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setIsLoading(true)
+        setError('')
+
+        const response = await productApi.getProducts({
+          page: 1,
+          size: 20,
+          keyword: searchQuery,
+          category:
+            selectedCategory !== 'all'
+              ? [parseInt(selectedCategory)]
+              : undefined,
+        })
+
+        if (response.success) {
+          setProducts(response.data?.content || [])
+        } else {
+          setError('상품을 불러오는데 실패했습니다.')
+        }
+      } catch (err) {
+        console.error('상품 로드 에러:', err)
+        setError('상품을 불러오는데 실패했습니다.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadProducts()
+  }, [searchQuery, selectedCategory])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
@@ -63,8 +100,8 @@ export function HomeClient({ stats }: HomeClientProps) {
     const matchesCategory =
       selectedCategory === 'all' || product.category === selectedCategory
     const matchesSearch =
-      product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase())
+      product.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCategory && matchesSearch
   })
 
@@ -160,11 +197,18 @@ export function HomeClient({ stats }: HomeClientProps) {
                 안전하고 투명한 경매 플랫폼에서 원하는 상품을 찾아보세요.
               </p>
               <div className="flex flex-col space-y-3 sm:flex-row sm:justify-center sm:space-y-0 sm:space-x-4">
-                <Button asChild size="lg">
-                  <Link href="/login">로그인</Link>
+                <Button
+                  size="lg"
+                  onClick={() => (window.location.href = '/login')}
+                >
+                  로그인
                 </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/signup">회원가입</Link>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => (window.location.href = '/signup')}
+                >
+                  회원가입
                 </Button>
               </div>
             </CardContent>
@@ -174,7 +218,38 @@ export function HomeClient({ stats }: HomeClientProps) {
 
       {/* 상품 목록 */}
       <div className="space-y-4">
-        {filteredProducts.length === 0 ? (
+        {isLoading ? (
+          <Card variant="outlined">
+            <CardContent className="py-12 text-center">
+              <div className="mb-4">
+                <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  상품을 불러오는 중...
+                </h3>
+              </div>
+            </CardContent>
+          </Card>
+        ) : error ? (
+          <Card variant="outlined">
+            <CardContent className="py-12 text-center">
+              <div className="mb-4">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                  <span className="text-2xl">⚠️</span>
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+                  오류가 발생했습니다
+                </h3>
+                <p className="text-neutral-600">{error}</p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  className="mt-4"
+                >
+                  다시 시도
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : filteredProducts.length === 0 ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">
@@ -203,7 +278,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                       {product.images && product.images[0] ? (
                         <img
                           src={product.images[0]}
-                          alt={product.title}
+                          alt={product.title || '상품'}
                           className="h-24 w-24 rounded-lg object-cover"
                         />
                       ) : (
@@ -273,11 +348,18 @@ export function HomeClient({ stats }: HomeClientProps) {
 
                     {/* 액션 버튼 */}
                     <div className="flex space-x-2">
-                      <Button asChild size="sm">
-                        <Link href={`/products/${product.id}`}>상세보기</Link>
+                      <Button
+                        size="sm"
+                        onClick={() => router.push(`/products/${product.id}`)}
+                      >
+                        상세보기
                       </Button>
                       {isLoggedIn && (
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/products/${product.id}`)}
+                        >
                           입찰하기
                         </Button>
                       )}

@@ -164,13 +164,14 @@ export interface SignupForm {
 export interface ProductForm {
   title: string
   description: string
-  category: ProductCategory
+  category: number
   images: File[]
   startingPrice: number
   duration: number
   startTime: 'immediate' | 'scheduled'
   scheduledTime?: string
-  deliveryMethod: ('shipping' | 'pickup')[]
+  deliveryMethod: ('shipping' | 'pickup' | 'both')[]
+  location: string
 }
 
 // 필터 관련 타입

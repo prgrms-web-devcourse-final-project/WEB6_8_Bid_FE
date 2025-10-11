@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react'
 import {
-  handleApiError,
   handle401Error,
+  handleApiError,
   type StandardApiError,
 } from '@/lib/api/common'
+import { useCallback, useState } from 'react'
+import { toast } from 'sonner'
 
 export const useApiError = () => {
   const [error, setError] = useState<string | null>(null)
@@ -13,9 +14,24 @@ export const useApiError = () => {
     const apiError = handleApiError(err)
     setError(apiError.message)
 
-    // 401 에러 시 자동 로그아웃
+    // 토스트 알림 표시
     if (apiError.status === 401) {
+      toast.error('로그인이 필요합니다.')
       handle401Error()
+    } else if (apiError.status === 403) {
+      toast.error('권한이 없습니다.')
+    } else if (apiError.status === 404) {
+      toast.error('요청한 리소스를 찾을 수 없습니다.')
+    } else if (apiError.status === 409) {
+      toast.error('이미 존재하는 데이터입니다.')
+    } else if (apiError.status === 422) {
+      toast.error('입력 데이터를 확인해주세요.')
+    } else if (apiError.status >= 500) {
+      toast.error('서버 오류가 발생했습니다.')
+    } else if (apiError.code === 'NETWORK_ERROR') {
+      toast.error('네트워크 연결을 확인해주세요.')
+    } else {
+      toast.error(apiError.message)
     }
 
     return apiError
@@ -30,6 +46,7 @@ export const useApiError = () => {
       apiCall: () => Promise<T>,
       onSuccess?: (data: T) => void,
       onError?: (error: StandardApiError) => void,
+      successMessage?: string,
     ): Promise<T | null> => {
       try {
         setIsLoading(true)
@@ -39,6 +56,11 @@ export const useApiError = () => {
 
         if (onSuccess) {
           onSuccess(result)
+        }
+
+        // 성공 메시지 표시
+        if (successMessage) {
+          toast.success(successMessage)
         }
 
         return result

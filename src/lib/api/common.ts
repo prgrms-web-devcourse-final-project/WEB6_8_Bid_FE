@@ -16,69 +16,79 @@ export interface StandardApiResponse<T = any> {
 export const handleApiError = (error: any): StandardApiError => {
   console.error('API 에러:', error)
 
-  if (error instanceof Response) {
-    return {
-      status: error.status,
-      message: `HTTP ${error.status}: ${error.statusText}`,
+  // Axios 에러 처리
+  if (error.response) {
+    const status = error.response.status
+    const data = error.response.data
+
+    switch (status) {
+      case 400:
+        return {
+          status: 400,
+          message: data?.errorMessage || data?.message || '잘못된 요청입니다.',
+          code: 'BAD_REQUEST',
+        }
+      case 401:
+        return {
+          status: 401,
+          message: '로그인이 필요합니다.',
+          code: 'UNAUTHORIZED',
+        }
+      case 403:
+        return {
+          status: 403,
+          message: '권한이 없습니다.',
+          code: 'FORBIDDEN',
+        }
+      case 404:
+        return {
+          status: 404,
+          message: '요청한 리소스를 찾을 수 없습니다.',
+          code: 'NOT_FOUND',
+        }
+      case 409:
+        return {
+          status: 409,
+          message: '이미 존재하는 데이터입니다.',
+          code: 'CONFLICT',
+        }
+      case 422:
+        return {
+          status: 422,
+          message: '입력 데이터가 올바르지 않습니다.',
+          code: 'UNPROCESSABLE_ENTITY',
+        }
+      case 500:
+        return {
+          status: 500,
+          message: '서버 내부 오류가 발생했습니다.',
+          code: 'INTERNAL_ERROR',
+        }
+      default:
+        return {
+          status,
+          message: data?.message || `HTTP ${status} 오류가 발생했습니다.`,
+          code: 'HTTP_ERROR',
+        }
     }
   }
 
-  if (error instanceof Error) {
-    if (
-      error.message.includes('네트워크') ||
-      error.message.includes('NetworkError') ||
-      error.message.includes('fetch')
-    ) {
-      return {
-        status: 0,
-        message: '서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.',
-        code: 'NETWORK_ERROR',
-      }
+  // 네트워크 에러 처리
+  if (error.request) {
+    return {
+      status: 0,
+      message: '서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.',
+      code: 'NETWORK_ERROR',
     }
+  }
 
+  // 기타 에러 처리
+  if (error instanceof Error) {
     if (error.message.includes('CORS')) {
       return {
         status: 0,
         message: '브라우저 보안 정책으로 인해 요청이 차단되었습니다.',
         code: 'CORS_ERROR',
-      }
-    }
-
-    if (
-      error.message.includes('401') ||
-      error.message.includes('Unauthorized')
-    ) {
-      return {
-        status: 401,
-        message: '로그인이 필요합니다.',
-        code: 'UNAUTHORIZED',
-      }
-    }
-
-    if (error.message.includes('403') || error.message.includes('Forbidden')) {
-      return {
-        status: 403,
-        message: '권한이 없습니다.',
-        code: 'FORBIDDEN',
-      }
-    }
-
-    if (error.message.includes('404') || error.message.includes('Not Found')) {
-      return {
-        status: 404,
-        message: '요청한 리소스를 찾을 수 없습니다.',
-        code: 'NOT_FOUND',
-      }
-    }
-
-    if (
-      error.message.includes('500') ||
-      error.message.includes('Internal Server Error')
-    ) {
-      return {
-        status: 500,
-        message: '서버 내부 오류가 발생했습니다.',
-        code: 'INTERNAL_ERROR',
       }
     }
 

@@ -143,6 +143,7 @@ export function LoginClient() {
             }
 
             // AuthContext를 통한 전역 상태 업데이트
+            console.log('👤 로그인 직후 사용자 정보:', userData)
             login(userData, tokens)
 
             // localStorage에 사용자 정보 저장 (백업용)
@@ -152,13 +153,24 @@ export function LoginClient() {
             document.cookie = `accessToken=${tokens.accessToken}; path=/; max-age=86400; SameSite=Lax`
             document.cookie = `refreshToken=${tokens.refreshToken}; path=/; max-age=604800; SameSite=Lax`
 
+            // localStorage에도 토큰 저장 (AuthContext 호환성)
+            localStorage.setItem('accessToken', tokens.accessToken)
+            localStorage.setItem('refreshToken', tokens.refreshToken)
+
+            console.log('🍪 토큰 저장 완료:', {
+              cookie: document.cookie,
+              localStorage: localStorage.getItem('accessToken'),
+            })
+
             // 홈페이지로 리다이렉트
             router.push('/')
           } else {
             console.log('❌ 로그인 실패:', response)
-            setApiError(
-              '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.',
-            )
+            // 백엔드에서 보내는 정확한 에러 메시지 사용
+            const errorMessage =
+              response.msg ||
+              '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.'
+            setApiError(errorMessage)
           }
         } else {
           // 회원가입 API 호출
@@ -166,7 +178,7 @@ export function LoginClient() {
             email: formData.email,
             password: formData.password,
             nickname: formData.name,
-            phone: formData.phone.replace(/-/g, ''), // 하이푼 제거
+            phoneNumber: formData.phone.replace(/-/g, ''), // 하이푼 제거
             address: formData.address, // 사용자 입력 주소
           })
 
@@ -206,16 +218,36 @@ export function LoginClient() {
         }
       } catch (error: any) {
         console.error('API 에러:', error)
-        if (error.response?.status === 400) {
-          const errorMessage =
-            error.response.data?.errorMessage || '입력 정보를 확인해주세요.'
-          setApiError(`요청 실패: ${errorMessage}`)
-        } else if (error.response?.status === 409) {
-          setApiError('이미 가입된 이메일입니다.')
-        } else if (error.response?.status === 401) {
-          setApiError('이메일 또는 비밀번호가 올바르지 않습니다.')
+        if (isLogin) {
+          // 로그인 에러 처리
+          if (
+            error.response?.status === 400 ||
+            error.response?.status === 409
+          ) {
+            const errorMessage =
+              error.response.data?.msg || '입력 정보를 확인해주세요.'
+            setApiError(errorMessage)
+          } else if (error.response?.status === 401) {
+            const errorMessage =
+              error.response.data?.msg ||
+              '이메일 또는 비밀번호가 올바르지 않습니다.'
+            setApiError(errorMessage)
+          } else {
+            setApiError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+          }
         } else {
-          setApiError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+          // 회원가입 에러 처리
+          if (error.response?.status === 400) {
+            const errorMessage =
+              error.response.data?.msg || '입력 정보를 확인해주세요.'
+            setApiError(`요청 실패: ${errorMessage}`)
+          } else if (error.response?.status === 409) {
+            setApiError('이미 가입된 이메일입니다.')
+          } else if (error.response?.status === 401) {
+            setApiError('이메일 또는 비밀번호가 올바르지 않습니다.')
+          } else {
+            setApiError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+          }
         }
       }
     }

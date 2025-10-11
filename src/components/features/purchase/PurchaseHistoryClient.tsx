@@ -3,21 +3,66 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
-import { Payment } from '@/types'
-import { Download, Eye, Search } from 'lucide-react'
-import { useState } from 'react'
+import { paymentApi } from '@/lib/api'
+import { Download, Eye, MessageSquare, Search } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+
+interface Payment {
+  paymentId: number
+  status: string
+  amount: number
+  provider: string
+  methodType: 'CARD' | 'BANK'
+  createdAt: string
+  paidAt?: string
+  cashTransactionId?: number
+  balanceAfter?: number
+}
 
 interface PurchaseHistoryClientProps {
-  initialPurchases: Payment[]
+  initialPurchases?: Payment[]
 }
 
 export function PurchaseHistoryClient({
-  initialPurchases,
+  initialPurchases = [],
 }: PurchaseHistoryClientProps) {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
-  const [purchases] = useState(initialPurchases || [])
+  const [purchases, setPurchases] = useState<Payment[]>(initialPurchases)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  // 결제 내역 로드
+  useEffect(() => {
+    const loadPayments = async () => {
+      try {
+        setIsLoading(true)
+        setError('')
+
+        const response = await paymentApi.getMyPayments({
+          page: 1,
+          size: 50,
+        })
+
+        if (response.success) {
+          setPurchases(response.data?.items || [])
+        } else {
+          setError('결제 내역을 불러오는데 실패했습니다.')
+        }
+      } catch (err) {
+        console.error('결제 내역 로드 에러:', err)
+        setError('결제 내역을 불러오는데 실패했습니다.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadPayments()
+  }, [])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
@@ -47,8 +92,8 @@ export function PurchaseHistoryClient({
   const filteredPurchases = purchases.filter((purchase) => {
     const matchesSearch =
       searchQuery === '' ||
-      purchase.productName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      purchase.sellerName?.toLowerCase().includes(searchQuery.toLowerCase())
+      purchase.provider?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      purchase.methodType?.toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesStatus =
       selectedStatus === 'all' || purchase.status === selectedStatus
@@ -75,6 +120,17 @@ export function PurchaseHistoryClient({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="mb-6">
+          <ErrorAlert
+            title="결제 내역 로드 실패"
+            message={error}
+            onClose={() => setError('')}
+          />
+        </div>
+      )}
+
       {/* 구매 현황 요약 */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card variant="outlined">
@@ -148,7 +204,18 @@ export function PurchaseHistoryClient({
 
       {/* 구매 내역 목록 */}
       <div className="space-y-4">
-        {filteredPurchases.length === 0 ? (
+        {isLoading ? (
+          <Card variant="outlined">
+            <CardContent className="py-12 text-center">
+              <div className="mb-4">
+                <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  결제 내역을 불러오는 중...
+                </h3>
+              </div>
+            </CardContent>
+          </Card>
+        ) : filteredPurchases.length === 0 ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">
@@ -171,57 +238,56 @@ export function PurchaseHistoryClient({
             const statusBadge = getStatusBadge(purchase.status)
 
             return (
-              <Card key={purchase.id} variant="outlined">
+              <Card key={purchase.paymentId} variant="outlined">
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
-                    {/* 상품 이미지 */}
+                    {/* 결제 아이콘 */}
                     <div className="flex-shrink-0">
-                      <div className="h-20 w-20 rounded-lg bg-neutral-200">
-                        {purchase.productImage ? (
-                          <img
-                            src={purchase.productImage}
-                            alt={purchase.productName}
-                            className="h-20 w-20 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-neutral-200">
-                            <span className="text-neutral-400">📦</span>
-                          </div>
-                        )}
+                      <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-neutral-200">
+                        <span className="text-2xl">
+                          {purchase.methodType === 'CARD' ? '💳' : '🏦'}
+                        </span>
                       </div>
                     </div>
 
-                    {/* 구매 정보 */}
+                    {/* 결제 정보 */}
                     <div className="min-w-0 flex-1">
                       <div className="mb-2 flex items-center space-x-2">
                         <Badge variant={statusBadge.variant}>
                           {statusBadge.label}
                         </Badge>
+                        <Badge variant="neutral">{purchase.methodType}</Badge>
                       </div>
 
                       <h3 className="mb-2 text-lg font-semibold text-neutral-900">
-                        {purchase.productName}
+                        결제 ID: {purchase.paymentId}
                       </h3>
 
                       <div className="mb-3 space-y-1 text-sm text-neutral-600">
                         <div className="flex items-center justify-between">
-                          <span>구매가:</span>
+                          <span>결제 금액:</span>
                           <span className="text-primary-600 font-semibold">
                             {formatPrice(purchase.amount || 0)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>판매자:</span>
-                          <span>{purchase.sellerName}</span>
+                          <span>결제 수단:</span>
+                          <span>{purchase.provider}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>구매일:</span>
-                          <span>{formatDate(purchase.purchaseDate)}</span>
+                          <span>결제일:</span>
+                          <span>{formatDate(purchase.createdAt)}</span>
                         </div>
-                        {purchase.completedDate && (
+                        {purchase.paidAt && (
                           <div className="flex items-center justify-between">
                             <span>완료일:</span>
-                            <span>{formatDate(purchase.completedDate)}</span>
+                            <span>{formatDate(purchase.paidAt)}</span>
+                          </div>
+                        )}
+                        {purchase.balanceAfter && (
+                          <div className="flex items-center justify-between">
+                            <span>잔액:</span>
+                            <span>{formatPrice(purchase.balanceAfter)}</span>
                           </div>
                         )}
                       </div>
@@ -234,7 +300,16 @@ export function PurchaseHistoryClient({
                         </Button>
                         {purchase.status === 'completed' && (
                           <>
-                            <Button size="sm" variant="outline">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                router.push(
+                                  `/review?productId=${purchase.paymentId}`,
+                                )
+                              }
+                            >
+                              <MessageSquare className="mr-1 h-3 w-3" />
                               리뷰 작성
                             </Button>
                             <Button size="sm" variant="outline">

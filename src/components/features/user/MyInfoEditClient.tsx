@@ -2,22 +2,32 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
-import { User } from '@/types'
+import { useAuth } from '@/contexts/AuthContext'
+import { authApi } from '@/lib/api'
 import { Camera, Edit, Trophy } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 interface MyInfoEditClientProps {
-  initialProfile?: User
+  initialProfile?: {
+    name?: string
+    phone?: string
+    address?: string
+  }
 }
 
 export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
+  const router = useRouter()
+  const { user, updateUser } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [apiError, setApiError] = useState('')
   const [formData, setFormData] = useState({
-    name: initialProfile?.name || '',
-    email: initialProfile?.email || '',
-    phone: initialProfile?.phone || '',
-    profileImage: initialProfile?.profileImage || '',
+    nickname: user?.nickname || initialProfile?.name || '',
+    phoneNumber: user?.phone || initialProfile?.phone || '',
+    address: (user as any)?.address || initialProfile?.address || '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -35,6 +45,11 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
         [name]: '',
       }))
     }
+
+    // API 에러 초기화
+    if (apiError) {
+      setApiError('')
+    }
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,43 +66,75 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
     }
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsLoading(true)
+    setApiError('')
+
     // 유효성 검사
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
-      newErrors.name = '이름을 입력해주세요'
+    if (!formData.nickname.trim()) {
+      newErrors.nickname = '닉네임을 입력해주세요'
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = '이메일을 입력해주세요'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = '올바른 이메일 형식을 입력해주세요'
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = '전화번호를 입력해주세요'
+    } else if (!/^010\d{8}$/.test(formData.phoneNumber.replace(/-/g, ''))) {
+      newErrors.phoneNumber =
+        '올바른 전화번호 형식을 입력해주세요 (010-1234-5678)'
     }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = '전화번호를 입력해주세요'
-    } else if (!/^010-\d{4}-\d{4}$/.test(formData.phone)) {
-      newErrors.phone = '올바른 전화번호 형식을 입력해주세요 (010-1234-5678)'
+    if (!formData.address.trim()) {
+      newErrors.address = '주소를 입력해주세요'
     }
 
     setErrors(newErrors)
 
     if (Object.keys(newErrors).length === 0) {
-      // TODO: API 호출
-      console.log('프로필 수정:', formData)
-      setIsEditing(false)
+      try {
+        // API 호출
+        const response = await authApi.updateProfile({
+          nickname: formData.nickname,
+          phoneNumber: formData.phoneNumber.replace(/-/g, ''), // 하이푼 제거
+          address: formData.address,
+        })
+
+        console.log('🔍 프로필 수정 API 응답:', response)
+
+        if (response.success || response.resultCode === '200') {
+          // 성공 시 AuthContext 업데이트
+          const updatedUser = {
+            ...user,
+            nickname: formData.nickname,
+            phone: formData.phoneNumber,
+            address: formData.address,
+          } as any
+          updateUser(updatedUser)
+
+          alert('프로필이 성공적으로 수정되었습니다.')
+          setIsEditing(false)
+        } else {
+          setApiError(response.msg || '프로필 수정에 실패했습니다.')
+        }
+      } catch (error: any) {
+        console.error('프로필 수정 에러:', error)
+        setApiError(
+          error.response?.data?.msg || '프로필 수정 중 오류가 발생했습니다.',
+        )
+      }
     }
+
+    setIsLoading(false)
   }
 
   const handleCancel = () => {
     setFormData({
-      name: initialProfile?.name || '',
-      email: initialProfile?.email || '',
-      phone: initialProfile?.phone || '',
-      profileImage: initialProfile?.profileImage || '',
+      nickname: user?.nickname || initialProfile?.name || '',
+      phoneNumber: user?.phone || initialProfile?.phone || '',
+      address: (user as any)?.address || initialProfile?.address || '',
     })
     setErrors({})
+    setApiError('')
     setIsEditing(false)
   }
 
@@ -117,21 +164,22 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
               )}
             </div>
 
+            {/* API 에러 메시지 */}
+            {apiError && (
+              <ErrorAlert
+                title="수정 실패"
+                message={apiError}
+                onClose={() => setApiError('')}
+              />
+            )}
+
             <div className="flex flex-col items-center space-y-6">
               {/* 프로필 사진 */}
               <div className="relative">
                 <div className="flex h-24 w-24 items-center justify-center rounded-full bg-neutral-200">
-                  {formData.profileImage ? (
-                    <img
-                      src={formData.profileImage}
-                      alt="프로필"
-                      className="h-24 w-24 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl font-bold text-neutral-500">
-                      {formData.name.charAt(0)}
-                    </span>
-                  )}
+                  <span className="text-2xl font-bold text-neutral-500">
+                    {formData.nickname.charAt(0)}
+                  </span>
                 </div>
                 {isEditing && (
                   <label className="bg-primary-500 hover:bg-primary-600 absolute -right-1 -bottom-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white">
@@ -150,14 +198,14 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
               <div className="w-full space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-neutral-700">
-                    이름
+                    닉네임
                   </label>
                   <Input
-                    name="name"
-                    value={formData.name}
+                    name="nickname"
+                    value={formData.nickname}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    error={errors.name}
+                    error={errors.nickname}
                   />
                 </div>
 
@@ -168,11 +216,13 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
                   <Input
                     name="email"
                     type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    error={errors.email}
+                    value={user?.email || ''}
+                    disabled={true}
+                    className="bg-neutral-100"
                   />
+                  <p className="mt-1 text-xs text-neutral-500">
+                    이메일은 변경할 수 없습니다
+                  </p>
                 </div>
 
                 <div>
@@ -180,19 +230,44 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
                     전화번호
                   </label>
                   <Input
-                    name="phone"
-                    value={formData.phone}
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     placeholder="010-1234-5678"
-                    error={errors.phone}
+                    error={errors.phoneNumber}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-neutral-700">
+                    주소
+                  </label>
+                  <Input
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    placeholder="주소를 입력하세요"
+                    error={errors.address}
                   />
                 </div>
               </div>
 
               {isEditing && (
-                <Button onClick={handleSave} className="w-full">
-                  저장
+                <Button
+                  onClick={handleSave}
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center">
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      저장 중...
+                    </div>
+                  ) : (
+                    '저장'
+                  )}
                 </Button>
               )}
             </div>

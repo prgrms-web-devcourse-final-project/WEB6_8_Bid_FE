@@ -3,19 +3,130 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Notification } from '@/types'
+import { ErrorAlert } from '@/components/ui/error-alert'
+import { notificationApi } from '@/lib/api'
 import { Bell, Check, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
+interface Notification {
+  id: number
+  title: string
+  message: string
+  type: string
+  isRead: boolean
+  createdAt: string
+}
 
 interface NotificationsClientProps {
-  initialNotifications: Notification[]
+  initialNotifications?: Notification[]
+  onUnreadCountChange?: (count: number) => void
 }
 
 export function NotificationsClient({
-  initialNotifications,
+  initialNotifications = [],
+  onUnreadCountChange,
 }: NotificationsClientProps) {
   const [selectedType, setSelectedType] = useState('all')
-  const [notifications] = useState(initialNotifications || [])
+  const [notifications, setNotifications] =
+    useState<Notification[]>(initialNotifications)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // 알림 목록 로드
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        setIsLoading(true)
+        setError('')
+
+        const response = await notificationApi.getNotifications({
+          page: 0,
+          size: 50,
+        })
+
+        if (response.success) {
+          setNotifications(response.data?.content || [])
+        } else {
+          setError('알림을 불러오는데 실패했습니다.')
+        }
+      } catch (err) {
+        console.error('알림 로드 에러:', err)
+        setError('알림을 불러오는데 실패했습니다.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadNotifications()
+  }, [])
+
+  // 읽지 않은 알림 개수 로드
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const response = await notificationApi.getUnreadCount()
+        if (response.success) {
+          setUnreadCount(response.data || 0)
+        }
+      } catch (err) {
+        console.error('읽지 않은 알림 개수 로드 에러:', err)
+      }
+    }
+
+    loadUnreadCount()
+  }, [])
+
+  // 알림 읽음 처리
+  const handleMarkAsRead = async (notificationId: number) => {
+    try {
+      const response = await notificationApi.markAsRead(notificationId)
+      if (response.success) {
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            notification.id === notificationId
+              ? { ...notification, isRead: true }
+              : notification,
+          ),
+        )
+        const newCount = Math.max(0, unreadCount - 1)
+        setUnreadCount(newCount)
+        onUnreadCountChange?.(newCount)
+
+        // 헤더의 알림 개수 업데이트를 위한 이벤트 발생
+        window.dispatchEvent(
+          new CustomEvent('notificationCountUpdate', {
+            detail: { count: newCount },
+          }),
+        )
+      }
+    } catch (err) {
+      console.error('알림 읽음 처리 에러:', err)
+    }
+  }
+
+  // 전체 읽음 처리
+  const handleMarkAllAsRead = async () => {
+    try {
+      const response = await notificationApi.markAllAsRead()
+      if (response.success) {
+        setNotifications((prev) =>
+          prev.map((notification) => ({ ...notification, isRead: true })),
+        )
+        setUnreadCount(0)
+        onUnreadCountChange?.(0)
+
+        // 헤더의 알림 개수 업데이트를 위한 이벤트 발생
+        window.dispatchEvent(
+          new CustomEvent('notificationCountUpdate', {
+            detail: { count: 0 },
+          }),
+        )
+      }
+    } catch (err) {
+      console.error('전체 읽음 처리 에러:', err)
+    }
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR', {
@@ -47,7 +158,7 @@ export function NotificationsClient({
 
   const stats = {
     total: notifications.length,
-    unread: notifications.filter((n) => !n.isRead).length,
+    unread: unreadCount,
     bid: notifications.filter((n) => n.type === 'bid').length,
     payment: notifications.filter((n) => n.type === 'payment').length,
     system: notifications.filter((n) => n.type === 'system').length,
@@ -62,6 +173,17 @@ export function NotificationsClient({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="mb-6">
+          <ErrorAlert
+            title="알림 로드 실패"
+            message={error}
+            onClose={() => setError('')}
+          />
+        </div>
+      )}
+
       {/* 알림 현황 요약 */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card variant="outlined">
@@ -122,7 +244,18 @@ export function NotificationsClient({
 
       {/* 알림 목록 */}
       <div className="space-y-4">
-        {filteredNotifications.length === 0 ? (
+        {isLoading ? (
+          <Card variant="outlined">
+            <CardContent className="py-12 text-center">
+              <div className="mb-4">
+                <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  알림을 불러오는 중...
+                </h3>
+              </div>
+            </CardContent>
+          </Card>
+        ) : filteredNotifications.length === 0 ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">
@@ -186,7 +319,11 @@ export function NotificationsClient({
 
                         <div className="flex space-x-2">
                           {!notification.isRead && (
-                            <Button size="sm" variant="outline">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMarkAsRead(notification.id)}
+                            >
                               <Check className="mr-1 h-3 w-3" />
                               읽음
                             </Button>
@@ -209,7 +346,7 @@ export function NotificationsClient({
       {/* 전체 읽음 처리 버튼 */}
       {stats.unread > 0 && (
         <div className="mt-8 text-center">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleMarkAllAsRead}>
             <Check className="mr-2 h-4 w-4" />
             전체 읽음 처리
           </Button>

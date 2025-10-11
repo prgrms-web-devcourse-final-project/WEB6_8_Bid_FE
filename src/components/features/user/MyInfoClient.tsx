@@ -1,10 +1,25 @@
 'use client'
 
+import { PaymentMethodClient } from '@/components/features/payment/PaymentMethodClient'
+import { ReviewManagementClient } from '@/components/features/reviews/ReviewManagementClient'
+import { WalletClient } from '@/components/features/wallet/WalletClient'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Clock, Edit, Package, TrendingUp, Trophy } from 'lucide-react'
-import { useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { authApi } from '@/lib/api'
+import {
+  Clock,
+  CreditCard,
+  DollarSign,
+  Edit,
+  MessageSquare,
+  Package,
+  TrendingUp,
+  Trophy,
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 interface MyInfoClientProps {
   user: {
@@ -20,10 +35,36 @@ interface MyInfoClientProps {
   }
 }
 
-export function MyInfoClient({ user }: MyInfoClientProps) {
-  const [activeTab, setActiveTab] = useState<'stats' | 'activity' | 'reviews'>(
-    'stats',
-  )
+export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
+  const router = useRouter()
+  const { user: authUser, updateUser } = useAuth()
+  const [activeTab, setActiveTab] = useState<
+    'stats' | 'activity' | 'reviews' | 'wallet' | 'payment' | 'my-reviews'
+  >('stats')
+  const [userInfo, setUserInfo] = useState(propUser || authUser)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // 사용자 정보 새로고침
+  const refreshUserInfo = async () => {
+    setIsLoading(true)
+    try {
+      const response = await authApi.getMyInfo()
+      if (response.success && response.data) {
+        setUserInfo(response.data)
+        updateUser(response.data)
+      }
+    } catch (error) {
+      console.error('사용자 정보 조회 실패:', error)
+    }
+    setIsLoading(false)
+  }
+
+  // 컴포넌트 마운트 시 사용자 정보 새로고침
+  useEffect(() => {
+    if (!userInfo || !userInfo.id) {
+      refreshUserInfo()
+    }
+  }, [])
 
   const formatJoinDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -31,9 +72,12 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
   }
 
   const tabs = [
-    { id: 'stats', label: '통계' },
-    { id: 'activity', label: '활동' },
-    { id: 'reviews', label: '리뷰' },
+    { id: 'stats', label: '통계', icon: TrendingUp },
+    { id: 'activity', label: '활동', icon: Package },
+    { id: 'reviews', label: '리뷰', icon: MessageSquare },
+    { id: 'wallet', label: '지갑', icon: DollarSign },
+    { id: 'payment', label: '결제수단', icon: CreditCard },
+    { id: 'my-reviews', label: '내 리뷰', icon: MessageSquare },
   ]
 
   // 실제 사용자 데이터에서 통계 계산 (현재는 0으로 표시, 추후 API 연동)
@@ -52,7 +96,11 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
             <h2 className="text-lg font-semibold text-neutral-900">
               기본 정보
             </h2>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/my-info/edit')}
+            >
               <Edit className="mr-2 h-4 w-4" />
               편집
             </Button>
@@ -62,7 +110,7 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
             <div className="relative">
               <div className="bg-primary-100 flex h-16 w-16 items-center justify-center rounded-full">
                 <span className="text-primary-600 text-xl font-bold">
-                  {user.nickname?.charAt(0) || 'U'}
+                  {userInfo.nickname?.charAt(0) || 'U'}
                 </span>
               </div>
               <button className="bg-primary-500 absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full">
@@ -73,17 +121,17 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
             <div className="flex-1">
               <div className="mb-3 flex items-center space-x-2">
                 <h3 className="text-lg font-semibold text-neutral-900">
-                  {user.nickname || '사용자'}
+                  {userInfo.nickname || '사용자'}
                 </h3>
                 <Badge variant="success">인증됨</Badge>
               </div>
 
               <div className="space-y-2 text-sm text-neutral-600">
-                <p>{user.email}</p>
-                <p>{user.phone}</p>
-                <p>{user.address}</p>
-                <p>신뢰도 {user.creditScore || 0}점</p>
-                <p>{formatJoinDate(user.createDate || '')}</p>
+                <p>{userInfo.email}</p>
+                <p>{userInfo.phone}</p>
+                <p>{userInfo.address}</p>
+                <p>신뢰도 {userInfo.creditScore || 0}점</p>
+                <p>{formatJoinDate(userInfo.createDate || '')}</p>
               </div>
             </div>
           </div>
@@ -102,30 +150,36 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
 
           <div className="text-center">
             <div className="text-primary-500 mb-2 text-4xl font-bold">
-              {user.creditScore ? `${user.creditScore}점` : '-'}
+              {userInfo.creditScore ? `${userInfo.creditScore}점` : '-'}
             </div>
             <div className="text-sm text-neutral-600">
-              {user.creditScore ? '신뢰도 점수' : '신뢰도 점수가 없습니다'}
+              {userInfo.creditScore ? '신뢰도 점수' : '신뢰도 점수가 없습니다'}
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* 탭 네비게이션 */}
-      <div className="mb-6 flex space-x-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'bg-primary-500 text-white'
-                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="mb-6">
+        <div className="flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'text-primary-600 bg-white shadow-sm'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                <Icon className="mr-2 h-4 w-4" />
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* 탭 컨텐츠 */}
@@ -202,6 +256,12 @@ export function MyInfoClient({ user }: MyInfoClientProps) {
           </CardContent>
         </Card>
       )}
+
+      {activeTab === 'wallet' && <WalletClient />}
+
+      {activeTab === 'payment' && <PaymentMethodClient />}
+
+      {activeTab === 'my-reviews' && <ReviewManagementClient />}
 
       {/* 월별 활동 차트 */}
       <Card variant="outlined">

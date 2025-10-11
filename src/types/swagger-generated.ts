@@ -44,6 +44,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reviews/{reviewId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReview"];
+        put: operations["updateReview"];
+        post?: never;
+        delete: operations["deleteReview"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products/{productId}": {
         parameters: {
             query?: never;
@@ -67,28 +83,6 @@ export interface paths {
          * @description 상품을 삭제합니다.
          */
         delete: operations["deleteProduct"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/payments/paymentMethods/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 결제 수단 단건 조회
-         * @description 카드 또는 계좌 단건 조회
-         */
-        get: operations["getPaymentMethod"];
-        /** 결제 수단 수정 */
-        put: operations["editPaymentMethod"];
-        post?: never;
-        /** 결제 수단 삭제 */
-        delete: operations["deletePaymentMethod"];
         options?: never;
         head?: never;
         patch?: never;
@@ -137,14 +131,14 @@ export interface paths {
          */
         get: operations["myInfo"];
         /**
-         * 내 정보 수정 Mock API
+         * 내 정보 수정 API
          * @description 내 정보 수정
          */
         put: operations["myInfoModify"];
         post?: never;
         /**
-         * 회원탈퇴 Mock API
-         * @description 회원탈퇴 확인
+         * 회원탈퇴 API
+         * @description 현재 로그인된 회원을 탈퇴 처리합니다.
          */
         delete: operations["memberWithdraw"];
         options?: never;
@@ -184,6 +178,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/test-data/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 테스트 데이터 생성 */
+        post: operations["generateTestData"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products": {
         parameters: {
             query?: never;
@@ -208,6 +235,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/products/reload-analyzers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Elasticsearch 검색 분석기 재로드
+         * @description Elasticsearch 검색 분석기를 재로드합니다.
+         */
+        post: operations["reloadSearchAnalyzers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payments": {
         parameters: {
             query?: never;
@@ -219,7 +266,7 @@ export interface paths {
         put?: never;
         /**
          * 지갑 충전 요청
-         * @description idempotencyKey로 중복 충전 방지
+         * @description idempotencyKey로 중복 충전 방지, 일단은 idempotencyKey 아무키로 등록해주세요!
          */
         post: operations["charge"];
         delete?: never;
@@ -228,7 +275,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/payments/payments": {
+    "/api/v1/payments/toss/issue-billing-key": {
         parameters: {
             query?: never;
             header?: never;
@@ -238,34 +285,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 결제 요청(충전)
-         * @description 돈을 충전합니다.
+         * 토스 빌링키 발급
+         * @description 카드/계좌 등록용 빌링키를 발급합니다.
          */
-        post: operations["charge_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/payments/paymentMethods": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 결제 수단 다건 조회
-         * @description 카드, 계좌 다건 조회
-         */
-        get: operations["getPaymentMethods"];
-        put?: never;
-        /**
-         * 결제 수단 등록
-         * @description 카드 또는 계좌 등록
-         */
-        post: operations["createPaymentMethod"];
+        post: operations["issueBillingKey"];
         delete?: never;
         options?: never;
         head?: never;
@@ -311,6 +334,26 @@ export interface paths {
         put?: never;
         /** 게시글 작성 */
         post: operations["writeBoard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bids/{bidId}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 낙찰 결제
+         * @description 내가 낙찰한 입찰 건에 대해 지갑에서 출금하고 결제 완료로 표시합니다.
+         */
+        post: operations["payBid"];
         delete?: never;
         options?: never;
         head?: never;
@@ -461,6 +504,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/test-data/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 현재 데이터 통계 */
+        get: operations["getDataStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products/members/{memberId}": {
         parameters: {
             query?: never;
@@ -501,14 +561,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/payments/payments/me": {
+    "/api/v1/products/es": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 내 결제 내역 조회 */
+        /**
+         * 상품 목록 조회 (ElasticSearch)
+         * @description ElasticSearch를 사용하여 상품 목록을 조회합니다.
+         */
+        get: operations["getProductsByElasticsearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 내 결제 내역 */
         get: operations["getMyPayments"];
         put?: never;
         post?: never;
@@ -518,15 +598,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/payments/payments/me/{paymentId}": {
+    "/api/v1/payments/me/{paymentId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 내 결제 상세 내역 조회 */
+        /** 내 결제 단건 상세 */
         get: operations["getMyPaymentDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-queue/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getQueueStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -543,8 +639,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 판매자 정보 Mock API
-         * @description 판매자 정보 확인
+         * 멤버 정보 조회
+         * @description 특정 멤버의 정보를 조회합니다.
          */
         get: operations["memberInfo"];
         put?: never;
@@ -575,14 +671,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cashs/cash": {
+    "/api/v1/cash": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 내 지갑 잔액 조회 */
+        /**
+         * 내 지갑 잔액 조회
+         * @description 지갑이 없으면 404를 반환합니다.
+         */
         get: operations["getMyCash"];
         put?: never;
         post?: never;
@@ -592,7 +691,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cashs/cash/transactions": {
+    "/api/v1/cash/transactions": {
         parameters: {
             query?: never;
             header?: never;
@@ -600,10 +699,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 내 원장 목록(입금/출금 내역)
-         * @description 입금/출금 내역을 확인합니다.
+         * 내 원장 목록(입금/출금)
+         * @description 지갑 미생성 시 404 반환
          */
-        get: operations["getCashTransactions"];
+        get: operations["getMyTransactions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -612,7 +711,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/cashs/cash/transactions/{transactionId}": {
+    "/api/v1/cash/transactions/{transactionId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -620,10 +719,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 내 원장 단건 상세 조회
-         * @description 원장 단건 조회
+         * 내 원장 단건 상세
+         * @description 해당 거래가 없으면 404를 반환합니다.
          */
-        get: operations["getCashTransactionDetail"];
+        get: operations["getMyTransactionDetail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -672,6 +771,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["showMain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/test-data/cleanup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 테스트 데이터 정리 */
+        delete: operations["cleanupTestData"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -680,6 +812,26 @@ export interface components {
             resultCode: string;
             msg: string;
             data?: Record<string, never>;
+        };
+        ReviewRequest: {
+            /** Format: int64 */
+            productId: number;
+            comment: string;
+            isSatisfied: boolean;
+        };
+        ReviewResponse: {
+            /** Format: int64 */
+            reviewId?: number;
+            reviewerNickname?: string;
+            comment?: string;
+            isSatisfied?: boolean;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        RsDataReviewResponse: {
+            resultCode: string;
+            msg: string;
+            data?: components["schemas"]["ReviewResponse"];
         };
         /** @description 상품 수정 요청 정보 */
         ProductModifyRequest: {
@@ -727,30 +879,6 @@ export interface components {
              */
             location?: string;
         };
-        PaymentMethodEditResponse: {
-            /** Format: int64 */
-            id?: number;
-            type?: string;
-            alias?: string;
-            isDefault?: boolean;
-            brand?: string;
-            last4?: string;
-            /** Format: int32 */
-            expMonth?: number;
-            /** Format: int32 */
-            expYear?: number;
-            bankCode?: string;
-            bankName?: string;
-            acctLast4?: string;
-            createDate?: string;
-            modifyDate?: string;
-            expireDate?: string;
-        };
-        RsDataPaymentMethodEditResponse: {
-            resultCode: string;
-            msg: string;
-            data?: components["schemas"]["PaymentMethodEditResponse"];
-        };
         PaymentMethodEditRequest: {
             alias?: string;
             isDefault?: boolean;
@@ -764,26 +892,6 @@ export interface components {
             bankName?: string;
             acctLast4?: string;
         };
-        PaymentMethodResponse: {
-            /** Format: int64 */
-            id?: number;
-            type?: string;
-            alias?: string;
-            isDefault?: boolean;
-            provider?: string;
-            brand?: string;
-            last4?: string;
-            /** Format: int32 */
-            expMonth?: number;
-            /** Format: int32 */
-            expYear?: number;
-            bankCode?: string;
-            bankName?: string;
-            acctLast4?: string;
-            createDate?: string;
-            modifyDate?: string;
-            expireDate?: string;
-        };
         MemberModifyRequestDto: {
             /**
              * @description 닉네임
@@ -791,15 +899,10 @@ export interface components {
              */
             nickname: string;
             /**
-             * @description 프로필 이미지
-             * @example example123
-             */
-            profileImageUrl?: string;
-            /**
              * @description 휴대폰 번호
              * @example 010-0000-0000
              */
-            phone: string;
+            phoneNumber: string;
             /**
              * @description 주소
              * @example 서울 강남구...
@@ -827,7 +930,7 @@ export interface components {
              * @description 전화번호
              * @example 010-0000-0000
              */
-            phone?: string;
+            phoneNumber?: string;
             /**
              * @description 주소
              * @example 서울특별시 강남구...
@@ -837,7 +940,7 @@ export interface components {
              * @description 프로필 이미지
              * @example https://example.com/profile.jpg
              */
-            profileImage?: string;
+            profileImageUrl?: string;
             /**
              * Format: int32
              * @description 신뢰 포인트
@@ -864,6 +967,18 @@ export interface components {
             resultCode: string;
             msg: string;
             data?: string;
+        };
+        TestDataGenerationResult: {
+            success?: boolean;
+            message?: string;
+            /** Format: int32 */
+            generatedCount?: number;
+            /** Format: int64 */
+            durationMs?: number;
+            /** Format: int64 */
+            totalProducts?: number;
+            /** Format: int64 */
+            totalMembers?: number;
         };
         /** @description 상품 등록 요청 정보 */
         ProductCreateRequest: {
@@ -918,35 +1033,9 @@ export interface components {
             amount: number;
             idempotencyKey: string;
         };
-        PaymentResponse: {
-            /** Format: int64 */
-            paymentId?: number;
-            /** Format: int64 */
-            paymentMethodId?: number;
-            status?: string;
-            /** Format: int64 */
-            amount?: number;
-            currency?: string;
-            provider?: string;
-            methodType?: string;
-            transactionId?: string;
-            createdAt?: string;
-            paidAt?: string;
-            idempotencyKey?: string;
-            /** Format: int64 */
-            cashTransactionId?: number;
-            /** Format: int64 */
-            balanceAfter?: number;
-        };
-        RsDataPaymentResponse: {
-            resultCode: string;
-            msg: string;
-            data?: components["schemas"]["PaymentResponse"];
-        };
-        RsDataPaymentMethodResponse: {
-            resultCode: string;
-            msg: string;
-            data?: components["schemas"]["PaymentMethodResponse"];
+        TossIssueBillingKeyRequest: {
+            customerKey?: string;
+            authKey?: string;
         };
         PaymentMethodCreateRequest: {
             type: string;
@@ -1004,7 +1093,7 @@ export interface components {
              * @example testUser1
              */
             nickname: string;
-            phone: string;
+            phoneNumber: string;
             address: string;
         };
         MemberSignUpResponseDto: {
@@ -1066,193 +1155,44 @@ export interface components {
              */
             password: string;
         };
-        MyPaymentListItemResponse: {
+        DataStats: {
             /** Format: int64 */
-            paymentId?: number;
+            productCount?: number;
             /** Format: int64 */
-            paymentMethodId?: number;
-            status?: string;
-            /** Format: int64 */
-            amount?: number;
-            currency?: string;
-            provider?: string;
-            methodType?: string;
-            transactionId?: string;
-            createdAt?: string;
+            memberCount?: number;
         };
-        MyPaymentsResponse: {
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
+        QueueStatus: {
             /** Format: int64 */
-            total?: number;
-            items?: components["schemas"]["MyPaymentListItemResponse"][];
+            pendingCount?: number;
+            /** Format: int64 */
+            processingCount?: number;
+            /** Format: int64 */
+            sentCount?: number;
+            /** Format: int64 */
+            failedCount?: number;
         };
-        RsDataMyPaymentsResponse: {
+        RsDataQueueStatus: {
             resultCode: string;
             msg: string;
-            data?: components["schemas"]["MyPaymentsResponse"];
-        };
-        MyPaymentResponse: {
-            /** Format: int64 */
-            paymentId?: number;
-            /** Format: int64 */
-            paymentMethodId?: number;
-            status?: string;
-            /** Format: int64 */
-            amount?: number;
-            currency?: string;
-            provider?: string;
-            methodType?: string;
-            transactionId?: string;
-            createdAt?: string;
-            modifyDate?: string;
-            idempotencyKey?: string;
-            /** Format: int64 */
-            cashTransactionId?: number;
-            /** Format: int64 */
-            balanceAfter?: number;
-        };
-        RsDataMyPaymentResponse: {
-            resultCode: string;
-            msg: string;
-            data?: components["schemas"]["MyPaymentResponse"];
-        };
-        RsDataListPaymentMethodResponse: {
-            resultCode: string;
-            msg: string;
-            data?: components["schemas"]["PaymentMethodResponse"][];
+            data?: components["schemas"]["QueueStatus"];
         };
         MemberInfoResponseDto: {
-            /**
-             * Format: int64
-             * @description DB 아이디
-             * @example 1
-             */
+            /** Format: int64 */
             id?: number;
-            /**
-             * @description 이메일
-             * @example test@test.com
-             */
-            email?: string;
-            /**
-             * @description 닉네임
-             * @example test
-             */
             nickname?: string;
-            /**
-             * @description 전화번호
-             * @example 010-0000-0000
-             */
-            phone?: string;
-            /**
-             * @description 프로필 이미지
-             * @example https://example.com/profile.jpg
-             */
-            profileImage?: string;
-            /**
-             * Format: int32
-             * @description 신뢰 포인트
-             * @example 50
-             */
+            profileImageUrl?: string;
+            /** Format: int32 */
             creditScore?: number;
-            /**
-             * Format: date-time
-             * @description 생성일
-             */
-            createDate?: string;
         };
         RsDataMemberInfoResponseDto: {
             resultCode: string;
             msg: string;
             data?: components["schemas"]["MemberInfoResponseDto"];
         };
-        CashResponse: {
-            /** Format: int64 */
-            cashId?: number;
-            /** Format: int64 */
-            memberId?: number;
-            /** Format: int64 */
-            balance?: number;
-            createDate?: string;
-            modifyDate?: string;
-        };
-        RsDataCashResponse: {
+        RsDataVoid: {
             resultCode: string;
             msg: string;
-            data?: components["schemas"]["CashResponse"];
-        };
-        CashTransactionItemResponse: {
-            /** Format: int64 */
-            transactionId?: number;
-            /** Format: int64 */
-            cashId?: number;
-            type?: string;
-            /** Format: int64 */
-            amount?: number;
-            /** Format: int64 */
-            balanceAfter?: number;
-            createdAt?: string;
-            related?: components["schemas"]["Related"];
-        };
-        CashTransactionsResponse: {
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-            /** Format: int64 */
-            total?: number;
-            items?: components["schemas"]["CashTransactionItemResponse"][];
-        };
-        Product: {
-            /** Format: int64 */
-            productId?: number;
-            productName?: string;
-            thumbnailUrl?: string;
-        };
-        Related: {
-            type?: string;
-            /** Format: int64 */
-            id?: number;
-            product?: components["schemas"]["Product"];
-            summary?: string;
-        };
-        RsDataCashTransactionsResponse: {
-            resultCode: string;
-            msg: string;
-            data?: components["schemas"]["CashTransactionsResponse"];
-        };
-        CashTransactionResponse: {
-            /** Format: int64 */
-            transactionId?: number;
-            /** Format: int64 */
-            cashId?: number;
-            type?: string;
-            /** Format: int64 */
-            amount?: number;
-            /** Format: int64 */
-            balanceAfter?: number;
-            createdAt?: string;
-            related?: components["schemas"]["Related"];
-        };
-        RsDataCashTransactionResponse: {
-            resultCode: string;
-            msg: string;
-            data?: components["schemas"]["CashTransactionResponse"];
-        };
-        PaymentMethodDeleteResponse: {
-            /** Format: int64 */
-            id?: number;
-            deleted?: boolean;
-            wasDefault?: boolean;
-            /** Format: int64 */
-            newDefaultId?: number;
-        };
-        RsDataPaymentMethodDeleteResponse: {
-            resultCode: string;
-            msg: string;
-            data?: components["schemas"]["PaymentMethodDeleteResponse"];
+            data?: Record<string, never>;
         };
     };
     responses: never;
@@ -1329,6 +1269,76 @@ export interface operations {
                 };
                 content: {
                     "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+        };
+    };
+    getReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsDataReviewResponse"];
+                };
+            };
+        };
+    };
+    updateReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsDataReviewResponse"];
+                };
+            };
+        };
+    };
+    deleteReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1493,72 +1503,6 @@ export interface operations {
             };
         };
     };
-    getPaymentMethod: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataPaymentMethodResponse"];
-                };
-            };
-        };
-    };
-    editPaymentMethod: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataPaymentMethodEditResponse"];
-                };
-            };
-        };
-    };
-    deletePaymentMethod: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataPaymentMethodDeleteResponse"];
-                };
-            };
-        };
-    };
     getOne: {
         parameters: {
             query?: never;
@@ -1570,13 +1514,40 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 단건 조회 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["PaymentMethodResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 권한 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 결제 수단 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
@@ -1596,13 +1567,58 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 수정 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["PaymentMethodResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 잘못된 요청 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 권한 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 결제수단 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 별명(alias) 중복 등 충돌 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
@@ -1618,13 +1634,40 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 삭제 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["PaymentMethodDeleteResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 권한 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 결제수단 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
@@ -1656,9 +1699,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["MemberModifyRequestDto"];
+                "application/json": {
+                    memberModifyRequestDto: components["schemas"]["MemberModifyRequestDto"];
+                    /** Format: binary */
+                    profileImage?: string;
+                };
             };
         };
         responses: {
@@ -1688,7 +1735,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataString"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsDataVoid"];
                 };
             };
         };
@@ -1757,6 +1804,52 @@ export interface operations {
             };
         };
     };
+    generateTestData: {
+        parameters: {
+            query?: {
+                count?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["TestDataGenerationResult"];
+                };
+            };
+        };
+    };
+    createReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsDataReviewResponse"];
+                };
+            };
+        };
+    };
     getProducts: {
         parameters: {
             query?: {
@@ -1773,7 +1866,7 @@ export interface operations {
                 /** @description 배송 가능 여부 */
                 isDelivery?: boolean;
                 /** @description 경매 상태 */
-                status?: "BEFORE_START" | "BIDDING" | "SUCCESSFUL" | "FAILED";
+                status?: "BEFORE_START" | "BIDDING" | "SUCCESSFUL" | "PAID" | "FAILED";
                 /** @description 정렬 기준 */
                 sort?: "LATEST" | "PRICE_HIGH" | "PRICE_LOW" | "ENDING_SOON" | "POPULAR";
             };
@@ -1840,6 +1933,35 @@ export interface operations {
             };
         };
     };
+    reloadSearchAnalyzers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 검색 분석기 재로드 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 검색 분석기 재로드 실패 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+        };
+    };
     charge: {
         parameters: {
             query?: never;
@@ -1853,73 +1975,91 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 충전 완료 */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["PaymentResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 잘못된 요청 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 멱등키 충돌 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
     };
-    charge_1: {
+    issueBillingKey: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataPaymentResponse"];
-                };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TossIssueBillingKeyRequest"];
             };
         };
-    };
-    getPaymentMethods: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 발급 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataListPaymentMethodResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
-        };
-    };
-    createPaymentMethod: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
+            /** @description 잘못된 요청 */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataPaymentMethodResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description PG 연동 오류 */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
@@ -1933,13 +2073,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 목록 조회 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["PaymentMethodResponse"][];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
@@ -1957,13 +2106,40 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description 등록 성공 */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["PaymentMethodResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 잘못된 요청 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 별명(alias) 중복 등 충돌 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
@@ -1988,6 +2164,47 @@ export interface operations {
                 };
                 content: {
                     "application/json;charset=UTF-8": components["schemas"]["RsDataBoardWriteResponse"];
+                };
+            };
+        };
+    };
+    payBid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 입찰 ID */
+                bidId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 결제 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 권한 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
@@ -2041,7 +2258,7 @@ export interface operations {
         };
         responses: {
             /** @description 입찰 생성 성공 */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2235,6 +2452,26 @@ export interface operations {
             };
         };
     };
+    getDataStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["DataStats"];
+                };
+            };
+        };
+    };
     getProductsByMember: {
         parameters: {
             query?: {
@@ -2314,6 +2551,43 @@ export interface operations {
             };
         };
     };
+    getProductsByElasticsearch: {
+        parameters: {
+            query?: {
+                /** @description 페이지 번호 (1부터 시작) */
+                page?: number;
+                /** @description 페이지 크기 */
+                size?: number;
+                /** @description 상품명 검색어 */
+                keyword?: string;
+                /** @description 상품 카테고리 (번호) */
+                category?: number[];
+                /** @description 직거래 시 지역 */
+                location?: string[];
+                /** @description 배송 가능 여부 */
+                isDelivery?: boolean;
+                /** @description 경매 상태 */
+                status?: "BEFORE_START" | "BIDDING" | "SUCCESSFUL" | "PAID" | "FAILED";
+                /** @description 정렬 기준 */
+                sort?: "LATEST" | "PRICE_HIGH" | "PRICE_LOW" | "ENDING_SOON" | "POPULAR";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 상품 목록 조회 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+        };
+    };
     getMyPayments: {
         parameters: {
             query?: {
@@ -2326,13 +2600,31 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 내역 조회 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataMyPaymentsResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 잘못된 요청 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
@@ -2348,13 +2640,60 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description 상세 조회 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 권한 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 결제 내역 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+        };
+    };
+    getQueueStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
             /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataMyPaymentResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsDataQueueStatus"];
                 };
             };
         };
@@ -2410,18 +2749,36 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 잔액 조회 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataCashResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 지갑 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
     };
-    getCashTransactions: {
+    getMyTransactions: {
         parameters: {
             query?: {
                 page?: number;
@@ -2433,35 +2790,90 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 원장 목록 조회 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataCashTransactionsResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 잘못된 요청 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 지갑 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
     };
-    getCashTransactionDetail: {
+    getMyTransactionDetail: {
         parameters: {
             query?: never;
             header?: never;
             path: {
+                /** @description 거래 ID */
                 transactionId: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description 원장 상세 조회 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json;charset=UTF-8": components["schemas"]["RsDataCashTransactionResponse"];
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 인증 실패 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 권한 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+            /** @description 거래 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
                 };
             };
         };
@@ -2522,6 +2934,46 @@ export interface operations {
                 };
                 content: {
                     "application/json;charset=UTF-8": components["schemas"]["RsDataString"];
+                };
+            };
+        };
+    };
+    showMain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": string;
+                };
+            };
+        };
+    };
+    cleanupTestData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": string;
                 };
             };
         };

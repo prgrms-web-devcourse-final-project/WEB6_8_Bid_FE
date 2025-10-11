@@ -1,14 +1,19 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { notificationApi } from '@/lib/api'
 import { Bell, Menu, X } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface HeaderProps {
   isLoggedIn?: boolean
   user?: {
-    nickname: string
+    id?: number
+    email?: string
+    nickname?: string
+    phone?: string
+    address?: string
     profileImage?: string
   }
   notificationCount?: number
@@ -22,10 +27,60 @@ export function Header({
   const { isLoggedIn: contextIsLoggedIn, user: contextUser, logout } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [unreadNotificationCount, setUnreadNotificationCount] =
+    useState(notificationCount)
 
   // Context 우선, props는 fallback
   const isLoggedIn = contextIsLoggedIn || propIsLoggedIn
   const user = contextUser || propUser
+
+  // 읽지 않은 알림 개수 가져오기
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (isLoggedIn) {
+        try {
+          const response = await notificationApi.getUnreadCount()
+          if (response.success && response.data) {
+            setUnreadNotificationCount(
+              response.data.count || response.data || 0,
+            )
+          }
+        } catch (error) {
+          console.error('읽지 않은 알림 개수 조회 실패:', error)
+        }
+      }
+    }
+
+    fetchUnreadCount()
+
+    // 30초마다 알림 개수 새로고침
+    const interval = setInterval(fetchUnreadCount, 30000)
+
+    // 알림 개수 업데이트 이벤트 리스너
+    const handleNotificationCountUpdate = (event: CustomEvent) => {
+      setUnreadNotificationCount(event.detail.count)
+    }
+
+    window.addEventListener(
+      'notificationCountUpdate',
+      handleNotificationCountUpdate as EventListener,
+    )
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener(
+        'notificationCountUpdate',
+        handleNotificationCountUpdate as EventListener,
+      )
+    }
+  }, [isLoggedIn])
+
+  console.log('🏠 Header - 사용자 정보:', {
+    contextUser,
+    propUser,
+    selectedUser: user,
+    nickname: user?.nickname,
+  })
 
   return (
     <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white">
@@ -69,6 +124,18 @@ export function Header({
                 >
                   입찰 현황
                 </Link>
+                <Link
+                  href="/purchase-history"
+                  className="hover:text-primary-500 text-neutral-600 transition-colors"
+                >
+                  구매 내역
+                </Link>
+                <Link
+                  href="/wallet"
+                  className="hover:text-primary-500 text-neutral-600 transition-colors"
+                >
+                  지갑
+                </Link>
               </>
             )}
           </nav>
@@ -99,9 +166,11 @@ export function Header({
                   className="hover:text-primary-500 relative p-2 text-neutral-600 transition-colors"
                 >
                   <Bell className="h-5 w-5" />
-                  {notificationCount > 0 && (
+                  {unreadNotificationCount > 0 && (
                     <span className="bg-error-500 absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-xs font-bold text-white">
-                      {notificationCount > 9 ? '9+' : notificationCount}
+                      {unreadNotificationCount > 9
+                        ? '9+'
+                        : unreadNotificationCount}
                     </span>
                   )}
                 </Link>
@@ -114,11 +183,13 @@ export function Header({
                   >
                     <div className="bg-primary-100 flex h-8 w-8 items-center justify-center rounded-full">
                       <span className="text-primary-600 text-sm font-medium">
-                        {user?.nickname?.charAt(0) || 'U'}
+                        {(user?.nickname || user?.email || 'U')
+                          .charAt(0)
+                          .toUpperCase()}
                       </span>
                     </div>
                     <span className="hidden text-sm font-medium text-neutral-900 sm:block">
-                      {user?.nickname || '사용자'}
+                      {user?.nickname || user?.email?.split('@')[0] || '사용자'}
                     </span>
                   </button>
 
@@ -149,8 +220,9 @@ export function Header({
                         <hr className="my-2" />
                         <button
                           onClick={() => {
-                            logout()
+                            console.log('🔓 로그아웃 버튼 클릭됨')
                             setIsProfileOpen(false)
+                            logout()
                           }}
                           className="block w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
                         >
@@ -233,11 +305,32 @@ export function Header({
                       상품 등록
                     </Link>
                     <Link
-                      href="/payments"
+                      href="/purchase-history"
                       className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      결제 관리
+                      구매 내역
+                    </Link>
+                    <Link
+                      href="/wallet"
+                      className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      지갑
+                    </Link>
+                    <Link
+                      href="/payment-methods"
+                      className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      결제 수단
+                    </Link>
+                    <Link
+                      href="/my-reviews"
+                      className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      내 리뷰
                     </Link>
                   </>
                 )}

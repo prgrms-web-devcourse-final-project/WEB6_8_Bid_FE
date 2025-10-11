@@ -14,7 +14,9 @@ const getCommonHeaders = (request: NextRequest, hasBody: boolean = false) => {
 
   // Content-Type은 POST/PUT/PATCH 등 body가 있을 때만 추가
   // GET 요청에는 Content-Type을 보내지 않음 (백엔드에서 400 에러 발생)
-  if (hasBody) {
+  // FormData 요청에서는 Content-Type을 설정하지 않음 (브라우저가 자동 설정)
+  const contentType = request.headers.get('content-type')
+  if (hasBody && contentType && !contentType.includes('multipart/form-data')) {
     headers['Content-Type'] = 'application/json'
   }
 
@@ -23,38 +25,29 @@ const getCommonHeaders = (request: NextRequest, hasBody: boolean = false) => {
   if (authHeader) {
     headers['Authorization'] = authHeader
     console.log(
-      '🔑 전달된 Authorization 헤더:',
-      authHeader.substring(0, 20) + '...',
+      '🔑 프록시 - Authorization 헤더 전달:',
+      authHeader.substring(0, 30) + '...',
     )
   } else {
-    console.log('⚠️ Authorization 헤더가 없습니다')
+    console.error('❌ 프록시 - Authorization 헤더 누락!', {
+      url: request.url,
+      method: request.method,
+      allHeaders: Object.fromEntries(request.headers.entries()),
+    })
   }
 
   // 쿠키 전달 (모든 관련 쿠키 포함)
   const cookieHeader = request.headers.get('cookie')
 
   if (cookieHeader) {
-    // 백엔드 관련 쿠키들만 필터링하여 전달
+    // 모든 쿠키를 그대로 전달
     const relevantCookies = cookieHeader
       .split(';')
       .map((c) => c.trim())
-      .filter(
-        (c) =>
-          c.startsWith('JSESSIONID=') ||
-          c.startsWith('_ga=') ||
-          c.startsWith('_gid=') ||
-          c.startsWith('connect.sid=') ||
-          c.startsWith('sessionid=') ||
-          c.startsWith('accessToken=') ||
-          c.startsWith('refreshToken='),
-      )
       .join('; ')
 
     if (relevantCookies) {
       headers['Cookie'] = relevantCookies
-      console.log('🍪 전달된 쿠키:', relevantCookies)
-    } else {
-      console.log('⚠️ 전달할 쿠키가 없습니다. 원본 쿠키:', cookieHeader)
     }
   }
 
@@ -77,12 +70,9 @@ const handleBackendResponse = async (response: Response) => {
   const contentType = response.headers.get('content-type')
   const responseText = await response.text()
 
-  // 백엔드 응답 로깅 개선
-  console.log('🔍 백엔드 응답 상세 정보:')
-  console.log('📊 상태 코드:', response.status)
-  console.log('📋 Content-Type:', contentType)
-  console.log('📄 응답 본문:', responseText)
-  console.log('🔗 응답 URL:', response.url)
+  // 백엔드 응답 로깅
+  console.log('백엔드 응답 상태:', response.status)
+  console.log('백엔드 응답 내용:', responseText)
 
   // 204 No Content 응답 처리
   if (response.status === 204) {
@@ -120,6 +110,7 @@ const handleBackendResponse = async (response: Response) => {
     const h1Match = responseText.match(/<h1>(.*?)<\/h1>/i)
     if (h1Match) {
       errorTitle = h1Match[1]
+
       console.log('추출된 h1:', errorTitle)
     }
 
@@ -156,22 +147,14 @@ const handleBackendResponse = async (response: Response) => {
     responseText.trim().startsWith('{') ||
     responseText.trim().startsWith('[')
   ) {
-    console.log('JSON 응답 감지 및 처리')
     try {
       const data = JSON.parse(responseText)
-      console.log('파싱된 JSON 데이터:', data)
 
       // Set-Cookie 헤더가 있으면 클라이언트에 전달
       const responseHeaders = new Headers()
       const setCookieHeaders = response.headers.getSetCookie()
-      console.log(
-        '🍪 백엔드에서 받은 Set-Cookie 헤더 개수:',
-        setCookieHeaders.length,
-      )
       if (setCookieHeaders && setCookieHeaders.length > 0) {
-        setCookieHeaders.forEach((cookie, index) => {
-          console.log(`🍪 프록시 - Original cookie ${index + 1}:`, cookie)
-
+        setCookieHeaders.forEach((cookie) => {
           // 쿠키 속성 수정
           let modifiedCookie = cookie
 
@@ -185,15 +168,8 @@ const handleBackendResponse = async (response: Response) => {
             modifiedCookie = modifiedCookie.replace(/;\s*Secure/gi, '')
           }
 
-          console.log(
-            `🍪 프록시 - Modified cookie ${index + 1}:`,
-            modifiedCookie,
-          )
           responseHeaders.append('Set-Cookie', modifiedCookie)
         })
-        console.log('🍪 총 전달된 쿠키 개수:', setCookieHeaders.length)
-      } else {
-        console.log('⚠️ 백엔드에서 Set-Cookie 헤더가 없습니다')
       }
 
       return NextResponse.json(data, {
@@ -247,18 +223,13 @@ export async function GET(
     const urlBase = [API_BASE_URL, path].join('/').replace(/([^:]\/)\/+/g, '$1')
     const url = queryString ? `${urlBase}?${queryString}` : urlBase
 
-    console.log('=== GET 요청 디버깅 ===')
-    console.log('요청 URL:', url)
-    console.log('경로:', path)
-    console.log('쿼리:', queryString)
-    console.log('=====================')
+    console.log('GET 요청:', url)
 
     const response = await fetch(url, {
       method: 'GET',
       headers: getCommonHeaders(request),
     })
 
-    console.log('fetch 완료, 응답 상태:', response.status)
     return await handleBackendResponse(response)
   } catch (error) {
     console.error('프록시 GET 요청 실패:', error)
@@ -277,48 +248,45 @@ export async function POST(
     const path = resolvedParams.path.join('/')
     const url = [API_BASE_URL, path].join('/').replace(/([^:]\/)\/+/g, '$1')
 
-    // Content-Type 확인
     const contentType = request.headers.get('content-type') || ''
-    console.log('요청 Content-Type:', contentType)
 
     let body = null
     let hasBody = false
-    let headers = getCommonHeaders(request, false) // 기본 헤더
+    let headers = getCommonHeaders(request, false)
 
-    // FormData 처리
+    // FormData 처리 - 스트림으로 그대로 전달
     if (contentType.includes('multipart/form-data')) {
-      console.log('FormData 처리 시작')
-      const formData = await request.formData()
-      body = formData
+      // 중요: request.body를 그대로 전달 (파싱하지 않음)
+      body = request.body
       hasBody = true
 
-      // FormData에는 Content-Type을 설정하지 않음 (브라우저가 자동으로 설정)
-      headers = getCommonHeaders(request, false)
-      delete headers['Content-Type'] // Content-Type 제거
+      // Content-Type도 boundary 포함해서 그대로 전달
+      headers['Content-Type'] = contentType
 
-      console.log('FormData 처리 완료')
-    } else {
-      // JSON 처리 (기존 로직)
+      console.log('📤 FormData 요청 - 스트림으로 전달')
+      console.log('📤 Content-Type:', contentType)
+    }
+    // JSON 처리
+    else {
       try {
         const requestBody = await request.json()
         if (requestBody && Object.keys(requestBody).length > 0) {
           body = JSON.stringify(requestBody)
           hasBody = true
-          headers = getCommonHeaders(request, hasBody)
+          headers['Content-Type'] = 'application/json'
         }
       } catch (error) {
         console.log('POST 요청에 body가 없거나 JSON이 아닙니다.')
       }
     }
 
-    console.log('=== POST 요청 디버깅 ===')
-    console.log('요청 URL:', url)
-    console.log('경로:', path)
-    console.log('Content-Type:', contentType)
-    console.log('Body 있음:', hasBody)
-    console.log('Body 타입:', body ? typeof body : 'none')
-    console.log('헤더:', headers)
-    console.log('=======================')
+    console.log(
+      'POST 요청:',
+      url,
+      hasBody
+        ? `(${contentType.includes('multipart') ? 'FormData' : 'JSON'})`
+        : '(no body)',
+    )
 
     const fetchOptions: RequestInit = {
       method: 'POST',
@@ -327,6 +295,11 @@ export async function POST(
 
     if (hasBody && body) {
       fetchOptions.body = body
+
+      // ReadableStream 사용 시 duplex 필요
+      if (body instanceof ReadableStream) {
+        ;(fetchOptions as any).duplex = 'half'
+      }
     }
 
     const response = await fetch(url, fetchOptions)
@@ -348,32 +321,56 @@ export async function PUT(
     const path = resolvedParams.path.join('/')
     const url = [API_BASE_URL, path].join('/').replace(/([^:]\/)\/+/g, '$1')
 
+    const contentType = request.headers.get('content-type') || ''
+
     let body = null
     let hasBody = false
+    let headers = getCommonHeaders(request, false)
 
-    try {
-      const requestBody = await request.json()
-      if (requestBody && Object.keys(requestBody).length > 0) {
-        body = JSON.stringify(requestBody)
-        hasBody = true
+    // FormData 처리 (POST와 동일)
+    if (contentType.includes('multipart/form-data')) {
+      body = request.body
+      hasBody = true
+      headers['Content-Type'] = contentType
+
+      console.log('📤 FormData PUT 요청 - 스트림으로 전달')
+    }
+    // JSON 처리
+    else {
+      try {
+        const requestBody = await request.json()
+        if (requestBody && Object.keys(requestBody).length > 0) {
+          body = JSON.stringify(requestBody)
+          hasBody = true
+          headers['Content-Type'] = 'application/json'
+        }
+      } catch (error) {
+        console.log('PUT 요청에 body가 없거나 JSON이 아닙니다.')
       }
-    } catch (error) {
-      console.log('PUT 요청에 body가 없거나 JSON이 아닙니다.')
     }
 
     console.log('=== PUT 요청 디버깅 ===')
     console.log('요청 URL:', url)
+    console.log('Content-Type:', contentType)
     console.log('Body 있음:', hasBody)
-    console.log('Body 내용:', body)
+    console.log(
+      'Body 타입:',
+      contentType.includes('multipart') ? 'FormData' : 'JSON',
+    )
     console.log('======================')
 
     const fetchOptions: RequestInit = {
       method: 'PUT',
-      headers: getCommonHeaders(request, hasBody),
+      headers: headers,
     }
 
     if (hasBody && body) {
       fetchOptions.body = body
+
+      // ReadableStream duplex 추가
+      if (body instanceof ReadableStream) {
+        ;(fetchOptions as any).duplex = 'half'
+      }
     }
 
     const response = await fetch(url, fetchOptions)
@@ -424,29 +421,45 @@ export async function PATCH(
     const path = resolvedParams.path.join('/')
     const url = [API_BASE_URL, path].join('/').replace(/([^:]\/)\/+/g, '$1')
 
+    const contentType = request.headers.get('content-type') || ''
+
     let body = null
     let hasBody = false
+    let headers = getCommonHeaders(request, false)
 
-    try {
-      const requestBody = await request.json()
-      if (requestBody && Object.keys(requestBody).length > 0) {
-        body = JSON.stringify(requestBody)
-        hasBody = true
+    // FormData 처리 (POST와 동일)
+    if (contentType.includes('multipart/form-data')) {
+      body = request.body
+      hasBody = true
+      headers['Content-Type'] = contentType
+
+      console.log('📤 FormData PATCH 요청 - 스트림으로 전달')
+    }
+    // JSON 처리
+    else {
+      try {
+        const requestBody = await request.json()
+        if (requestBody && Object.keys(requestBody).length > 0) {
+          body = JSON.stringify(requestBody)
+          hasBody = true
+          headers['Content-Type'] = 'application/json'
+        }
+      } catch (error) {
+        console.log('PATCH 요청에 body가 없거나 JSON이 아닙니다.')
       }
-    } catch (error) {
-      console.log('PATCH 요청에 body가 없거나 JSON이 아닙니다.')
     }
 
     console.log('=== PATCH 요청 디버깅 ===')
     console.log('요청 URL:', url)
+    console.log('Content-Type:', contentType)
     console.log('Body 있음:', hasBody)
-    console.log('Body 내용:', body)
+    console.log(
+      'Body 타입:',
+      contentType.includes('multipart') ? 'FormData' : 'JSON',
+    )
     console.log('원본 쿠키 헤더:', request.headers.get('cookie'))
-    console.log('전달될 헤더:', getCommonHeaders(request, hasBody))
+    console.log('전달될 헤더:', headers)
     console.log('========================')
-
-    const headers = getCommonHeaders(request, hasBody)
-    console.log('🔧 PATCH 최종 헤더:', headers)
 
     const fetchOptions: RequestInit = {
       method: 'PATCH',
@@ -455,6 +468,11 @@ export async function PATCH(
 
     if (hasBody && body) {
       fetchOptions.body = body
+
+      // ReadableStream duplex 추가
+      if (body instanceof ReadableStream) {
+        ;(fetchOptions as any).duplex = 'half'
+      }
     }
 
     console.log('🔧 PATCH fetch 옵션:', fetchOptions)

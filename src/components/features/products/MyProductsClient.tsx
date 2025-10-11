@@ -3,16 +3,82 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ErrorAlert } from '@/components/ui/error-alert'
+import { productApi } from '@/lib/api'
 import { Product } from '@/types'
-import { useState } from 'react'
+import { Edit, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 interface MyProductsClientProps {
   initialProducts?: Product[]
 }
 
 export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
+  const router = useRouter()
   const [selectedTab, setSelectedTab] = useState('active')
-  const [products] = useState(initialProducts || [])
+  const [products, setProducts] = useState(initialProducts || [])
+  const [isLoading, setIsLoading] = useState(false)
+  const [apiError, setApiError] = useState('')
+
+  // 내 상품 목록 조회
+  const fetchMyProducts = async () => {
+    setIsLoading(true)
+    setApiError('')
+    try {
+      const response = await productApi.getMyProducts()
+      if (response.success && response.data) {
+        // API 응답 데이터 구조에 맞게 변환
+        let productsData = []
+        if (Array.isArray(response.data)) {
+          productsData = response.data
+        } else if (
+          response.data.content &&
+          Array.isArray(response.data.content)
+        ) {
+          productsData = response.data.content
+        }
+        setProducts(productsData)
+      } else {
+        setApiError(response.msg || '상품 목록을 불러오는데 실패했습니다.')
+      }
+    } catch (error: any) {
+      console.error('내 상품 목록 조회 실패:', error)
+      setApiError(
+        error.response?.data?.msg || '상품 목록을 불러오는데 실패했습니다.',
+      )
+    }
+    setIsLoading(false)
+  }
+
+  // 상품 삭제
+  const handleDeleteProduct = async (productId: number) => {
+    if (!confirm('정말로 이 상품을 삭제하시겠습니까?')) {
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await productApi.deleteProduct(productId)
+      if (response.success) {
+        alert('상품이 성공적으로 삭제되었습니다.')
+        fetchMyProducts() // 목록 새로고침
+      } else {
+        setApiError(response.msg || '상품 삭제에 실패했습니다.')
+      }
+    } catch (error: any) {
+      console.error('상품 삭제 실패:', error)
+      setApiError(error.response?.data?.msg || '상품 삭제에 실패했습니다.')
+    }
+    setIsLoading(false)
+  }
+
+  // 컴포넌트 마운트 시 상품 목록 조회
+  useEffect(() => {
+    if (!initialProducts || initialProducts.length === 0) {
+      fetchMyProducts()
+    }
+  }, [])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
@@ -65,6 +131,15 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* API 에러 메시지 */}
+      {apiError && (
+        <ErrorAlert
+          title="오류"
+          message={apiError}
+          onClose={() => setApiError('')}
+        />
+      )}
+
       {/* 판매 현황 요약 */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card variant="outlined">
@@ -142,7 +217,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                   {selectedTab === 'sold' && '상품을 판매해보세요'}
                   {selectedTab === 'failed' && '다시 경매에 올려보세요'}
                 </p>
-                <Button>
+                <Button onClick={() => router.push('/register-product')}>
                   {selectedTab === 'active' && '+ 첫 상품 등록하기'}
                   {selectedTab === 'sold' && '+ 새 상품 등록하기'}
                   {selectedTab === 'failed' && '+ 상품 재등록하기'}
@@ -232,18 +307,48 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                         )}
                         {product.status === 'active' && (
                           <>
-                            <Button size="sm" variant="outline">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                router.push(
+                                  `/register-product?edit=${product.id}`,
+                                )
+                              }
+                            >
+                              <Edit className="mr-1 h-3 w-3" />
                               경매 수정
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteProduct(product.id)}
+                              disabled={isLoading}
+                            >
+                              <Trash2 className="mr-1 h-3 w-3" />
                               경매 중단
                             </Button>
                           </>
                         )}
                         {product.status === 'failed' && (
                           <>
-                            <Button size="sm">재경매 등록</Button>
-                            <Button size="sm" variant="outline">
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                router.push(
+                                  `/register-product?relist=${product.id}`,
+                                )
+                              }
+                            >
+                              재경매 등록
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteProduct(product.id)}
+                              disabled={isLoading}
+                            >
+                              <Trash2 className="mr-1 h-3 w-3" />
                               상품 삭제
                             </Button>
                           </>

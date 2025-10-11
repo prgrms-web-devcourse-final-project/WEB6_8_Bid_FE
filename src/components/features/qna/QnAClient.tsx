@@ -4,8 +4,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { boardApi } from '@/lib/api'
 import { Post } from '@/types'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface QnAClientProps {
   initialPosts: Post[]
@@ -14,7 +15,39 @@ interface QnAClientProps {
 export function QnAClient({ initialPosts }: QnAClientProps) {
   const [selectedCategory, setSelectedCategory] = useState('qna')
   const [searchQuery, setSearchQuery] = useState('')
-  const [posts] = useState(initialPosts || [])
+  const [posts, setPosts] = useState(initialPosts || [])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  // 게시글 목록 로드
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        setIsLoading(true)
+        setError('')
+
+        const response = await boardApi.getPosts({
+          page: 1,
+          size: 20,
+          boardType: selectedCategory.toUpperCase() as 'NOTICE' | 'QNA' | 'FAQ',
+          keyword: searchQuery,
+        })
+
+        if (response.success) {
+          setPosts(response.data?.content || [])
+        } else {
+          setError('게시글을 불러오는데 실패했습니다.')
+        }
+      } catch (err) {
+        console.error('게시글 로드 에러:', err)
+        setError('게시글을 불러오는데 실패했습니다.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadPosts()
+  }, [selectedCategory, searchQuery])
 
   // 실제 데이터에서 카운트 계산
   const categories = [
@@ -86,7 +119,38 @@ export function QnAClient({ initialPosts }: QnAClientProps) {
 
       {/* 게시글 목록 */}
       <div className="space-y-4">
-        {filteredPosts.length === 0 ? (
+        {isLoading ? (
+          <Card variant="outlined">
+            <CardContent className="py-12 text-center">
+              <div className="mb-4">
+                <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  게시글을 불러오는 중...
+                </h3>
+              </div>
+            </CardContent>
+          </Card>
+        ) : error ? (
+          <Card variant="outlined">
+            <CardContent className="py-12 text-center">
+              <div className="mb-4">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                  <span className="text-2xl">⚠️</span>
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+                  오류가 발생했습니다
+                </h3>
+                <p className="text-neutral-600">{error}</p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  className="mt-4"
+                >
+                  다시 시도
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : filteredPosts.length === 0 ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">

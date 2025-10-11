@@ -2,18 +2,23 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
+import { authApi } from '@/lib/api'
 import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export function SignupClient() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     nickname: '',
     phone: '',
+    address: '',
     agreeTerms: false,
     agreePrivacy: false,
     agreeMarketing: false,
@@ -21,6 +26,8 @@ export function SignupClient() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isLoading, setIsLoading] = useState(false)
+  const [apiError, setApiError] = useState('')
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -36,10 +43,17 @@ export function SignupClient() {
         [name]: '',
       }))
     }
+
+    // API 에러 초기화
+    if (apiError) {
+      setApiError('')
+    }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
+    setApiError('')
 
     // 유효성 검사
     const newErrors: Record<string, string> = {}
@@ -74,6 +88,10 @@ export function SignupClient() {
       newErrors.phone = '올바른 전화번호 형식을 입력해주세요 (010-1234-5678)'
     }
 
+    if (!formData.address) {
+      newErrors.address = '주소를 입력해주세요'
+    }
+
     if (!formData.agreeTerms) {
       newErrors.agreeTerms = '이용약관에 동의해주세요'
     }
@@ -85,9 +103,53 @@ export function SignupClient() {
     setErrors(newErrors)
 
     if (Object.keys(newErrors).length === 0) {
-      // TODO: API 호출
-      console.log('회원가입:', formData)
+      try {
+        // 회원가입 API 호출
+        const response = await authApi.signup({
+          email: formData.email,
+          password: formData.password,
+          nickname: formData.nickname,
+          phoneNumber: formData.phone.replace(/-/g, ''), // 하이푼 제거
+          address: formData.address,
+        })
+
+        console.log('🔍 회원가입 API 응답 전체:', response)
+        console.log('🔍 response.success:', response.success)
+        console.log('🔍 response.data:', response.data)
+        console.log('🔍 response.resultCode:', response.resultCode)
+
+        // 성공 조건 확인 (다양한 형식 지원)
+        const isSuccess =
+          response.success ||
+          response.resultCode === '200' ||
+          response.resultCode === 'SUCCESS' ||
+          (response.data && response.data !== null)
+
+        if (isSuccess) {
+          // 회원가입 성공
+          console.log('✅ 회원가입 성공:', response.data)
+          setApiError('')
+          alert('회원가입이 완료되었습니다. 로그인해주세요.')
+          router.push('/login')
+        } else {
+          console.log('❌ 회원가입 실패:', response)
+          setApiError('회원가입에 실패했습니다. 다시 시도해주세요.')
+        }
+      } catch (error: any) {
+        console.error('API 에러:', error)
+        if (error.response?.status === 400) {
+          const errorMessage =
+            error.response.data?.errorMessage || '입력 정보를 확인해주세요.'
+          setApiError(`요청 실패: ${errorMessage}`)
+        } else if (error.response?.status === 409) {
+          setApiError('이미 가입된 이메일입니다.')
+        } else {
+          setApiError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+        }
+      }
     }
+
+    setIsLoading(false)
   }
 
   return (
@@ -95,6 +157,15 @@ export function SignupClient() {
       <Card variant="outlined">
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* API 에러 메시지 */}
+            {apiError && (
+              <ErrorAlert
+                title="요청 실패"
+                message={apiError}
+                onClose={() => setApiError('')}
+              />
+            )}
+
             {/* 이메일 */}
             <div>
               <Input
@@ -184,6 +255,18 @@ export function SignupClient() {
               />
             </div>
 
+            {/* 주소 */}
+            <div>
+              <Input
+                label="주소"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                placeholder="주소를 입력하세요"
+                error={errors.address}
+              />
+            </div>
+
             {/* 약관 동의 */}
             <div className="space-y-3">
               <div className="flex items-start space-x-2">
@@ -248,8 +331,15 @@ export function SignupClient() {
             </div>
 
             {/* 회원가입 버튼 */}
-            <Button type="submit" className="w-full">
-              회원가입
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <div className="flex items-center">
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  회원가입 중...
+                </div>
+              ) : (
+                '회원가입'
+              )}
             </Button>
           </form>
 

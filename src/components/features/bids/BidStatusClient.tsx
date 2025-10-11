@@ -3,16 +3,59 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ErrorAlert } from '@/components/ui/error-alert'
+import { bidApi } from '@/lib/api'
 import { Bid } from '@/types'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 interface BidStatusClientProps {
   initialBids?: Bid[]
 }
 
 export function BidStatusClient({ initialBids }: BidStatusClientProps) {
+  const router = useRouter()
   const [selectedTab, setSelectedTab] = useState('active')
-  const [bids] = useState((initialBids as any) || [])
+  const [bids, setBids] = useState((initialBids as any) || [])
+  const [isLoading, setIsLoading] = useState(false)
+  const [apiError, setApiError] = useState('')
+
+  // 내 입찰 내역 조회
+  const fetchMyBids = async () => {
+    setIsLoading(true)
+    setApiError('')
+    try {
+      const response = await bidApi.getMyBids()
+      if (response.success && response.data) {
+        // API 응답 데이터 구조에 맞게 변환
+        let bidsData = []
+        if (Array.isArray(response.data)) {
+          bidsData = response.data
+        } else if (
+          response.data.content &&
+          Array.isArray(response.data.content)
+        ) {
+          bidsData = response.data.content
+        }
+        setBids(bidsData)
+      } else {
+        setApiError(response.msg || '입찰 내역을 불러오는데 실패했습니다.')
+      }
+    } catch (error: any) {
+      console.error('내 입찰 내역 조회 실패:', error)
+      setApiError(
+        error.response?.data?.msg || '입찰 내역을 불러오는데 실패했습니다.',
+      )
+    }
+    setIsLoading(false)
+  }
+
+  // 컴포넌트 마운트 시 입찰 내역 조회
+  useEffect(() => {
+    if (!initialBids || initialBids.length === 0) {
+      fetchMyBids()
+    }
+  }, [])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
@@ -66,6 +109,15 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* API 에러 메시지 */}
+      {apiError && (
+        <ErrorAlert
+          title="오류"
+          message={apiError}
+          onClose={() => setApiError('')}
+        />
+      )}
+
       {/* 입찰 현황 요약 */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card variant="outlined">
@@ -143,7 +195,7 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                   {selectedTab === 'won' && '경매에 참여해보세요'}
                   {selectedTab === 'lost' && '다른 경매에 참여해보세요'}
                 </p>
-                <Button>
+                <Button onClick={() => router.push('/')}>
                   {selectedTab === 'active' && '+ 첫 입찰하기'}
                   {selectedTab === 'won' && '+ 경매 둘러보기'}
                   {selectedTab === 'lost' && '+ 새 경매 참여하기'}
