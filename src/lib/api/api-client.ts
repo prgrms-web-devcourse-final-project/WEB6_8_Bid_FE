@@ -56,7 +56,7 @@ class ApiClient {
           const accessTokenCookie = cookies.find((cookie) =>
             cookie.trim().startsWith('accessToken='),
           )
-          const cookieToken = accessTokenCookie?.split('=')[1]
+          const cookieToken = accessTokenCookie?.split('=')[1]?.trim()
 
           // localStorage에서 토큰 확인 (백업)
           const localStorageToken = localStorage.getItem('accessToken')
@@ -64,12 +64,13 @@ class ApiClient {
           // localStorage에 토큰이 있으면 쿠키에도 강제로 설정
           if (localStorageToken && !cookieToken) {
             console.log('🍪 localStorage 토큰을 쿠키에 강제 설정')
-            document.cookie = `accessToken=${localStorageToken}; path=/; max-age=86400; SameSite=Lax; Secure`
+            document.cookie = `accessToken=${localStorageToken}; path=/; max-age=86400; SameSite=Lax`
             // 설정 후 다시 확인
             const updatedCookies = document.cookie.split(';')
             const updatedCookieToken = updatedCookies
               .find((cookie) => cookie.trim().startsWith('accessToken='))
               ?.split('=')[1]
+              ?.trim()
             console.log(
               '🍪 쿠키 설정 후 확인:',
               updatedCookieToken ? '성공' : '실패',
@@ -104,6 +105,12 @@ class ApiClient {
             console.log('⚠️ accessToken이 없습니다')
             console.log('🍪 전체 쿠키:', document.cookie)
             console.log('📱 localStorage:', localStorage.getItem('accessToken'))
+            console.log('🔍 쿠키 파싱 결과:', {
+              allCookies: document.cookie.split(';'),
+              accessTokenCookie: accessTokenCookie,
+              cookieToken: cookieToken,
+              localStorageToken: localStorageToken,
+            })
           }
         }
 

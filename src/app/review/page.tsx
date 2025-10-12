@@ -11,6 +11,9 @@ interface ReviewPageProps {
 
 export default async function ReviewPage({ searchParams }: ReviewPageProps) {
   try {
+    // searchParams await 처리
+    const params = await searchParams
+
     // 쿠키에서 토큰 가져오기
     const cookieStore = await cookies()
     const accessToken = cookieStore.get('accessToken')?.value
@@ -37,9 +40,7 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
       )
     }
 
-    const productId = searchParams.productId
-      ? parseInt(searchParams.productId)
-      : undefined
+    const productId = params.productId ? parseInt(params.productId) : undefined
 
     if (!productId) {
       return (

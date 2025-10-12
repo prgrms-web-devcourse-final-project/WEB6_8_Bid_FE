@@ -2,6 +2,7 @@ import { LoginPrompt } from '@/components/auth/LoginPrompt'
 import { MyProductsClient } from '@/components/features/products/MyProductsClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { serverApi } from '@/lib/api/server-api-client'
 import { cookies } from 'next/headers'
 
 export default async function MyProductsPage() {
@@ -26,37 +27,10 @@ export default async function MyProductsPage() {
       )
     }
 
-    // 직접 API 호출 (토큰을 헤더에 포함)
-    const response = await fetch('http://localhost:8080/api/v1/products/me', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    // 서버 API로 내 상품 데이터 가져오기
+    const response = await serverApi.getMyProducts()
 
-    if (!response.ok) {
-      if (response.status === 403) {
-        return (
-          <HomeLayout>
-            <PageHeader
-              title="내 상품 관리"
-              description="등록한 상품을 관리하고 판매 현황을 확인하세요"
-              showBackButton
-            />
-            <LoginPrompt
-              title="내 상품 관리"
-              description="내 상품을 확인하려면 로그인해주세요."
-            />
-          </HomeLayout>
-        )
-      }
-      throw new Error(`API 호출 실패: ${response.status}`)
-    }
-
-    const data = await response.json()
-    console.log('📊 내 상품 API 응답:', data)
-
-    if (data.resultCode !== '200-1' && data.resultCode !== '200') {
+    if (!response.success || !response.data) {
       return (
         <HomeLayout isLoggedIn={true}>
           <PageHeader
@@ -78,13 +52,19 @@ export default async function MyProductsPage() {
 
     // API 응답 데이터 구조에 맞게 변환
     let products = []
-    if (data.data) {
-      if (Array.isArray(data.data)) {
-        products = data.data
-      } else if (data.data.content && Array.isArray(data.data.content)) {
-        products = data.data.content
-      } else if (data.data.products && Array.isArray(data.data.products)) {
-        products = data.data.products
+    if (response.data) {
+      if (Array.isArray(response.data)) {
+        products = response.data
+      } else if (
+        (response.data as any).content &&
+        Array.isArray((response.data as any).content)
+      ) {
+        products = (response.data as any).content
+      } else if (
+        (response.data as any).products &&
+        Array.isArray((response.data as any).products)
+      ) {
+        products = (response.data as any).products
       }
     }
 

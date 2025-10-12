@@ -42,10 +42,10 @@ export function ReviewManagementClient() {
         // 현재는 사용자별 리뷰 조회 API가 없으므로
         // 임시로 더미 데이터를 사용하되, 실제 API 구조에 맞게 수정
         console.log('📝 내 리뷰 목록 로드 중...')
-        
+
         // TODO: 실제 사용자별 리뷰 조회 API가 구현되면 교체
         // const response = await reviewApi.getMyReviews()
-        
+
         // 임시 더미 데이터 (실제 API 응답 구조에 맞게)
         const dummyReviews = [
           {
@@ -71,7 +71,8 @@ export function ReviewManagementClient() {
             createDate: '2024-01-10T14:20:00Z',
             modifyDate: '2024-01-10T14:20:00Z',
           },
-        ])
+        ]
+        setReviews(dummyReviews)
       } catch (err) {
         console.error('리뷰 로드 에러:', err)
         setError('리뷰를 불러오는데 실패했습니다.')
@@ -94,7 +95,7 @@ export function ReviewManagementClient() {
       if (response.success) {
         alert('리뷰가 성공적으로 삭제되었습니다.')
         // 리뷰 목록에서 제거
-        setReviews(prev => prev.filter(review => review.id !== reviewId))
+        setReviews((prev) => prev.filter((review) => review.id !== reviewId))
       } else {
         alert(response.msg || '리뷰 삭제에 실패했습니다.')
       }
@@ -293,7 +294,9 @@ export function ReviewManagementClient() {
           <Card className="w-full max-w-lg">
             <CardHeader>
               <h3 className="text-lg font-semibold">리뷰 수정</h3>
-              <p className="text-sm text-neutral-600">{selectedReview.productName}</p>
+              <p className="text-sm text-neutral-600">
+                {selectedReview.productName}
+              </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -308,7 +311,12 @@ export function ReviewManagementClient() {
                         type="radio"
                         name="isSatisfied"
                         checked={editFormData.isSatisfied === true}
-                        onChange={() => setEditFormData(prev => ({ ...prev, isSatisfied: true }))}
+                        onChange={() =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            isSatisfied: true,
+                          }))
+                        }
                         className="text-primary-600 focus:ring-primary-500 mr-2"
                       />
                       <span className="flex items-center text-sm">
@@ -321,7 +329,12 @@ export function ReviewManagementClient() {
                         type="radio"
                         name="isSatisfied"
                         checked={editFormData.isSatisfied === false}
-                        onChange={() => setEditFormData(prev => ({ ...prev, isSatisfied: false }))}
+                        onChange={() =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            isSatisfied: false,
+                          }))
+                        }
                         className="text-primary-600 focus:ring-primary-500 mr-2"
                       />
                       <span className="flex items-center text-sm">
@@ -339,7 +352,12 @@ export function ReviewManagementClient() {
                   </label>
                   <textarea
                     value={editFormData.comment}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, comment: e.target.value }))}
+                    onChange={(e) =>
+                      setEditFormData((prev) => ({
+                        ...prev,
+                        comment: e.target.value,
+                      }))
+                    }
                     placeholder="리뷰 내용을 입력해주세요"
                     className="focus:ring-primary-500 focus:border-primary-500 block w-full rounded-lg border border-neutral-300 px-3 py-2 focus:ring-2 focus:outline-none"
                     rows={4}

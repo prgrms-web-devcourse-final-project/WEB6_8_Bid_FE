@@ -5,7 +5,6 @@ import type {
   BoardWriteRequest,
   BoardWriteResponse,
   LoginResponse,
-  MyBidsParams,
   MyProductsParams,
   PaymentMethodCreateRequest,
   PaymentMethodEditRequest,
@@ -476,10 +475,12 @@ export const bidApi = {
   },
 
   // 내 입찰 내역 조회
-  getMyBids: async (params?: MyBidsParams) => {
+  getMyBids: async (params?: { page?: number; size?: number }) => {
+    console.log('🔍 내 입찰 내역 조회 요청:', params)
     const response = await apiClient.get<ApiResponse<any>>('/api/v1/bids/me', {
       params,
     })
+    console.log('🔍 내 입찰 내역 API 응답:', response.data)
     return normalizeApiResponse(response.data)
   },
 }
@@ -942,6 +943,28 @@ export const reviewApi = {
       `/api/v1/reviews/${reviewId}`,
     )
     return normalizeApiResponse(response.data)
+  },
+
+  // 상품별 리뷰 목록 조회
+  getReviewsByProduct: async (productId: number) => {
+    console.log(`⭐ 상품별 리뷰 조회 요청: 상품 ID ${productId}`)
+    try {
+      // 올바른 엔드포인트 사용
+      const response = await apiClient.get<ApiResponse<any>>(
+        `/api/v1/reviews/products/${productId}`,
+      )
+      console.log('⭐ 리뷰 조회 성공:', response.data)
+      return normalizeApiResponse(response.data)
+    } catch (error) {
+      console.log('⭐ 리뷰 조회 실패:', error)
+      // 에러가 발생해도 빈 배열 반환하여 UI가 깨지지 않도록 함
+      return {
+        success: true,
+        data: [],
+        resultCode: 'SUCCESS',
+        msg: '리뷰가 없습니다',
+      }
+    }
   },
 
   // 리뷰 수정
