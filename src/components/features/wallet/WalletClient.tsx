@@ -158,6 +158,17 @@ export function WalletClient() {
     loadData()
   }, [])
 
+  // 토스 카드 등록 완료 후 자동 새로고침
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('paymentMethodAdded') === 'true') {
+      console.log('🎉 토스 카드 등록 완료 감지, 결제수단 목록 새로고침')
+      refreshPaymentMethods()
+      // URL에서 파라미터 제거
+      window.history.replaceState({}, '', '/wallet')
+    }
+  }, [])
+
   // 거래 내역 로드
   const loadTransactions = async () => {
     try {
@@ -281,16 +292,18 @@ export function WalletClient() {
         try {
           const tossPayments = createTossPayments(clientKey)
 
+          // successUrl에 파라미터 추가하여 지갑 페이지로 돌아올 때 자동 새로고침되도록 함
+          const successUrlWithParam = `${successUrl}?redirectTo=${encodeURIComponent('/wallet?paymentMethodAdded=true')}`
           tossPayments.requestBillingAuth('카드', {
             customerKey: customerKey,
-            successUrl: successUrl,
+            successUrl: successUrlWithParam,
             failUrl: failUrl,
           })
         } catch (tossError) {
           console.error('토스 SDK 에러:', tossError)
           // 토스 SDK 에러 시 대체 방법 사용
           const currentUrl = window.location.origin
-          const fullSuccessUrl = `${currentUrl}/payments/toss/billing-success`
+          const fullSuccessUrl = `${currentUrl}/payments/toss/billing-success?redirectTo=${encodeURIComponent('/wallet?paymentMethodAdded=true')}`
           const fullFailUrl = `${currentUrl}/payments/toss/billing-fail`
 
           window.location.href = `/api/proxy/api/v1/payments/toss/billing-auth?customerKey=${customerKey}&successUrl=${encodeURIComponent(fullSuccessUrl)}&failUrl=${encodeURIComponent(fullFailUrl)}`
@@ -298,7 +311,7 @@ export function WalletClient() {
       } else {
         // 토스 SDK가 로드되지 않은 경우 직접 페이지 이동
         const currentUrl = window.location.origin
-        const fullSuccessUrl = `${currentUrl}/payments/toss/billing-success`
+        const fullSuccessUrl = `${currentUrl}/payments/toss/billing-success?redirectTo=${encodeURIComponent('/wallet?paymentMethodAdded=true')}`
         const fullFailUrl = `${currentUrl}/payments/toss/billing-fail`
 
         window.location.href = `/api/proxy/api/v1/payments/toss/billing-auth?customerKey=${customerKey}&successUrl=${encodeURIComponent(fullSuccessUrl)}&failUrl=${encodeURIComponent(fullFailUrl)}`
@@ -913,12 +926,6 @@ export function WalletClient() {
                                 <div className="flex items-center justify-between">
                                   <span>카드 번호:</span>
                                   <span>**** **** **** {method.last4}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span>만료일:</span>
-                                  <span>
-                                    {method.expMonth}/{method.expYear}
-                                  </span>
                                 </div>
                               </>
                             )}

@@ -4,9 +4,18 @@ import { useEffect } from 'react'
 
 export default function BillingSuccessPage() {
   useEffect(() => {
-    // 백엔드에서 제공하는 HTML 페이지로 리다이렉트
-    window.location.href =
-      '/api/proxy/billing-success.html' + window.location.search
+    // URL 파라미터에서 redirectTo 정보 추출
+    const urlParams = new URLSearchParams(window.location.search)
+    const redirectTo = urlParams.get('redirectTo')
+
+    if (redirectTo) {
+      // redirectTo 파라미터가 있으면 해당 페이지로 리다이렉트
+      window.location.href = redirectTo
+    } else {
+      // 기본적으로 백엔드 HTML 페이지로 리다이렉트
+      window.location.href =
+        '/api/proxy/billing-success.html' + window.location.search
+    }
   }, [])
 
   return (

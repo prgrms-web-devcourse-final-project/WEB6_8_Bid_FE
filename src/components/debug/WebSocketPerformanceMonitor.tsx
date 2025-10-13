@@ -20,7 +20,7 @@ interface PerformanceMetrics {
 }
 
 export function WebSocketPerformanceMonitor() {
-  const { isConnected, connectionTime } = useWebSocket()
+  const { isConnected } = useWebSocket()
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
     connectionTime: 0,
     messageCount: 0,

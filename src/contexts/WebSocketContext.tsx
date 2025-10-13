@@ -12,7 +12,7 @@ import { Client, Message } from 'stompjs'
 
 // WebSocket 메시지 타입 정의
 export interface WebSocketMessage {
-  type: 'CHAT' | 'BID' | 'AUCTION_TIMER' | 'NOTIFICATION' | 'SYSTEM'
+  type: 'CHAT' | 'BID' | 'AUCTION_TIMER' | 'NOTIFICATION' | 'SYSTEM' | 'HOME_UPDATE' | 'POPULAR_PRODUCTS' | 'RECENT_BIDS' | 'ENDING_SOON' | 'AUCTION_STATS' | 'BID_UPDATE' | 'AUCTION_END' | 'RANKING_UPDATE' | 'NEW_BID_RANKING' | 'RANKING_REFRESH'
   sender?: string
   content: string
   data?: any
