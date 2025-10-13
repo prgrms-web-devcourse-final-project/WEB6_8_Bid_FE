@@ -10,7 +10,7 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",
-    "generate-types": "openapi-typescript http://localhost:8080/v3/api-docs -o src/types/swagger-generated.ts"
+    "generate-types": "openapi-typescript https://api.bid-market.shop/v3/api-docs -o src/types/swagger-generated.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",

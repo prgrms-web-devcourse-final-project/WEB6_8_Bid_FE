@@ -44,18 +44,24 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
         console.log('🔍 변환된 입찰 데이터:', bidsData)
         setBids(bidsData)
 
-        // 입찰 내역이 비어있을 때 안내 메시지
-        if (bidsData.length === 0) {
-          setApiError('입찰 내역이 없습니다. 입찰 후 잠시 기다려주세요.')
-        }
+        // 입찰 내역이 비어있을 때는 에러 메시지 설정하지 않음 (정상 상태)
+        // setApiError('입찰 내역이 없습니다. 입찰 후 잠시 기다려주세요.')
       } else {
+        // API 실패 시에만 에러 메시지 표시
+        console.log('🔍 API 응답 실패:', response.msg)
         setApiError(response.msg || '입찰 내역을 불러오는데 실패했습니다.')
       }
     } catch (error: any) {
       console.error('내 입찰 내역 조회 실패:', error)
-      setApiError(
-        error.response?.data?.msg || '입찰 내역을 불러오는데 실패했습니다.',
-      )
+      // 401 에러는 로그인 문제이므로 에러 메시지 표시하지 않음
+      if (error.response?.status === 401) {
+        console.log('🔍 401 에러 - 로그인 필요')
+        setApiError('')
+      } else {
+        setApiError(
+          error.response?.data?.msg || '입찰 내역을 불러오는데 실패했습니다.',
+        )
+      }
     }
     setIsLoading(false)
   }
@@ -128,7 +134,7 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* API 에러 메시지 */}
       {apiError && (
         <ErrorAlert
@@ -149,7 +155,7 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
       {/* 입찰 목록 */}
       <div className="space-y-6">
         {bids.length === 0 ? (
-          <Card variant="outlined">
+          <Card variant="outlined" className="w-full">
             <CardContent className="py-16 text-center">
               <div className="mb-6">
                 <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100">

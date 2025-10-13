@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { authApi } from '@/lib/api'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -24,9 +23,6 @@ export function LoginClient() {
     phone: '',
     address: '',
     confirmPassword: '',
-    rememberMe: false,
-    agreeToTerms: false,
-    agreeToPrivacy: false,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [apiError, setApiError] = useState('')
@@ -86,14 +82,6 @@ export function LoginClient() {
       } else if (formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = '비밀번호가 일치하지 않습니다'
       }
-
-      if (!formData.agreeToTerms) {
-        newErrors.agreeToTerms = '서비스 이용약관에 동의해주세요'
-      }
-
-      if (!formData.agreeToPrivacy) {
-        newErrors.agreeToPrivacy = '개인정보 처리방침에 동의해주세요'
-      }
     }
 
     setErrors(newErrors)
@@ -142,11 +130,8 @@ export function LoginClient() {
               refreshToken: responseData?.refreshToken || 'temp-refresh-token',
             }
 
-            // AuthContext를 통한 전역 상태 업데이트
-            console.log('👤 로그인 직후 사용자 정보:', userData)
             login(userData, tokens)
 
-            // localStorage에 사용자 정보 저장 (백업용)
             localStorage.setItem('user', JSON.stringify(userData))
 
             // 쿠키에 토큰 저장 (서버에서 접근 가능)
@@ -207,9 +192,6 @@ export function LoginClient() {
               phone: '',
               address: '',
               confirmPassword: '',
-              rememberMe: false,
-              agreeToTerms: false,
-              agreeToPrivacy: false,
             })
           } else {
             console.log('❌ 회원가입 실패:', response)
@@ -417,7 +399,7 @@ export function LoginClient() {
                 />
               )}
 
-              {isLogin && (
+              {/* {isLogin && (
                 <div className="flex items-center justify-between">
                   <label className="flex items-center">
                     <input
@@ -438,9 +420,9 @@ export function LoginClient() {
                     비밀번호 찾기
                   </Link>
                 </div>
-              )}
+              )} */}
 
-              {!isLogin && (
+              {/* {!isLogin && (
                 <div className="space-y-2">
                   <label className="flex items-center">
                     <input
@@ -478,7 +460,7 @@ export function LoginClient() {
                     </p>
                   )}
                 </div>
-              )}
+              )} */}
 
               <Button
                 type="submit"
@@ -500,7 +482,7 @@ export function LoginClient() {
             </form>
 
             {/* 소셜 로그인 */}
-            <div className="mt-6">
+            {/* <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-neutral-300" />
@@ -554,7 +536,7 @@ export function LoginClient() {
                   카카오로 로그인
                 </Button>
               </div>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 
@@ -588,7 +570,7 @@ export function LoginClient() {
             >
               데모 계정으로 로그인
             </Button>
-            <Button
+            {/* <Button
               type="button"
               variant="outline"
               size="sm"
@@ -596,9 +578,9 @@ export function LoginClient() {
               onClick={() => {
                 setFormData((prev) => ({
                   ...prev,
-                  email: 'user@example.com',
-                  password: 'password123',
-                  name: '사용자닉네임',
+                  email: 'test@example.com',
+                  password: 'test123',
+                  name: '테스트',
                   phone: '010-1234-5678',
                   address: '서울시 강남구',
                 }))
@@ -607,7 +589,7 @@ export function LoginClient() {
               disabled={isLoading}
             >
               테스트 데이터로 회원가입
-            </Button>
+            </Button> */}
           </CardContent>
         </Card>
       </div>

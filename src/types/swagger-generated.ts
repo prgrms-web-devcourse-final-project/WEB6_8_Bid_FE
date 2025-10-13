@@ -178,23 +178,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-data/generate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 테스트 데이터 생성 */
-        post: operations["generateTestData"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/reviews": {
         parameters: {
             query?: never;
@@ -266,7 +249,7 @@ export interface paths {
         put?: never;
         /**
          * 지갑 충전 요청
-         * @description idempotencyKey로 중복 충전 방지, 일단은 idempotencyKey 아무키로 등록해주세요!
+         * @description idempotencyKey로 중복 충전 방지
          */
         post: operations["charge"];
         delete?: never;
@@ -504,23 +487,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-data/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 현재 데이터 통계 */
-        get: operations["getDataStats"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/products/members/{memberId}": {
         parameters: {
             query?: never;
@@ -581,6 +547,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payments/toss/billing-auth-params": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 토스 카드등록(빌링) 팝업 파라미터 조회
+         * @description 토스 카드 등록 창을 띄우기 위해 FE가 먼저 호출하는 엔드포인트입니다.
+         *     - 로그인(인증) 필요: 서버가 로그인 사용자의 customerKey(`user-{id}`)를 만들어 줍니다.
+         *     - 응답 값:
+         *       * clientKey   : Toss Payments 공개 키 (FE에서 Toss SDK 초기화에 사용)
+         *       * customerKey : 사용자 고유키 (카드 등록/결제 시 동일 값 사용)
+         *       * successUrl  : 카드 등록 성공 후 리다이렉트될 페이지
+         *       * failUrl     : 카드 등록 실패 시 리다이렉트될 페이지
+         *
+         */
+        get: operations["getBillingAuthParams"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/payments/me": {
         parameters: {
             query?: never;
@@ -607,6 +600,26 @@ export interface paths {
         };
         /** 내 결제 단건 상세 */
         get: operations["getMyPaymentDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payments/idempotency-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 멱등키(결제 재시도 식별 키) 발급
+         * @description 결제 요청 전에 1회 호출해서 받은 키를 재시도 시에도 동일하게 사용하세요.
+         */
+        get: operations["newIdempotencyKey"];
         put?: never;
         post?: never;
         delete?: never;
@@ -787,23 +800,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-data/cleanup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** 테스트 데이터 정리 */
-        delete: operations["cleanupTestData"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -968,18 +964,6 @@ export interface components {
             msg: string;
             data?: string;
         };
-        TestDataGenerationResult: {
-            success?: boolean;
-            message?: string;
-            /** Format: int32 */
-            generatedCount?: number;
-            /** Format: int64 */
-            durationMs?: number;
-            /** Format: int64 */
-            totalProducts?: number;
-            /** Format: int64 */
-            totalMembers?: number;
-        };
         /** @description 상품 등록 요청 정보 */
         ProductCreateRequest: {
             /**
@@ -1031,10 +1015,17 @@ export interface components {
             paymentMethodId: number;
             /** Format: int64 */
             amount: number;
+            /**
+             * @description 멱등키(재시도 시 동일하게 사용)
+             * @example d6a6f3ad-5d9a-4a3a-b0a5-7e0a2b77c2b1
+             */
             idempotencyKey: string;
         };
         TossIssueBillingKeyRequest: {
-            customerKey?: string;
+            /**
+             * @description Toss가 successUrl로 전달한 키
+             * @example bln_xxx
+             */
             authKey?: string;
         };
         PaymentMethodCreateRequest: {
@@ -1154,12 +1145,6 @@ export interface components {
              * @example example123
              */
             password: string;
-        };
-        DataStats: {
-            /** Format: int64 */
-            productCount?: number;
-            /** Format: int64 */
-            memberCount?: number;
         };
         QueueStatus: {
             /** Format: int64 */
@@ -1804,28 +1789,6 @@ export interface operations {
             };
         };
     };
-    generateTestData: {
-        parameters: {
-            query?: {
-                count?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json;charset=UTF-8": components["schemas"]["TestDataGenerationResult"];
-                };
-            };
-        };
-    };
     createReview: {
         parameters: {
             query?: never;
@@ -1889,7 +1852,10 @@ export interface operations {
     };
     createProduct: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 상품 타입 */
+                productType?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2452,26 +2418,6 @@ export interface operations {
             };
         };
     };
-    getDataStats: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json;charset=UTF-8": components["schemas"]["DataStats"];
-                };
-            };
-        };
-    };
     getProductsByMember: {
         parameters: {
             query?: {
@@ -2588,6 +2534,26 @@ export interface operations {
             };
         };
     };
+    getBillingAuthParams: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 조회 성공 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+        };
+    };
     getMyPayments: {
         parameters: {
             query?: {
@@ -2669,6 +2635,26 @@ export interface operations {
             };
             /** @description 결제 내역 없음 */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json;charset=UTF-8": components["schemas"]["RsData"];
+                };
+            };
+        };
+    };
+    newIdempotencyKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 발급 성공 */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2939,26 +2925,6 @@ export interface operations {
         };
     };
     showMain: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json;charset=UTF-8": string;
-                };
-            };
-        };
-    };
-    cleanupTestData: {
         parameters: {
             query?: never;
             header?: never;

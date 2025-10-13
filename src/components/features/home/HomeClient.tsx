@@ -168,9 +168,12 @@ export function HomeClient({ stats }: HomeClientProps) {
               product.endTime ||
               new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 기본값 설정
             status: product.status || 'BIDDING',
-            images: product.images || [],
+            images: product.thumbnailUrl
+              ? [product.thumbnailUrl]
+              : product.images || [],
+            thumbnailUrl: product.thumbnailUrl, // 원본 thumbnailUrl도 유지
             seller: {
-              name: product.seller?.name || product.sellerName || '판매자',
+              name: product.seller?.nickname || '판매자',
               trustScore:
                 product.seller?.trustScore || product.sellerTrustScore || 0,
               location:
@@ -269,7 +272,7 @@ export function HomeClient({ stats }: HomeClientProps) {
           <div className="relative flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
             <Input
-              placeholder="상품명이나 설명으로 검색하세요"
+              placeholder="상품명을 검색하세요"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -563,9 +566,14 @@ export function HomeClient({ stats }: HomeClientProps) {
                     {/* 상품 이미지와 카테고리 */}
                     <div className="flex items-start justify-between">
                       <div className="relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-200">
-                        {product.images && product.images[0] ? (
+                        {product.thumbnailUrl || product.images?.[0] ? (
                           <img
-                            src={product.images[0]}
+                            src={
+                              product.thumbnailUrl ||
+                              (typeof product.images?.[0] === 'string'
+                                ? product.images[0]
+                                : product.images?.[0]?.imageUrl)
+                            }
                             alt={product.title || '상품'}
                             className="h-32 w-32 rounded-xl object-cover"
                           />
@@ -596,11 +604,6 @@ export function HomeClient({ stats }: HomeClientProps) {
                         <Badge variant="primary" className="w-fit">
                           {product.category}
                         </Badge>
-                        {(product.status as any) === '경매 중' && (
-                          <Badge variant="success" className="w-fit">
-                            진행중
-                          </Badge>
-                        )}
                       </div>
                     </div>
 
@@ -674,16 +677,6 @@ export function HomeClient({ stats }: HomeClientProps) {
                       >
                         상세보기
                       </Button>
-                      {isLoggedIn && (product.status as any) === '경매 중' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => router.push(`/products/${product.id}`)}
-                        >
-                          입찰하기
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </CardContent>

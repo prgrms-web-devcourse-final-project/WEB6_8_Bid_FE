@@ -58,9 +58,9 @@ export default function ApiTestPage() {
       category: '인증',
       test: async () => {
         const response = await authApi.signup({
-          email: 'test2@example.com',
-          password: 'test123',
-          nickname: '테스트유저2',
+          email: 'demo@example.com',
+          password: 'demo123',
+          nickname: '데모',
           phoneNumber: '01012345678',
           address: '서울시 강남구',
         })
@@ -70,10 +70,10 @@ export default function ApiTestPage() {
     },
     {
       name: '로그인 (POST JSON)',
-      description: 'test2@example.com / test123으로 로그인',
+      description: 'demo@example.com / demo123으로 로그인',
       category: '인증',
       test: async () => {
-        const response = await authApi.login('test2@example.com', 'test123')
+        const response = await authApi.login('demo@example.com', 'demo123')
         console.log('🔐 로그인 결과:', response)
         return response
       },
@@ -151,6 +151,7 @@ export default function ApiTestPage() {
             location: '서울 강남구',
           },
           [file],
+          'AUCTION', // 상품 타입: 경매 상품
         )
         console.log('📦 상품 등록 결과:', response)
 
@@ -544,7 +545,7 @@ export default function ApiTestPage() {
               '📦 저장된 상품 ID가 없음. 최근 등록된 상품을 찾습니다.',
             )
 
-            // 현재 사용자 정보 조회
+            // 현재  조회
             const myInfoResponse = await authApi.getMyInfo()
             if (myInfoResponse.success && myInfoResponse.data) {
               const currentUserId = myInfoResponse.data.id

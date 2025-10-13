@@ -17,7 +17,7 @@ export interface Product {
   title: string
   description: string
   category: ProductCategory
-  images: string[]
+  images: (string | { imageUrl: string; id?: number; productId?: number })[]
   startingPrice: number
   currentPrice: number
   seller: User
@@ -27,6 +27,7 @@ export interface Product {
   endTime: string
   bidCount: number
   isLiked: boolean
+  thumbnailUrl: string
 }
 
 export type ProductCategory =

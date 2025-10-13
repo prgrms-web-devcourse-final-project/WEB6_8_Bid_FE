@@ -103,7 +103,7 @@ class ServerApiClient {
 
   // 사용자 정보 API
   async getMyInfo() {
-    return this.makeRequest('/users/me')
+    return this.makeRequest('/members/me')
   }
 
   // 입찰 관련 API

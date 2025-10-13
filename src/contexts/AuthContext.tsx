@@ -78,11 +78,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 phone: userResponse.data.phone || '',
                 address: userResponse.data.address || '',
               }
-              console.log('👤 새로고침 후 서버에서 받은 사용자 정보:', userInfo)
               setUser(userInfo)
             } else {
               // 사용자 정보 API 실패 시 기본값 설정
-              console.log('⚠️ 사용자 정보 API 실패, 기본값 설정')
               const userInfo = {
                 id: 1,
                 email: typeof response.data === 'string' ? response.data : '',
@@ -95,25 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
               setUser(userInfo)
             }
-          } catch (userError) {
-            console.error('❌ 사용자 정보 API 호출 실패:', userError)
-            // 사용자 정보 API 실패 시 기본값 설정
-            const userInfo = {
-              id: 1,
-              email: typeof response.data === 'string' ? response.data : '',
-              nickname:
-                typeof response.data === 'string'
-                  ? response.data.split('@')[0]
-                  : '',
-              phone: '',
-              address: '',
-            }
-            setUser(userInfo)
-          }
+          } catch (userError) {}
         } else if (response.resultCode === '200-2') {
-          // 로그아웃 상태 응답 - 토큰 재발급 시도 (한 번만)
-          console.log('🔄 토큰 재발급 시도 중...')
-
           // 이미 토큰 재발급을 시도했는지 확인
           const lastRefreshAttempt = localStorage.getItem('lastRefreshAttempt')
           const now = Date.now()
@@ -123,7 +104,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             lastRefreshAttempt &&
             now - parseInt(lastRefreshAttempt) < REFRESH_COOLDOWN
           ) {
-            console.log('🔄 토큰 재발급 쿨다운 중, 로그아웃 처리')
             logout()
             return
           }
@@ -140,12 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 ?.split('=')[1]
 
             if (refreshToken) {
-              console.log(
-                '🔄 Refresh Token으로 재발급 시도:',
-                refreshToken.substring(0, 20) + '...',
-              )
               const reissueResponse = await authApi.reissue(refreshToken)
-              console.log('🔄 토큰 재발급 응답:', reissueResponse)
 
               if (reissueResponse.success && reissueResponse.data) {
                 // 새로운 토큰으로 사용자 정보 다시 조회
@@ -154,15 +129,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   newUserResponse.resultCode === '200-1' &&
                   newUserResponse.data
                 ) {
-                  console.log('✅ 토큰 재발급 후 로그인 상태 확인 성공')
-
                   // 토큰 재발급 후 사용자 정보 API 호출
                   try {
                     const userResponse = await authApi.getProfile()
-                    console.log(
-                      '👤 토큰 재발급 후 사용자 정보 API 응답:',
-                      userResponse,
-                    )
 
                     if (userResponse.success && userResponse.data) {
                       const userInfo = {
@@ -175,48 +144,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         phone: userResponse.data.phone || '',
                         address: userResponse.data.address || '',
                       }
-                      console.log('👤 토큰 재발급 후 사용자 정보:', userInfo)
                       setUser(userInfo)
                     } else {
-                      // 사용자 정보 API 실패 시 기본값 설정
-                      console.log(
-                        '⚠️ 토큰 재발급 후 사용자 정보 API 실패, 기본값 설정',
-                      )
-                      const userInfo = {
-                        id: 1,
-                        email:
-                          typeof newUserResponse.data === 'string'
-                            ? newUserResponse.data
-                            : '',
-                        nickname:
-                          typeof newUserResponse.data === 'string'
-                            ? newUserResponse.data.split('@')[0]
-                            : '',
-                        phone: '',
-                        address: '',
-                      }
-                      setUser(userInfo)
                     }
                   } catch (userError) {
                     console.error(
                       '❌ 토큰 재발급 후 사용자 정보 API 호출 실패:',
                       userError,
                     )
-                    // 사용자 정보 API 실패 시 기본값 설정
-                    const userInfo = {
-                      id: 1,
-                      email:
-                        typeof newUserResponse.data === 'string'
-                          ? newUserResponse.data
-                          : '',
-                      nickname:
-                        typeof newUserResponse.data === 'string'
-                          ? newUserResponse.data.split('@')[0]
-                          : '',
-                      phone: '',
-                      address: '',
-                    }
-                    setUser(userInfo)
                   }
 
                   // 새로운 토큰 저장
@@ -232,11 +167,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   // 재발급 성공 시 쿨다운 제거
                   localStorage.removeItem('lastRefreshAttempt')
 
-                  console.log('✅ 토큰 재발급 성공')
                   return
                 }
               } else {
-                // Refresh Token이 유효하지 않은 경우
                 console.log(
                   '❌ Refresh Token이 유효하지 않음:',
                   reissueResponse.msg,

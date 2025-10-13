@@ -8,7 +8,7 @@ import { productApi } from '@/lib/api'
 import { ProductForm } from '@/types'
 import { Camera, MapPin, Package } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 const categories = [
   { id: 1, label: '디지털/가전' },
@@ -28,76 +28,20 @@ const categories = [
 export function ProductRegistrationClient() {
   const router = useRouter()
   const [formData, setFormData] = useState<ProductForm>({
-    title: '아이폰 15 Pro 256GB',
-    description: '미개봉 새 제품입니다.',
+    title: '',
+    description: '',
     category: 1,
     images: [],
-    startingPrice: 1000000,
+    startingPrice: 0,
     duration: 24,
-    startTime: 'scheduled',
-    scheduledTime: '2025-12-17T09:00',
-    deliveryMethod: ['pickup'],
-    location: '서울 강남구',
+    startTime: 'immediate',
+    scheduledTime: '',
+    deliveryMethod: [],
+    location: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
-
-  // 테스트용 더미 이미지 생성 함수 (api-test와 동일)
-  const createDummyImage = (name: string): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas')
-      canvas.width = 200
-      canvas.height = 200
-      const ctx = canvas.getContext('2d')!
-
-      // 배경색 설정
-      ctx.fillStyle = '#e0e0e0'
-      ctx.fillRect(0, 0, 200, 200)
-
-      // 텍스트 추가
-      ctx.fillStyle = '#333333'
-      ctx.font = 'bold 16px Arial'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('TEST IMAGE', 100, 80)
-      ctx.fillText('API TEST', 100, 120)
-
-      // Blob으로 변환 후 File 객체 생성
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], `${name}.png`, {
-            type: 'image/png',
-          })
-          resolve(file)
-        }
-      }, 'image/png')
-    })
-  }
-
-  // 컴포넌트 마운트 시 테스트용 이미지 자동 추가
-  useEffect(() => {
-    const loadTestImages = async () => {
-      try {
-        const testImages = await Promise.all([
-          createDummyImage('상품 이미지 1'),
-          createDummyImage('상품 이미지 2'),
-          createDummyImage('상품 이미지 3'),
-        ])
-
-        setFormData((prev) => ({
-          ...prev,
-          images: testImages,
-        }))
-
-        console.log('🧪 테스트용 이미지 자동 로드됨:', testImages.length, '개')
-      } catch (error) {
-        console.error('❌ 테스트 이미지 생성 실패:', error)
-      }
-    }
-
-    loadTestImages()
-  }, [])
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -152,6 +96,19 @@ export function ProductRegistrationClient() {
     }))
   }
 
+  // 이미지 삭제 함수
+  const handleImageDelete = (indexToDelete: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, index) => index !== indexToDelete),
+    }))
+  }
+
+  // 이미지 미리보기 URL 생성 함수
+  const getImagePreviewUrl = (file: File): string => {
+    return URL.createObjectURL(file)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log('🚀 상품 등록 폼 제출 시작')
@@ -168,7 +125,7 @@ export function ProductRegistrationClient() {
 
     if (!accessToken) {
       console.log('❌ 쿠키에 토큰이 없음 - 로그인 필요')
-      setApiError('로그인이 필요합니다. 로그인 페이지로 이동하시겠습니까?')
+      setApiError('상품 등록에 실패했습니다. 잠시 후 다시 시도해주세요.')
       setIsLoading(false)
       return
     }
@@ -244,6 +201,17 @@ export function ProductRegistrationClient() {
 
     if (Object.keys(newErrors).length === 0) {
       console.log('✅ 유효성 검사 통과, API 호출 시작')
+
+      // 배송 방법 매핑
+      let deliveryMethod: 'DELIVERY' | 'BOTH' | 'TRADE' = 'DELIVERY'
+      if (formData.deliveryMethod.includes('both')) {
+        deliveryMethod = 'BOTH'
+      } else if (formData.deliveryMethod.includes('pickup')) {
+        deliveryMethod = 'TRADE'
+      } else if (formData.deliveryMethod.includes('shipping')) {
+        deliveryMethod = 'DELIVERY'
+      }
+
       console.log('📋 전송할 데이터:', {
         name: formData.title,
         description: formData.description,
@@ -251,25 +219,18 @@ export function ProductRegistrationClient() {
         initialPrice: formData.startingPrice,
         auctionStartTime:
           formData.startTime === 'immediate'
-            ? new Date().toISOString()
-            : formData.scheduledTime + ':00',
+            ? new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 19) // 5분 후 시작 (YYYY-MM-DDTHH:mm:ss 형식)
+            : formData.scheduledTime
+              ? new Date(formData.scheduledTime).toISOString().slice(0, 19)
+              : new Date().toISOString().slice(0, 19), // datetime-local 값을 YYYY-MM-DDTHH:mm:ss 형식으로 변환
         auctionDuration: `${formData.duration}시간`,
-        deliveryMethod: formData.deliveryMethod,
+        deliveryMethod: deliveryMethod,
         location: formData.location,
         images: formData.images.length,
       })
 
       try {
         // 상품 등록 API 호출
-        // 배송 방법 매핑
-        let deliveryMethod = 'DELIVERY'
-        if (formData.deliveryMethod.includes('both')) {
-          deliveryMethod = 'BOTH'
-        } else if (formData.deliveryMethod.includes('pickup')) {
-          deliveryMethod = 'TRADE'
-        } else if (formData.deliveryMethod.includes('shipping')) {
-          deliveryMethod = 'DELIVERY'
-        }
 
         console.log(
           '🚚 배송 방법 매핑:',
@@ -281,7 +242,19 @@ export function ProductRegistrationClient() {
         console.log('🔑 상품 등록 전 쿠키 토큰 상태:', {
           cookie: accessToken ? '존재' : '없음',
           tokenLength: accessToken?.length || 0,
+          tokenPreview: accessToken
+            ? accessToken.substring(0, 20) + '...'
+            : '없음',
           allCookies: document.cookie,
+        })
+
+        console.log('🖼️ 업로드된 이미지 정보:', {
+          imageCount: formData.images.length,
+          images: formData.images.map((img) => ({
+            name: img.name,
+            size: img.size,
+            type: img.type,
+          })),
         })
 
         const response = await productApi.createProduct(
@@ -292,13 +265,17 @@ export function ProductRegistrationClient() {
             initialPrice: formData.startingPrice,
             auctionStartTime:
               formData.startTime === 'immediate'
-                ? new Date().toISOString()
-                : formData.scheduledTime + ':00',
+                ? new Date(Date.now() + 5 * 60 * 1000)
+                    .toISOString()
+                    .slice(0, 19) // 5분 후 시작 (YYYY-MM-DDTHH:mm:ss 형식)
+                : formData.scheduledTime
+                  ? new Date(formData.scheduledTime).toISOString().slice(0, 19)
+                  : new Date().toISOString().slice(0, 19), // datetime-local 값을 YYYY-MM-DDTHH:mm:ss 형식으로 변환
             auctionDuration: `${formData.duration}시간`,
-            deliveryMethod: deliveryMethod as 'DELIVERY' | 'BOTH' | 'TRADE',
+            deliveryMethod: deliveryMethod,
             location: formData.location,
           },
-          formData.images,
+          formData.images, // 사용자가 업로드한 실제 이미지 사용
         )
 
         console.log('🔍 상품 등록 API 응답 전체:', response)
@@ -309,19 +286,27 @@ export function ProductRegistrationClient() {
           router.push('/my-products')
         } else {
           console.log('❌ 상품 등록 실패:', response)
-          setApiError('상품 등록에 실패했습니다. 다시 시도해주세요.')
+          console.log('❌ 실패 상세 정보:', {
+            success: response.success,
+            msg: response.msg,
+            resultCode: response.resultCode,
+            data: response.data,
+          })
+          setApiError(
+            response.msg || '상품 등록에 실패했습니다. 다시 시도해주세요.',
+          )
         }
       } catch (error: any) {
         console.error('API 에러:', error)
 
-        // 에러 처리 (api-test와 동일)
+        // 에러 처리 (401 에러는 로그인 관련 메시지 표시하지 않음)
         if (error.message?.includes('401')) {
           console.log('🔐 401 에러 - 토큰 만료 또는 인증 실패')
-          setApiError('로그인이 만료되었습니다. 다시 로그인해주세요.')
+          setApiError('상품 등록에 실패했습니다. 잠시 후 다시 시도해주세요.')
         } else if (error.message?.includes('400')) {
           setApiError('입력 정보를 확인해주세요.')
         } else if (error.message?.includes('403')) {
-          setApiError('권한이 없습니다. 로그인 상태를 확인해주세요.')
+          setApiError('권한이 없습니다. 잠시 후 다시 시도해주세요.')
         } else if (error.message?.includes('500')) {
           setApiError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
         } else {
@@ -384,11 +369,21 @@ export function ProductRegistrationClient() {
                   {formData.images.map((image, index) => (
                     <div
                       key={index}
-                      className="flex h-20 w-20 items-center justify-center rounded-lg bg-neutral-100"
+                      className="relative h-20 w-20 overflow-hidden rounded-lg border border-neutral-200"
                     >
-                      <span className="text-xs text-neutral-500">
-                        이미지 {index + 1}
-                      </span>
+                      <img
+                        src={getImagePreviewUrl(image)}
+                        alt={`상품 이미지 ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleImageDelete(index)}
+                        className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm hover:bg-red-600"
+                        title="이미지 삭제"
+                      >
+                        <span className="text-xs">×</span>
+                      </button>
                     </div>
                   ))}
                 </div>

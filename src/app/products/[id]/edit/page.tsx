@@ -1,17 +1,17 @@
-import { ProductDetailClient } from '@/components/features/products/ProductDetailClient'
+import { ProductEditClient } from '@/components/features/products/ProductEditClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { serverApi } from '@/lib/api/server-api-client'
 import { cookies } from 'next/headers'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
-interface ProductDetailPageProps {
+interface ProductEditPageProps {
   params: Promise<{ id: string }>
 }
 
-export default async function ProductDetailPage({
+export default async function ProductEditPage({
   params,
-}: ProductDetailPageProps) {
+}: ProductEditPageProps) {
   try {
     const { id } = await params
     const productId = parseInt(id)
@@ -24,26 +24,15 @@ export default async function ProductDetailPage({
     const cookieStore = await cookies()
     const accessToken = cookieStore.get('accessToken')?.value
 
+    if (!accessToken) {
+      redirect('/login')
+    }
+
     // 서버 API로 상품 정보 가져오기
     const response = await serverApi.getProduct(productId)
 
     if (!response.success || !response.data) {
       notFound()
-    }
-
-    // 입찰 현황도 서버에서 가져오기
-    let bidStatus = null
-    try {
-      const bidResponse = await serverApi.getMyBids()
-      if (bidResponse.success && bidResponse.data) {
-        const bids = Array.isArray(bidResponse.data)
-          ? bidResponse.data
-          : (bidResponse.data as any).content || []
-        // 해당 상품의 입찰 현황 찾기
-        bidStatus = bids.find((bid: any) => bid.productId === productId) || null
-      }
-    } catch (error) {
-      // 입찰 현황 조회 실패 시 무시
     }
 
     // API 응답을 컴포넌트에서 사용하는 형식으로 매핑
@@ -53,11 +42,7 @@ export default async function ProductDetailPage({
       title: data.name || data.title || '상품명 없음',
       description: data.description || '상품 설명이 없습니다.',
       category: data.category || '기타',
-      images: data.images
-        ? data.images.map((img: any) =>
-            typeof img === 'string' ? img : img.imageUrl || img.url || img,
-          )
-        : [],
+      images: data.images || [],
       startingPrice: Number(data.initialPrice || data.startingPrice || 0),
       currentPrice: Number(
         data.currentPrice || data.initialPrice || data.startingPrice || 0,
@@ -94,18 +79,15 @@ export default async function ProductDetailPage({
     return (
       <HomeLayout isLoggedIn={!!accessToken}>
         <PageHeader
-          title="상품 상세"
-          description="상품 정보를 확인하고 입찰에 참여하세요"
+          title="상품 수정"
+          description="상품 정보를 수정하세요"
           showBackButton
         />
-        <ProductDetailClient
-          product={mappedProduct as any}
-          initialBidStatus={bidStatus}
-        />
+        <ProductEditClient product={mappedProduct as any} />
       </HomeLayout>
     )
   } catch (error) {
-    console.error('상품 조회 실패:', error)
+    console.error('상품 수정 페이지 로드 실패:', error)
     notFound()
   }
 }

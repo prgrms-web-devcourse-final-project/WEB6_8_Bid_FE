@@ -8,9 +8,17 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { bidApi, productApi, reviewApi } from '@/lib/api'
 import { Product } from '@/types'
-import { Clock, Heart, MapPin, MessageSquare, Star, User } from 'lucide-react'
+import {
+  Clock,
+  Edit,
+  Heart,
+  MapPin,
+  MessageSquare,
+  Star,
+  User,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 interface ProductDetailClientProps {
   product: Product
@@ -22,7 +30,7 @@ export function ProductDetailClient({
   initialBidStatus,
 }: ProductDetailClientProps) {
   const router = useRouter()
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, user } = useAuth()
   const [bidAmount, setBidAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
@@ -30,47 +38,116 @@ export function ProductDetailClient({
   const [productData, setProductData] = useState(product)
   const [reviews, setReviews] = useState<any[]>([])
 
+  // product.id를 안전하게 숫자로 변환하는 함수
+  const getSafeProductId = (productId: any): number => {
+    if (typeof productId === 'number') return productId
+    if (typeof productId === 'string') return parseInt(productId) || 0
+    if (typeof productId === 'object' && productId !== null) {
+      return Number(productId.id || productId.value || productId.productId) || 0
+    }
+    return 0
+  }
+
+  // 이미지 URL을 안전하게 추출하는 함수
+  const getImageUrl = (
+    image:
+      | string
+      | { imageUrl: string; id?: number; productId?: number }
+      | undefined,
+  ): string => {
+    if (!image) return ''
+    if (typeof image === 'string') return image
+    return image.imageUrl || ''
+  }
+
+  const safeProductId = getSafeProductId(product.id)
+
+  // 현재 사용자가 상품 판매자인지 확인 (메모이제이션으로 성능 최적화)
+  const isOwner = useMemo(() => {
+    return (
+      user &&
+      productData.seller &&
+      (String(user.id) === String(productData.seller.id) ||
+        user.email === productData.seller.email ||
+        user.nickname === productData.seller.name)
+    )
+  }, [user, productData.seller])
+
   // 입찰 현황 조회
   const fetchBidStatus = async () => {
     try {
-      const response = await bidApi.getBidStatus(product.id)
+      console.log('🔍 입찰 현황 조회 시작', {
+        productId: product.id,
+        safeProductId,
+      })
+      const response = await bidApi.getBidStatus(safeProductId)
+      console.log('🔍 입찰 현황 조회 응답:', response)
       if (response.success) {
         setBidStatus(response.data)
+      } else {
+        console.log('❌ 입찰 현황 조회 실패:', response.msg)
       }
     } catch (error) {
-      console.error('입찰 현황 조회 실패:', error)
+      console.error('❌ 입찰 현황 조회 실패:', error)
     }
   }
 
   // 리뷰 조회
   const fetchReviews = async () => {
     try {
-      const response = await reviewApi.getReviewsByProduct(product.id)
+      console.log('⭐ 리뷰 조회 시작', { productId: product.id, safeProductId })
+      const response = await reviewApi.getReviewsByProduct(safeProductId)
+      console.log('⭐ 리뷰 조회 응답:', response)
       if (response.success && response.data) {
         const reviewsData = Array.isArray(response.data)
           ? response.data
           : response.data.content || []
         setReviews(reviewsData)
+        console.log('✅ 리뷰 조회 성공:', reviewsData.length, '개')
+      } else {
+        console.log('❌ 리뷰 조회 실패:', response.msg)
+        setReviews([])
       }
     } catch (error) {
-      console.error('리뷰 조회 실패:', error)
+      console.error('❌ 리뷰 조회 실패:', error)
       setReviews([])
     }
   }
 
-  // 상품 정보 새로고침
+  // 상품 정보 새로고침 (필요한 경우에만 호출)
   const refreshProduct = async () => {
     try {
-      const response = await productApi.getProduct(product.id)
+      console.log('🔄 상품 정보 새로고침 시작', {
+        productId: product.id,
+        safeProductId,
+      })
+      const response = await productApi.getProduct(safeProductId)
 
       if (response.success && response.data) {
+        console.log('🔍 API 응답 데이터:', {
+          productId: response.data.productId,
+          id: response.data.id,
+          productIdType: typeof response.data.productId,
+          idType: typeof response.data.id,
+        })
+
         // API 응답을 컴포넌트에서 사용하는 형식으로 매핑
+        const productId = response.data.productId || response.data.id
+        const safeId =
+          typeof productId === 'object'
+            ? productId?.id || productId?.value || productId
+            : productId
+
         const mappedProduct: Product = {
-          id: response.data.productId || response.data.id,
+          id: Number(safeId) || 0,
           title: response.data.name || response.data.title,
           description: response.data.description || '',
           category: response.data.category,
-          images: response.data.images || [],
+          images: response.data.images
+            ? response.data.images.map((img: any) =>
+                typeof img === 'string' ? img : img.imageUrl || img.url || img,
+              )
+            : [],
           startingPrice:
             response.data.initialPrice || response.data.startingPrice,
           currentPrice: response.data.currentPrice,
@@ -97,11 +174,13 @@ export function ProductDetailClient({
           endTime: response.data.endTime || '',
           bidCount: response.data.bidCount || 0,
           isLiked: response.data.isLiked || false,
+          thumbnailUrl: response.data.thumbnailUrl || '',
         }
         setProductData(mappedProduct)
+        console.log('✅ 상품 정보 새로고침 완료')
       }
     } catch (error) {
-      console.error('상품 정보 새로고침 실패:', error)
+      console.error('❌ 상품 정보 새로고침 실패:', error)
     }
   }
 
@@ -109,17 +188,49 @@ export function ProductDetailClient({
     // 서버에서 전달받은 데이터를 그대로 사용
     setProductData(product)
 
+    // product.id 타입 확인
+    console.log('🔍 Product ID 분석:', {
+      originalId: product.id,
+      idType: typeof product.id,
+      safeId: safeProductId,
+      safeIdType: typeof safeProductId,
+      stringified: String(product.id),
+    })
+
+    // 이미지 데이터 확인
+    console.log('🖼️ 이미지 데이터 분석:', {
+      images: product.images,
+      imagesType: typeof product.images,
+      firstImage: product.images?.[0],
+      firstImageType: typeof product.images?.[0],
+    })
+
+    // 토큰 상태 확인
+    const cookies = document.cookie.split(';')
+    const accessTokenCookie = cookies.find((cookie) =>
+      cookie.trim().startsWith('accessToken='),
+    )
+    const accessToken = accessTokenCookie?.split('=')[1]
+
+    console.log('🔑 상품 상세 페이지 토큰 상태:', {
+      hasToken: !!accessToken,
+      tokenLength: accessToken?.length || 0,
+      tokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : '없음',
+    })
+
     // 서버에서 입찰 현황을 가져오지 못한 경우에만 클라이언트에서 조회
-    if (!initialBidStatus) {
+    if (!initialBidStatus && accessToken) {
       fetchBidStatus()
     }
 
-    // 리뷰 데이터 가져오기
-    fetchReviews()
+    // 리뷰 데이터 가져오기 (토큰이 있을 때만)
+    if (accessToken) {
+      fetchReviews()
+    }
 
     // 상품 정보는 서버에서 이미 최신 데이터를 가져왔으므로 새로고침 불필요
     // refreshProduct()
-  }, [])
+  }, [product.id]) // product.id를 의존성으로 추가
 
   const formatPrice = (price: number) => {
     if (isNaN(price) || price === null || price === undefined) {
@@ -225,15 +336,18 @@ export function ProductDetailClient({
 
   const handleBid = async () => {
     if (!isLoggedIn) {
+      console.log('🎯 로그인되지 않음, 로그인 페이지로 이동')
       router.push('/login')
       return
     }
 
     const amount = parseInt(bidAmount.replace(/,/g, ''))
+
     if (
       !amount ||
       amount <= (productData.currentPrice || productData.startingPrice)
     ) {
+      console.log('🎯 입찰 금액이 현재가보다 낮음')
       setApiError('현재가보다 높은 금액을 입력해주세요.')
       return
     }
@@ -242,18 +356,32 @@ export function ProductDetailClient({
     setApiError('')
 
     try {
-      const response = await bidApi.createBid(product.id, amount)
+      console.log('🎯 입찰 API 호출 시작:', {
+        productId: safeProductId,
+        price: amount,
+        bidData: { price: amount },
+      })
+
+      // API 호출 방식 확인
+      console.log('🎯 bidApi.createBid 함수:', bidApi.createBid)
+
+      const response = await bidApi.createBid(safeProductId, { price: amount })
+      console.log('🎯 입찰 API 응답:', response)
+
       if (response.success) {
+        console.log('🎯 입찰 성공!')
         alert('입찰이 성공적으로 등록되었습니다.')
         setBidAmount('')
         fetchBidStatus()
         // 입찰 후에만 상품 정보 새로고침
         refreshProduct()
       } else {
+        console.log('🎯 입찰 실패:', response.msg)
         setApiError(response.msg || '입찰에 실패했습니다.')
       }
     } catch (error: any) {
-      console.error('입찰 실패:', error)
+      console.error('🎯 입찰 실패:', error)
+      console.error('🎯 에러 상세:', error.response?.data)
       setApiError(error.response?.data?.msg || '입찰 중 오류가 발생했습니다.')
     }
 
@@ -284,9 +412,13 @@ export function ProductDetailClient({
           <div className="aspect-square rounded-lg bg-neutral-200">
             {productData.images && productData.images[0] ? (
               <img
-                src={productData.images[0]}
+                src={getImageUrl(productData.images[0])}
                 alt={productData.title}
                 className="h-full w-full rounded-lg object-cover"
+                onError={(e) => {
+                  console.error('이미지 로드 실패:', e.currentTarget.src)
+                  e.currentTarget.style.display = 'none'
+                }}
               />
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center rounded-lg bg-gradient-to-br from-neutral-100 to-neutral-200">
@@ -319,9 +451,13 @@ export function ProductDetailClient({
                   className="aspect-square rounded-lg bg-neutral-200"
                 >
                   <img
-                    src={image}
+                    src={getImageUrl(image)}
                     alt={`${productData.title} ${index + 2}`}
                     className="h-full w-full rounded-lg object-cover"
+                    onError={(e) => {
+                      console.error('이미지 로드 실패:', e.currentTarget.src)
+                      e.currentTarget.style.display = 'none'
+                    }}
                   />
                 </div>
               ))}
@@ -349,9 +485,42 @@ export function ProductDetailClient({
               )}
             </div>
 
-            <h1 className="mb-4 text-2xl font-bold text-neutral-900">
-              {productData.title}
-            </h1>
+            <div className="mb-4 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-neutral-900">
+                {productData.title}
+              </h1>
+              {isOwner && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    console.log('🔍 Edit 버튼 클릭 - productData.id:', {
+                      id: productData.id,
+                      type: typeof productData.id,
+                      stringified: String(productData.id),
+                    })
+                    router.push(`/products/${productData.id}/edit`)
+                  }}
+                  className="flex items-center space-x-2"
+                  disabled={
+                    productData.status === 'BIDDING' ||
+                    productData.status === 'SUCCESSFUL' ||
+                    productData.status === 'PAID'
+                  }
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>
+                    {productData.status === 'BIDDING'
+                      ? '경매중'
+                      : productData.status === 'SUCCESSFUL'
+                        ? '완료'
+                        : productData.status === 'PAID'
+                          ? '결제완료'
+                          : '수정'}
+                  </span>
+                </Button>
+              )}
+            </div>
 
             <div className="space-y-3 text-sm text-neutral-600">
               <div className="flex items-center justify-between">
@@ -450,8 +619,17 @@ export function ProductDetailClient({
           </Card>
 
           {/* 입찰 섹션 */}
-          {((productData as any).status === 'BIDDING' ||
-            (productData as any).status === '경매 중') && (
+          {(() => {
+            const status = (productData as any).status
+            const showBidSection = status === 'BIDDING' || status === '경매 중'
+            console.log('🎯 입찰 섹션 표시 조건 확인:', {
+              status,
+              showBidSection,
+              isLoggedIn,
+              productId: safeProductId,
+            })
+            return showBidSection
+          })() && (
             <Card variant="outlined">
               <CardContent className="p-4">
                 <h3 className="mb-3 text-lg font-semibold text-neutral-900">

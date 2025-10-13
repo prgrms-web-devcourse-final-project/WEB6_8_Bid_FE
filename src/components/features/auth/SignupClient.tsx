@@ -19,9 +19,6 @@ export function SignupClient() {
     nickname: '',
     phone: '',
     address: '',
-    agreeTerms: false,
-    agreePrivacy: false,
-    agreeMarketing: false,
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -90,14 +87,6 @@ export function SignupClient() {
 
     if (!formData.address) {
       newErrors.address = '주소를 입력해주세요'
-    }
-
-    if (!formData.agreeTerms) {
-      newErrors.agreeTerms = '이용약관에 동의해주세요'
-    }
-
-    if (!formData.agreePrivacy) {
-      newErrors.agreePrivacy = '개인정보 처리방침에 동의해주세요'
     }
 
     setErrors(newErrors)
@@ -268,7 +257,7 @@ export function SignupClient() {
             </div>
 
             {/* 약관 동의 */}
-            <div className="space-y-3">
+            {/* <div className="space-y-3">
               <div className="flex items-start space-x-2">
                 <input
                   type="checkbox"
@@ -328,7 +317,7 @@ export function SignupClient() {
                   수신에 동의합니다
                 </label>
               </div>
-            </div>
+            </div> */}
 
             {/* 회원가입 버튼 */}
             <Button type="submit" className="w-full" disabled={isLoading}>
@@ -344,7 +333,7 @@ export function SignupClient() {
           </form>
 
           {/* 소셜 로그인 */}
-          <div className="mt-8">
+          {/* <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-neutral-300" />
@@ -397,7 +386,7 @@ export function SignupClient() {
                 카카오로 계속하기
               </Button>
             </div>
-          </div>
+          </div> */}
 
           {/* 로그인 링크 */}
           <div className="mt-6 text-center">

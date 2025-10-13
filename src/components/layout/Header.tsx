@@ -75,13 +75,6 @@ export function Header({
     }
   }, [isLoggedIn])
 
-  console.log('🏠 Header - 사용자 정보:', {
-    contextUser,
-    propUser,
-    selectedUser: user,
-    nickname: user?.nickname,
-  })
-
   return (
     <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

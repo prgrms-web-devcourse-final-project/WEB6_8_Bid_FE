@@ -1,9 +1,5 @@
 'use client'
 
-import { PaymentMethodClient } from '@/components/features/payment/PaymentMethodClient'
-import { ReviewManagementClient } from '@/components/features/reviews/ReviewManagementClient'
-import { WalletClient } from '@/components/features/wallet/WalletClient'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
@@ -16,7 +12,6 @@ import {
   MessageSquare,
   Package,
   TrendingUp,
-  Trophy,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -27,8 +22,10 @@ interface MyInfoClientProps {
     email?: string
     nickname?: string
     phone?: string
+    phoneNumber?: string
     address?: string
     profileImage?: string
+    profileImageUrl?: string
     creditScore?: number
     createDate?: string
     modifyDate?: string
@@ -38,11 +35,18 @@ interface MyInfoClientProps {
 export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
   const router = useRouter()
   const { user: authUser, updateUser } = useAuth()
-  const [activeTab, setActiveTab] = useState<
-    'stats' | 'activity' | 'reviews' | 'wallet' | 'payment' | 'my-reviews'
-  >('stats')
   const [userInfo, setUserInfo] = useState(propUser || authUser)
   const [isLoading, setIsLoading] = useState(false)
+
+  // 디버깅용 로그 (필요시 주석 해제)
+  // console.log('🔍 MyInfoClient 데이터 확인:', {
+  //   propUser,
+  //   authUser,
+  //   userInfo,
+  //   hasPropUser: !!propUser,
+  //   hasAuthUser: !!authUser,
+  //   hasUserInfo: !!userInfo,
+  // })
 
   // 사용자 정보 새로고침
   const refreshUserInfo = async () => {
@@ -66,20 +70,6 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
     }
   }, [])
 
-  const formatJoinDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return `${date.getFullYear()}년 가입`
-  }
-
-  const tabs = [
-    { id: 'stats', label: '통계', icon: TrendingUp },
-    { id: 'activity', label: '활동', icon: Package },
-    { id: 'reviews', label: '리뷰', icon: MessageSquare },
-    { id: 'wallet', label: '지갑', icon: DollarSign },
-    { id: 'payment', label: '결제수단', icon: CreditCard },
-    { id: 'my-reviews', label: '내 리뷰', icon: MessageSquare },
-  ]
-
   // 실제 사용자 데이터에서 통계 계산 (현재는 0으로 표시, 추후 API 연동)
   const stats = {
     totalSales: 0,
@@ -87,197 +77,319 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
     activeBids: 0,
   }
 
+  const formatDisplayValue = (value: any, fallback: string = '') => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === '' ||
+      value === 'Invalid Date'
+    ) {
+      return fallback
+    }
+    return value
+  }
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString || dateString === 'Invalid Date' || dateString === '') {
+      return ''
+    }
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        return ''
+      }
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+    } catch {
+      return ''
+    }
+  }
+
+  const getTrustScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600'
+    if (score >= 60) return 'text-yellow-600'
+    return 'text-red-600'
+  }
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      {/* 기본 정보 */}
-      <Card variant="outlined" className="mb-6">
-        <CardContent className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-neutral-900">
-              기본 정보
-            </h2>
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      {/* 프로필 헤더 */}
+      <div className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 p-8 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative flex flex-col items-center space-y-6 text-center lg:flex-row lg:items-start lg:space-y-0 lg:space-x-8 lg:text-left">
+          {/* 프로필 아바타 */}
+          <div className="flex-shrink-0">
+            <div className="relative">
+              <div className="h-24 w-24 overflow-hidden rounded-full bg-white/20 ring-4 ring-white/30 backdrop-blur-sm">
+                <div className="flex h-24 w-24 items-center justify-center">
+                  <span className="text-3xl font-bold text-white">
+                    {formatDisplayValue(userInfo.nickname, 'U')
+                      .charAt(0)
+                      .toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              <div className="absolute -right-2 -bottom-2 rounded-full bg-green-500 p-2 shadow-lg">
+                <span className="text-xs text-white">✓</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 사용자 정보 */}
+          <div className="min-w-0 flex-1">
+            <div className="mb-6">
+              <h1 className="mb-2 text-4xl font-bold text-white">
+                {formatDisplayValue(userInfo.nickname, '사용자')}
+              </h1>
+              <div className="inline-flex items-center rounded-full bg-white/20 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm">
+                <span className="mr-1">✓</span>
+                인증된 사용자
+              </div>
+            </div>
+
+            {/* 통계 카드들 */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-xl bg-white/10 p-4 backdrop-blur-sm">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">
+                    {stats.totalSales}
+                  </div>
+                  <div className="text-sm text-white/80">판매 완료</div>
+                </div>
+              </div>
+              <div className="rounded-xl bg-white/10 p-4 backdrop-blur-sm">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">
+                    {stats.totalPurchases}
+                  </div>
+                  <div className="text-sm text-white/80">낙찰 성공</div>
+                </div>
+              </div>
+              <div className="rounded-xl bg-white/10 p-4 backdrop-blur-sm">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">
+                    {stats.activeBids}
+                  </div>
+                  <div className="text-sm text-white/80">진행 중</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 수정 버튼 */}
+          <div className="flex-shrink-0">
             <Button
-              variant="outline"
-              size="sm"
+              className="border-white/30 bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"
               onClick={() => router.push('/my-info/edit')}
             >
               <Edit className="mr-2 h-4 w-4" />
-              편집
+              프로필 수정
             </Button>
           </div>
-
-          <div className="flex items-center space-x-6">
-            <div className="relative">
-              <div className="bg-primary-100 flex h-16 w-16 items-center justify-center rounded-full">
-                <span className="text-primary-600 text-xl font-bold">
-                  {userInfo.nickname?.charAt(0) || 'U'}
-                </span>
-              </div>
-              <button className="bg-primary-500 absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full">
-                <Edit className="h-2.5 w-2.5 text-white" />
-              </button>
-            </div>
-
-            <div className="flex-1">
-              <div className="mb-3 flex items-center space-x-2">
-                <h3 className="text-lg font-semibold text-neutral-900">
-                  {userInfo.nickname || '사용자'}
-                </h3>
-                <Badge variant="success">인증됨</Badge>
-              </div>
-
-              <div className="space-y-2 text-sm text-neutral-600">
-                <p>{userInfo.email}</p>
-                <p>{userInfo.phone}</p>
-                <p>{userInfo.address}</p>
-                <p>신뢰도 {userInfo.creditScore || 0}점</p>
-                <p>{formatJoinDate(userInfo.createDate || '')}</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 신뢰도 점수 */}
-      <Card variant="outlined" className="mb-6">
-        <CardContent className="p-6">
-          <div className="mb-4 flex items-center space-x-2">
-            <Trophy className="text-warning-500 h-5 w-5" />
-            <h2 className="text-lg font-semibold text-neutral-900">
-              신뢰도 점수
-            </h2>
-          </div>
-
-          <div className="text-center">
-            <div className="text-primary-500 mb-2 text-4xl font-bold">
-              {userInfo.creditScore ? `${userInfo.creditScore}점` : '-'}
-            </div>
-            <div className="text-sm text-neutral-600">
-              {userInfo.creditScore ? '신뢰도 점수' : '신뢰도 점수가 없습니다'}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 탭 네비게이션 */}
-      <div className="mb-6">
-        <div className="flex flex-wrap gap-1 rounded-lg bg-neutral-100 p-1">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? 'text-primary-600 bg-white shadow-sm'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-              >
-                <Icon className="mr-2 h-4 w-4" />
-                {tab.label}
-              </button>
-            )
-          })}
         </div>
       </div>
 
-      {/* 탭 컨텐츠 */}
-      {activeTab === 'stats' && (
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card variant="outlined">
-            <CardContent className="py-6 text-center">
-              <div className="mb-2 flex items-center justify-center">
-                <Package className="text-primary-500 mr-2 h-6 w-6" />
-                <span className="text-primary-500 text-2xl font-bold">
-                  {stats.totalSales}
-                </span>
-              </div>
-              <div className="text-sm text-neutral-600">판매 완료</div>
-            </CardContent>
-          </Card>
-
-          <Card variant="outlined">
-            <CardContent className="py-6 text-center">
-              <div className="mb-2 flex items-center justify-center">
-                <Trophy className="text-success-500 mr-2 h-6 w-6" />
-                <span className="text-success-500 text-2xl font-bold">
-                  {stats.totalPurchases}
-                </span>
-              </div>
-              <div className="text-sm text-neutral-600">낙찰 성공</div>
-            </CardContent>
-          </Card>
-
-          <Card variant="outlined">
-            <CardContent className="py-6 text-center">
-              <div className="mb-2 flex items-center justify-center">
-                <Clock className="text-warning-500 mr-2 h-6 w-6" />
-                <span className="text-warning-500 text-2xl font-bold">
-                  {stats.activeBids}
-                </span>
-              </div>
-              <div className="text-sm text-neutral-600">진행 중</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {activeTab === 'activity' && (
-        <Card variant="outlined">
-          <CardContent className="p-6">
-            <h3 className="mb-4 text-lg font-semibold text-neutral-900">
-              최근 활동
-            </h3>
-
-            <div className="py-8 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
-                <Package className="h-8 w-8 text-neutral-400" />
-              </div>
-              <p className="text-neutral-500">최근 활동이 없습니다.</p>
+      {/* 상세 정보 */}
+      <Card className="mb-8 overflow-hidden border-0 bg-white shadow-lg">
+        <CardContent className="p-8">
+          <h2 className="mb-6 text-xl font-semibold text-neutral-900">
+            상세 정보
+          </h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              {userInfo.email && (
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                    <span className="text-sm text-neutral-600">📧</span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-neutral-500">이메일</div>
+                    <div className="font-medium text-neutral-900">
+                      {userInfo.email}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {(userInfo.phone || userInfo.phoneNumber) && (
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                    <span className="text-sm text-neutral-600">📱</span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-neutral-500">전화번호</div>
+                    <div className="font-medium text-neutral-900">
+                      {userInfo.phone || userInfo.phoneNumber}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === 'reviews' && (
-        <Card variant="outlined">
-          <CardContent className="p-6">
-            <h3 className="mb-4 text-lg font-semibold text-neutral-900">
-              리뷰
-            </h3>
-
-            <div className="py-8 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
-                <TrendingUp className="h-8 w-8 text-neutral-400" />
-              </div>
-              <p className="text-neutral-500">아직 리뷰가 없습니다.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === 'wallet' && <WalletClient />}
-
-      {activeTab === 'payment' && <PaymentMethodClient />}
-
-      {activeTab === 'my-reviews' && <ReviewManagementClient />}
-
-      {/* 월별 활동 차트 */}
-      <Card variant="outlined">
-        <CardContent className="p-6">
-          <h3 className="mb-4 text-lg font-semibold text-neutral-900">
-            월별 활동
-          </h3>
-
-          <div className="flex h-48 items-center justify-center rounded-lg bg-neutral-100">
-            <div className="text-center">
-              <TrendingUp className="mx-auto mb-2 h-12 w-12 text-neutral-400" />
-              <p className="text-neutral-500">활동 데이터가 없습니다</p>
+            <div className="space-y-4">
+              {userInfo.creditScore && userInfo.creditScore > 0 ? (
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                    <span className="text-sm text-neutral-600">⭐</span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-neutral-500">신뢰도</div>
+                    <div
+                      className={`font-medium ${getTrustScoreColor(userInfo.creditScore)}`}
+                    >
+                      {userInfo.creditScore}점
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {formatDate(userInfo.createDate) && (
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                    <span className="text-sm text-neutral-600">📅</span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-neutral-500">가입일</div>
+                    <div className="font-medium text-neutral-900">
+                      {formatDate(userInfo.createDate)}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* 빠른 액션 버튼들 */}
+      <div className="mb-8">
+        <h2 className="mb-6 text-xl font-semibold text-neutral-900">
+          빠른 액션
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card
+            className="group cursor-pointer overflow-hidden border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+            onClick={() => router.push('/my-products')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
+                  <Package className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-neutral-900">내 상품</h3>
+                  <p className="text-sm text-neutral-600">등록한 상품 관리</p>
+                </div>
+                <div className="text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
+                  →
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="group cursor-pointer overflow-hidden border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+            onClick={() => router.push('/my-bids')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
+                  <Clock className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-neutral-900">입찰 현황</h3>
+                  <p className="text-sm text-neutral-600">
+                    진행 중인 입찰 확인
+                  </p>
+                </div>
+                <div className="text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
+                  →
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="group cursor-pointer overflow-hidden border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+            onClick={() => router.push('/wallet')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
+                  <DollarSign className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-neutral-900">지갑</h3>
+                  <p className="text-sm text-neutral-600">잔액 및 거래 내역</p>
+                </div>
+                <div className="text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
+                  →
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="group cursor-pointer overflow-hidden border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+            onClick={() => router.push('/payment-methods')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
+                  <CreditCard className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-neutral-900">결제 수단</h3>
+                  <p className="text-sm text-neutral-600">결제 방법 관리</p>
+                </div>
+                <div className="text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
+                  →
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="group cursor-pointer overflow-hidden border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+            onClick={() => router.push('/my-reviews')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
+                  <MessageSquare className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-neutral-900">내 리뷰</h3>
+                  <p className="text-sm text-neutral-600">작성한 리뷰 관리</p>
+                </div>
+                <div className="text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
+                  →
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="group cursor-pointer overflow-hidden border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+            onClick={() => router.push('/notifications')}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
+                  <TrendingUp className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-neutral-900">알림</h3>
+                  <p className="text-sm text-neutral-600">알림 내역 확인</p>
+                </div>
+                <div className="text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100">
+                  →
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
