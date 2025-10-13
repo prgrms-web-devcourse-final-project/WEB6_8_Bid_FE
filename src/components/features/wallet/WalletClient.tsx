@@ -1393,12 +1393,12 @@ export function WalletClient() {
                               </>
                             )}
                             <div className="flex items-center justify-between">
-                              <span>등록일:</span>
+                              <span>등록일: </span>
                               <span>{formatDate(method.createDate)}</span>
                             </div>
                             {method.expireDate && (
                               <div className="flex items-center justify-between">
-                                <span>만료일:</span>
+                                <span>만료일: </span>
                                 <span>{formatDate(method.expireDate)}</span>
                               </div>
                             )}
