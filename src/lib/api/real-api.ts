@@ -14,8 +14,8 @@ import type {
   ProductCreateRequest,
   ProductListParams,
   ProductModifyRequest,
-  ReviewCreateRequest,
   ReviewUpdateRequest,
+  ReviewWriteRequest,
   SignupRequest,
   TossBillingAuthParams,
   UserInfo,
@@ -341,10 +341,10 @@ export const productApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 특정 회원의 상품 목록 조회
+  // 특정 회원의 상품 목록 조회 (수정된 엔드포인트)
   getProductsByMember: async (memberId: number, params?: ProductListParams) => {
     const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/products/member/${memberId}`,
+      `/api/v1/products/members/${memberId}`, // ✅ 올바른 경로
       {
         params,
       },
@@ -412,7 +412,7 @@ export const bidApi = {
 // 리뷰 관련 API
 export const reviewApi = {
   // 리뷰 작성
-  createReview: async (data: ReviewCreateRequest) => {
+  createReview: async (data: ReviewWriteRequest) => {
     const response = await apiClient.post<ApiResponse<any>>(
       '/api/v1/reviews',
       data,
@@ -445,19 +445,9 @@ export const reviewApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 상품별 리뷰 목록 조회
-  getReviewsByProduct: async (productId: number) => {
-    const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/reviews/product/${productId}`,
-    )
-    return normalizeApiResponse(response.data)
-  },
-
-  // 내 리뷰 목록 조회
-  getMyReviews: async () => {
-    const response = await apiClient.get<ApiResponse<any>>('/api/v1/reviews/my')
-    return normalizeApiResponse(response.data)
-  },
+  // ❌ 제거된 API들 (백엔드에 구현되지 않음)
+  // getReviewsByProduct: async (productId: number) => { ... }
+  // getMyReviews: async () => { ... }
 }
 
 // 알림 관련 API
@@ -635,40 +625,9 @@ export const boardApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 게시글 목록 조회
-  getPosts: async (params?: {
-    page?: number
-    size?: number
-    category?: string
-  }) => {
-    const response = await apiClient.get<ApiResponse<any>>('/api/v1/boards', {
-      params,
-    })
-    return normalizeApiResponse(response.data)
-  },
-
-  // 게시글 상세 조회
-  getPost: async (postId: number) => {
-    const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/boards/${postId}`,
-    )
-    return normalizeApiResponse(response.data)
-  },
-
-  // 게시글 수정
-  updatePost: async (postId: number, data: BoardWriteRequest) => {
-    const response = await apiClient.put<ApiResponse<any>>(
-      `/api/v1/boards/${postId}`,
-      data,
-    )
-    return normalizeApiResponse(response.data)
-  },
-
-  // 게시글 삭제
-  deletePost: async (postId: number) => {
-    const response = await apiClient.delete<ApiResponse<any>>(
-      `/api/v1/boards/${postId}`,
-    )
-    return normalizeApiResponse(response.data)
-  },
+  // ❌ 제거된 API들 (백엔드에 구현되지 않음)
+  // getPosts: async (params?: { page?: number; size?: number; category?: string }) => { ... }
+  // getPost: async (postId: number) => { ... }
+  // updatePost: async (postId: number, data: BoardWriteRequest) => { ... }
+  // deletePost: async (postId: number) => { ... }
 }

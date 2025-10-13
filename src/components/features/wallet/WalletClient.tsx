@@ -66,9 +66,10 @@ interface CashResponse {
   modifyDate: string
 }
 
-interface PaymentMethod {
+interface PaymentMethodData {
   id: number
   type: string
+  methodType: string
   alias: string
   isDefault: boolean
   provider: string
@@ -87,7 +88,7 @@ interface PaymentMethod {
 export function WalletClient() {
   const [cashInfo, setCashInfo] = useState<CashResponse | null>(null)
   const [transactions, setTransactions] = useState<CashTransaction[]>([])
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodData[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<
@@ -178,6 +179,14 @@ export function WalletClient() {
             Array.isArray(paymentMethodsResponse.data.content)
           ) {
             paymentMethodsData = paymentMethodsResponse.data.content
+          }
+          console.log('💳 처리된 결제수단 데이터:', paymentMethodsData)
+          if (paymentMethodsData.length > 0) {
+            console.log('💳 첫 번째 결제수단 구조:', paymentMethodsData[0])
+            console.log(
+              '💳 첫 번째 결제수단의 모든 키:',
+              Object.keys(paymentMethodsData[0]),
+            )
           }
           setPaymentMethods(paymentMethodsData)
         } else {
@@ -468,10 +477,60 @@ export function WalletClient() {
 
     setIsEditing(true)
     try {
-      const response = await paymentMethodApi.updatePaymentMethod(editingId, {
+      // 수정하려는 결제수단의 원래 데이터 찾기
+      const originalPaymentMethod = paymentMethods.find(
+        (pm) => pm.id === editingId,
+      )
+      if (!originalPaymentMethod) {
+        throw new Error('수정할 결제수단을 찾을 수 없습니다.')
+      }
+
+      // 원래 데이터의 필수 필드들을 포함해서 수정 요청
+      const updateData: any = {
         alias: editFormData.alias,
         isDefault: editFormData.isDefault,
-      })
+      }
+
+      console.log('🔍 원래 결제수단 데이터:', originalPaymentMethod)
+      console.log('🔍 methodType:', originalPaymentMethod.methodType)
+      console.log('🔍 type:', originalPaymentMethod.type)
+
+      // CARD 타입의 경우 필수 필드들 추가 (type 필드로 확인)
+      if (
+        originalPaymentMethod.type === 'CARD' ||
+        originalPaymentMethod.methodType === 'CARD'
+      ) {
+        updateData.brand = originalPaymentMethod.brand
+        updateData.last4 = originalPaymentMethod.last4
+        updateData.expMonth = originalPaymentMethod.expMonth
+        updateData.expYear = originalPaymentMethod.expYear
+        console.log('🔍 CARD 필수 필드 추가:', {
+          brand: originalPaymentMethod.brand,
+          last4: originalPaymentMethod.last4,
+          expMonth: originalPaymentMethod.expMonth,
+          expYear: originalPaymentMethod.expYear,
+        })
+      }
+
+      // BANK_ACCOUNT 타입의 경우 필수 필드들 추가 (type 필드로 확인)
+      if (
+        originalPaymentMethod.type === 'BANK' ||
+        originalPaymentMethod.methodType === 'BANK_ACCOUNT'
+      ) {
+        updateData.bankCode = originalPaymentMethod.bankCode
+        updateData.bankName = originalPaymentMethod.bankName
+        console.log('🔍 BANK_ACCOUNT 필수 필드 추가:', {
+          bankCode: originalPaymentMethod.bankCode,
+          bankName: originalPaymentMethod.bankName,
+        })
+      }
+
+      console.log('🔍 최종 수정 요청 데이터:', updateData)
+
+      const response = await paymentMethodApi.updatePaymentMethod(
+        editingId,
+        updateData,
+      )
 
       if (response.success) {
         alert('결제수단이 성공적으로 수정되었습니다.')
@@ -502,7 +561,7 @@ export function WalletClient() {
   }
 
   // 수정 모드 시작
-  const startEdit = (paymentMethod: PaymentMethod) => {
+  const startEdit = (paymentMethod: PaymentMethodData) => {
     setEditingId(paymentMethod.id)
     setEditFormData({
       alias: paymentMethod.alias,
@@ -568,7 +627,7 @@ export function WalletClient() {
       console.log('💳 결제 내역 응답:', paymentsResponse)
 
       if (paymentsResponse.success && paymentsResponse.data) {
-        const paymentsData = paymentsResponse.data.content || []
+        const paymentsData = paymentsResponse.data.items || []
         console.log('💳 처리된 결제 내역 데이터:', paymentsData)
         setPayments(paymentsData)
       } else {

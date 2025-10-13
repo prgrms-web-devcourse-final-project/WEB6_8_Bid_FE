@@ -42,28 +42,17 @@ export default async function SellerDetailPage({
       allProducts = data.products
     }
 
-    console.log('🔍 모든 상품 데이터:', allProducts)
-    console.log('🔍 찾는 판매자 ID:', sellerId)
-
     // 해당 판매자의 상품들 필터링
     const sellerProducts = allProducts.filter((product: any) => {
       const productSellerId = product.seller?.id || product.sellerId
-      console.log(
-        '🔍 상품 판매자 ID:',
-        productSellerId,
-        '타입:',
-        typeof productSellerId,
-      )
       return (
         productSellerId === sellerId || productSellerId === String(sellerId)
       )
     })
 
-    console.log('🔍 필터링된 판매자 상품:', sellerProducts)
-
     // 상품 데이터를 Product 타입으로 매핑
     const mappedProducts = sellerProducts.map((product: any) => ({
-      id: product.productId || product.id,
+      productId: product.productId || product.id,
       title: product.name || product.title,
       description: product.description || '',
       category: product.category,

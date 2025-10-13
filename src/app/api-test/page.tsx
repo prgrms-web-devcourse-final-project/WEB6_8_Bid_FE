@@ -8,10 +8,10 @@ import {
   authApi,
   cashApi,
   notificationApi,
-  paymentApi,
   paymentMethodApi,
   productApi,
   reviewApi,
+  tossApi,
 } from '@/lib/api'
 import { useState } from 'react'
 
@@ -716,13 +716,32 @@ export default function ApiTestPage() {
 
         if (paymentMethods.length > 0) {
           const paymentMethodId = paymentMethods[0].id
+          const originalPaymentMethod = paymentMethods[0]
           console.log(`💳 수정할 결제수단 ID: ${paymentMethodId}`)
+          
+          // 원래 데이터의 필수 필드들을 포함해서 수정 요청
+          const updateData: any = {
+            alias: '수정된 결제수단',
+            isDefault: false,
+          }
+
+          // CARD 타입의 경우 필수 필드들 추가 (type 필드로 확인)
+          if (originalPaymentMethod.type === 'CARD' || originalPaymentMethod.methodType === 'CARD') {
+            updateData.brand = originalPaymentMethod.brand
+            updateData.last4 = originalPaymentMethod.last4
+            updateData.expMonth = originalPaymentMethod.expMonth
+            updateData.expYear = originalPaymentMethod.expYear
+          }
+
+          // BANK_ACCOUNT 타입의 경우 필수 필드들 추가 (type 필드로 확인)
+          if (originalPaymentMethod.type === 'BANK' || originalPaymentMethod.methodType === 'BANK_ACCOUNT') {
+            updateData.bankCode = originalPaymentMethod.bankCode
+            updateData.bankName = originalPaymentMethod.bankName
+          }
+
           const response = await paymentMethodApi.updatePaymentMethod(
             paymentMethodId,
-            {
-              alias: '수정된 결제수단',
-              isDefault: false,
-            },
+            updateData,
           )
           console.log('💳 결제수단 수정:', response)
           return response
@@ -771,9 +790,7 @@ export default function ApiTestPage() {
       description: 'POST /api/v1/payments/toss/issue-billing-key',
       category: '결제',
       test: async () => {
-        const response = await paymentApi.issueTossBillingKey({
-          authKey: 'test_auth_key_12345', // 테스트용 authKey
-        })
+        const response = await tossApi.issueBillingKey('test_auth_key_12345')
         console.log('🔑 토스 빌링키 발급:', response)
         return response
       },
@@ -824,7 +841,7 @@ export default function ApiTestPage() {
         if (paymentMethods.length > 0) {
           const paymentMethodId = paymentMethods[0].id
           console.log(`💰 충전에 사용할 결제수단 ID: ${paymentMethodId}`)
-          const response = await paymentApi.createPayment({
+          const response = await tossApi.chargeWallet({
             paymentMethodId: paymentMethodId,
             amount: 50000, // 5만원 충전
             idempotencyKey: `charge_${Date.now()}`, // 중복 방지 키
@@ -1003,7 +1020,7 @@ export default function ApiTestPage() {
         if (paymentMethods.length > 0) {
           const paymentMethodId = paymentMethods[0].id
           console.log(`💰 결제에 사용할 결제수단 ID: ${paymentMethodId}`)
-          const response = await paymentApi.charge({
+          const response = await tossApi.chargeWallet({
             paymentMethodId: paymentMethodId,
             amount: 100000, // 10만원 결제
             idempotencyKey: `payment_${Date.now()}`, // 중복 방지 키
@@ -1039,6 +1056,11 @@ export default function ApiTestPage() {
         if (Array.isArray(listResponse.data)) {
           payments = listResponse.data
         } else if (
+          listResponse.data?.items &&
+          Array.isArray(listResponse.data.items)
+        ) {
+          payments = listResponse.data.items
+        } else if (
           listResponse.data?.content &&
           Array.isArray(listResponse.data.content)
         ) {
@@ -1048,7 +1070,7 @@ export default function ApiTestPage() {
         if (payments.length > 0) {
           const paymentId = payments[0].id
           console.log(`💰 조회할 결제 ID: ${paymentId}`)
-          const response = await paymentApi.getMyPaymentDetail(paymentId)
+          const response = await paymentApi.getPaymentDetail(paymentId)
           console.log('💰 내 결제 단건 상세 조회:', response)
           return response
         } else {

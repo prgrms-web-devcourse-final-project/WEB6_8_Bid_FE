@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react'
 interface PaymentMethod {
   id: number
   type: string
+  methodType: string
   alias: string
   isDefault: boolean
   provider: string
@@ -209,10 +210,44 @@ export function PaymentMethodClient() {
 
     setIsEditing(true)
     try {
-      const response = await paymentMethodApi.updatePaymentMethod(editingId, {
+      // 수정하려는 결제수단의 원래 데이터 찾기
+      const originalPaymentMethod = paymentMethods.find(
+        (pm) => pm.id === editingId,
+      )
+      if (!originalPaymentMethod) {
+        throw new Error('수정할 결제수단을 찾을 수 없습니다.')
+      }
+
+      // 원래 데이터의 필수 필드들을 포함해서 수정 요청
+      const updateData: any = {
         alias: editFormData.alias,
         isDefault: editFormData.isDefault,
-      })
+      }
+
+      // CARD 타입의 경우 필수 필드들 추가 (type 필드로 확인)
+      if (
+        originalPaymentMethod.type === 'CARD' ||
+        originalPaymentMethod.methodType === 'CARD'
+      ) {
+        updateData.brand = originalPaymentMethod.brand
+        updateData.last4 = originalPaymentMethod.last4
+        updateData.expMonth = originalPaymentMethod.expMonth
+        updateData.expYear = originalPaymentMethod.expYear
+      }
+
+      // BANK_ACCOUNT 타입의 경우 필수 필드들 추가 (type 필드로 확인)
+      if (
+        originalPaymentMethod.type === 'BANK' ||
+        originalPaymentMethod.methodType === 'BANK_ACCOUNT'
+      ) {
+        updateData.bankCode = originalPaymentMethod.bankCode
+        updateData.bankName = originalPaymentMethod.bankName
+      }
+
+      const response = await paymentMethodApi.updatePaymentMethod(
+        editingId,
+        updateData,
+      )
 
       if (response.success) {
         alert('결제수단이 성공적으로 수정되었습니다.')

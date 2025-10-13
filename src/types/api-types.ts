@@ -44,7 +44,6 @@ export type MemberSignUpFormData =
 export type MemberModifyFormData =
   components['schemas']['MemberModifyRequestDto']
 export type LoginFormData = components['schemas']['LoginRequestDto']
-export type ReviewWriteFormData = components['schemas']['ReviewRequest']
 
 // 입찰 관련 타입
 export type BidRequest = components['schemas']['BidRequestDto']
@@ -85,6 +84,22 @@ export type PaymentMethodEditRequest =
   components['schemas']['PaymentMethodEditRequest']
 export type PaymentMethodListResponse = components['schemas']['RsData']
 export type PaymentMethodDetailResponse = components['schemas']['RsData']
+
+// 결제수단 객체 타입 (API 응답에서 사용)
+export interface PaymentMethod {
+  id: number
+  type: string
+  methodType: string
+  alias?: string
+  isDefault: boolean
+  brand?: string
+  last4?: string
+  expMonth?: number
+  expYear?: number
+  bankCode?: string
+  bankName?: string
+  createdAt: string
+}
 
 // 결제 관련 타입
 export type PaymentRequest = components['schemas']['PaymentRequest']
@@ -149,13 +164,10 @@ export type MyPaymentListResponse = {
   resultCode: string
   msg: string
   data: {
-    content: MyPaymentListItemResponse[]
-    totalElements: number
-    totalPages: number
+    page: number
     size: number
-    number: number
-    first: boolean
-    last: boolean
+    total: number
+    items: MyPaymentListItemResponse[]
   }
 }
 
@@ -177,33 +189,15 @@ export type BoardWriteResponse =
 
 // 리뷰 관련 타입
 export type ReviewWriteRequest = components['schemas']['ReviewRequest']
-export type ReviewWriteResponse = components['schemas']['RsDataReviewResponse']
-export type ReviewEditResponse = components['schemas']['RsDataReviewResponse']
-export type ReviewResponse = components['schemas']['RsDataReviewResponse']
-
-// 리뷰 API 타입들
-export type ReviewCreateRequest = {
-  productId: number
-  comment: string
-  isSatisfied: boolean
-}
-
-export type ReviewDetailResponse = {
-  id: number
-  productId: number
-  comment: string
-  isSatisfied: boolean
-  createdAt: string
-  member: {
-    id: number
-    nickname: string
-  }
-}
-
 export type ReviewUpdateRequest = {
   comment: string
   isSatisfied: boolean
 }
+export type ReviewWriteResponse = components['schemas']['RsDataReviewResponse']
+export type ReviewEditResponse = components['schemas']['RsDataReviewResponse']
+export type ReviewResponse = components['schemas']['RsDataReviewResponse']
+
+// 리뷰 API 타입들 (사용되지 않음 - Swagger 타입 사용)
 
 // 상품 목록 조회 파라미터
 export interface ProductListParams {
@@ -225,20 +219,20 @@ export interface MyProductsParams {
   sort?: 'LATEST' | 'PRICE_HIGH' | 'PRICE_LOW' | 'ENDING_SOON' | 'POPULAR'
 }
 
-// 알림 조회 파라미터
+// 알림 조회 파라미터 (사용되지 않음)
 export interface NotificationParams {
   page?: number
   size?: number
   isRead?: boolean
 }
 
-// 결제 내역 조회 파라미터
+// 결제 내역 조회 파라미터 (사용되지 않음)
 export interface PaymentHistoryParams {
   page?: number
   size?: number
 }
 
-// 지갑 거래 내역 조회 파라미터
+// 지갑 거래 내역 조회 파라미터 (사용되지 않음)
 export interface CashTransactionParams {
   page?: number
   size?: number
