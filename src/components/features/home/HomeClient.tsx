@@ -122,11 +122,6 @@ export function HomeClient({ stats }: HomeClientProps) {
           (cat) => cat.id === selectedCategory,
         )
 
-        // 검색어가 있으면 Elasticsearch 사용, 없으면 일반 DB 조회
-        const apiFunction = searchQuery.trim()
-          ? productApi.searchProducts
-          : productApi.getProducts
-
         const requestParams = {
           page: 1,
           size: 20,
@@ -141,16 +136,35 @@ export function HomeClient({ stats }: HomeClientProps) {
         }
 
         console.log('🔍 검색 파라미터:', requestParams)
-        console.log('🔍 사용할 API 함수:', apiFunction.name)
 
-        const response = await apiFunction(requestParams)
+        // 검색어가 있으면 Elasticsearch 먼저 시도, 실패하면 일반 DB 조회
+        let response
+        if (searchQuery.trim()) {
+          console.log('🔍 Elasticsearch 검색 시도...')
+          try {
+            response = await productApi.searchProducts(requestParams)
+            console.log('🔍 Elasticsearch 응답:', response)
+
+            // ES 검색 결과가 비어있으면 일반 DB 검색으로 fallback
+            if (response.success && response.data?.content?.length === 0) {
+              console.log('🔍 ES 검색 결과 없음, 일반 DB 검색으로 fallback...')
+              response = await productApi.getProducts(requestParams)
+              console.log('🔍 일반 DB 검색 응답:', response)
+            }
+          } catch (error) {
+            console.log('🔍 ES 검색 실패, 일반 DB 검색으로 fallback...', error)
+            response = await productApi.getProducts(requestParams)
+            console.log('🔍 일반 DB 검색 응답:', response)
+          }
+        } else {
+          console.log('🔍 일반 DB 검색...')
+          response = await productApi.getProducts(requestParams)
+        }
 
         console.log('🏠 홈페이지 상품 API 응답:', response)
         console.log(
-          '🔍 사용된 API:',
-          searchQuery.trim()
-            ? 'Elasticsearch (/products/es)'
-            : '일반 DB (/products)',
+          '🔍 최종 사용된 API:',
+          response?.data?.content?.length > 0 ? '검색 성공' : '검색 실패',
         )
 
         if (response.success && response.data) {
