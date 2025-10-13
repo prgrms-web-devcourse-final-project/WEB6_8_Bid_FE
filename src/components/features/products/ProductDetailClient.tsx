@@ -462,7 +462,7 @@ export function ProductDetailClient({
               </div>
               <div className="flex items-center justify-between">
                 <span>참여자 수:</span>
-                <span>{bidStatus?.bidCount || 0}명</span>
+                <span>{product.bidCount || 0}명</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>배송 방법:</span>
