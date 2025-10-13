@@ -2426,7 +2426,7 @@ export interface operations {
                 /** @description 페이지 크기 */
                 size?: number;
                 /** @description 판매 상태 */
-                status?: "SELLING" | "SOLD" | "FAILED";
+                status?: "BEFORE_START" | "SELLING" | "SOLD" | "FAILED";
                 /** @description 정렬 기준 */
                 sort?: "LATEST" | "PRICE_HIGH" | "PRICE_LOW" | "ENDING_SOON" | "POPULAR";
             };
@@ -2467,7 +2467,7 @@ export interface operations {
                 /** @description 페이지 크기 */
                 size?: number;
                 /** @description 판매 상태 */
-                status?: "SELLING" | "SOLD" | "FAILED";
+                status?: "BEFORE_START" | "SELLING" | "SOLD" | "FAILED";
                 /** @description 정렬 기준 */
                 sort?: "LATEST" | "PRICE_HIGH" | "PRICE_LOW" | "ENDING_SOON" | "POPULAR";
             };

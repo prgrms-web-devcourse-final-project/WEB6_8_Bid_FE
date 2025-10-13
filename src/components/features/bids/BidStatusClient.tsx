@@ -134,7 +134,7 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
       {/* API 에러 메시지 */}
       {apiError && (
         <ErrorAlert
@@ -189,18 +189,18 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                 className="transition-shadow hover:shadow-lg"
               >
                 <CardContent className="p-6">
-                  <div className="flex items-start space-x-4">
+                  <div className="flex items-start space-x-6">
                     {/* 상품 이미지 */}
                     <div className="flex-shrink-0">
-                      <div className="h-20 w-20 rounded-lg bg-neutral-200">
+                      <div className="h-24 w-24 rounded-lg bg-neutral-200">
                         {bid.thumbnailUrl ? (
                           <img
                             src={bid.thumbnailUrl}
                             alt={bid.productName}
-                            className="h-20 w-20 rounded-lg object-cover"
+                            className="h-24 w-24 rounded-lg object-cover"
                           />
                         ) : (
-                          <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-neutral-200">
+                          <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-neutral-200">
                             <span className="text-neutral-400">📦</span>
                           </div>
                         )}
@@ -222,27 +222,35 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                         {bid.productName}
                       </h3>
 
-                      <div className="mb-3 space-y-1 text-sm text-neutral-600">
-                        <div className="flex items-center justify-between">
-                          <span>내 입찰가:</span>
+                      <div className="mb-3 grid grid-cols-1 gap-2 text-sm text-neutral-600 sm:grid-cols-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="w-20 text-neutral-500">
+                            내 입찰가:
+                          </span>
                           <span className="text-primary-600 font-semibold">
                             {formatPrice(bid.myBidPrice)}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>현재가:</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-20 text-neutral-500">현재가:</span>
                           <span>{formatPrice(bid.currentPrice)}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>입찰 시간:</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-20 text-neutral-500">
+                            입찰 시간:
+                          </span>
                           <span>{formatDate(bid.bidTime)}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>종료 시간:</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-20 text-neutral-500">
+                            종료 시간:
+                          </span>
                           <span>{formatDate(bid.endTime)}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>상품 상태:</span>
+                        <div className="flex items-center space-x-2 sm:col-span-2">
+                          <span className="w-20 text-neutral-500">
+                            상품 상태:
+                          </span>
                           <span>{bid.productStatus}</span>
                         </div>
                       </div>

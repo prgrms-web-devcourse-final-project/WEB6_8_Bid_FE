@@ -39,6 +39,7 @@ export default async function ProductEditPage({
     const data = response.data as any
     const mappedProduct = {
       id: data.productId || data.id || productId,
+      productId: data.productId || data.id || productId, // ProductEditClient에서 사용
       title: data.name || data.title || '상품명 없음',
       description: data.description || '상품 설명이 없습니다.',
       category: data.category || '기타',

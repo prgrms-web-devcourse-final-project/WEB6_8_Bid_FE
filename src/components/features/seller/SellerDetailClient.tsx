@@ -58,6 +58,24 @@ export function SellerDetailClient({
     return image.imageUrl || ''
   }
 
+  // API 응답의 영어 status를 한국어로 변환
+  const mapApiStatusToKorean = (apiStatus: string): string => {
+    switch (apiStatus) {
+      case 'BEFORE_START':
+        return '경매 시작 전'
+      case 'BIDDING':
+      case 'SELLING':
+        return '경매 중'
+      case 'SUCCESSFUL':
+      case 'SOLD':
+        return '낙찰'
+      case 'FAILED':
+        return '유찰'
+      default:
+        return apiStatus // 알 수 없는 상태는 그대로 반환
+    }
+  }
+
   // 판매자 상품 조회
   const fetchSellerProducts = async () => {
     console.log('🏪 판매자 상품 조회 시작:', { sellerId: seller.id })
@@ -85,7 +103,7 @@ export function SellerDetailClient({
           startingPrice: product.initialPrice || product.startingPrice,
           currentPrice: product.currentPrice,
           endTime: product.auctionEndTime || product.endTime,
-          status: product.status || 'BIDDING',
+          status: mapApiStatusToKorean(product.status || 'BIDDING'),
           images: product.thumbnailUrl
             ? [product.thumbnailUrl]
             : product.images || [],
@@ -317,7 +335,7 @@ export function SellerDetailClient({
               const statusInfo = getStatusBadge(product.status)
               return (
                 <Card
-                  key={product.id}
+                  key={product.productId}
                   className="group overflow-hidden border-0 bg-white/80 shadow-lg backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
                 >
                   <CardContent className="p-0">
@@ -397,7 +415,9 @@ export function SellerDetailClient({
                       <div className="p-6 pt-0">
                         <Button
                           className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl"
-                          onClick={() => router.push(`/products/${product.id}`)}
+                          onClick={() =>
+                            router.push(`/products/${product.productId}`)
+                          }
                         >
                           <Eye className="mr-2 h-4 w-4" />
                           상품 보기

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ErrorAlert } from '@/components/ui/error-alert'
 import { notificationApi } from '@/lib/api'
-import { Bell, Check, Trash2 } from 'lucide-react'
+import { Bell, Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 interface Notification {
@@ -129,7 +129,12 @@ export function NotificationsClient({
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
+    if (!dateString) return ''
+
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return ''
+
+    return date.toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -138,22 +143,10 @@ export function NotificationsClient({
     })
   }
 
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case 'bid':
-        return { label: '입찰', variant: 'primary' as const }
-      case 'payment':
-        return { label: '결제', variant: 'success' as const }
-      case 'system':
-        return { label: '시스템', variant: 'warning' as const }
-      default:
-        return { label: '기타', variant: 'neutral' as const }
-    }
-  }
-
   const filteredNotifications = notifications.filter((notification) => {
     if (selectedType === 'all') return true
-    return notification.type === selectedType
+    if (selectedType === 'unread') return !notification.isRead
+    return false
   })
 
   const stats = {
@@ -166,9 +159,7 @@ export function NotificationsClient({
 
   const typeTabs = [
     { id: 'all', label: '전체', count: stats.total },
-    { id: 'bid', label: '입찰', count: stats.bid },
-    { id: 'payment', label: '결제', count: stats.payment },
-    { id: 'system', label: '시스템', count: stats.system },
+    { id: 'unread', label: '안읽음', count: stats.unread },
   ]
 
   return (
@@ -185,7 +176,7 @@ export function NotificationsClient({
       )}
 
       {/* 알림 현황 요약 */}
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-4">
         <Card variant="outlined">
           <CardContent className="p-4 text-center">
             <div className="text-primary-500 text-2xl font-bold">
@@ -201,24 +192,6 @@ export function NotificationsClient({
               {stats.unread}
             </div>
             <div className="text-sm text-neutral-600">읽지 않음</div>
-          </CardContent>
-        </Card>
-
-        <Card variant="outlined">
-          <CardContent className="p-4 text-center">
-            <div className="text-success-500 text-2xl font-bold">
-              {stats.bid}
-            </div>
-            <div className="text-sm text-neutral-600">입찰 알림</div>
-          </CardContent>
-        </Card>
-
-        <Card variant="outlined">
-          <CardContent className="p-4 text-center">
-            <div className="text-lg font-bold text-neutral-900">
-              {stats.payment}
-            </div>
-            <div className="text-sm text-neutral-600">결제 알림</div>
           </CardContent>
         </Card>
       </div>
@@ -267,17 +240,13 @@ export function NotificationsClient({
                 </h3>
                 <p className="text-neutral-600">
                   {selectedType === 'all' && '아직 받은 알림이 없습니다.'}
-                  {selectedType === 'bid' && '입찰 관련 알림이 없습니다.'}
-                  {selectedType === 'payment' && '결제 관련 알림이 없습니다.'}
-                  {selectedType === 'system' && '시스템 알림이 없습니다.'}
+                  {selectedType === 'unread' && '읽지 않은 알림이 없습니다.'}
                 </p>
               </div>
             </CardContent>
           </Card>
         ) : (
           filteredNotifications.map((notification) => {
-            const typeBadge = getTypeBadge(notification.type)
-
             return (
               <Card
                 key={notification.id}
@@ -296,9 +265,6 @@ export function NotificationsClient({
 
                     <div className="min-w-0 flex-1">
                       <div className="mb-2 flex items-center space-x-2">
-                        <Badge variant={typeBadge.variant}>
-                          {typeBadge.label}
-                        </Badge>
                         {!notification.isRead && (
                           <Badge variant="warning">새 알림</Badge>
                         )}
@@ -328,10 +294,6 @@ export function NotificationsClient({
                               읽음
                             </Button>
                           )}
-                          <Button size="sm" variant="outline">
-                            <Trash2 className="mr-1 h-3 w-3" />
-                            삭제
-                          </Button>
                         </div>
                       </div>
                     </div>

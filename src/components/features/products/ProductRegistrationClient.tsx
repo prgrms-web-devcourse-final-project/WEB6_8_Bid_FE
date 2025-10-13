@@ -271,14 +271,13 @@ export function ProductRegistrationClient() {
                 : formData.scheduledTime
                   ? new Date(formData.scheduledTime).toISOString().slice(0, 19)
                   : new Date().toISOString().slice(0, 19), // datetime-local 값을 YYYY-MM-DDTHH:mm:ss 형식으로 변환
-            auctionDuration: `${formData.duration}시간`,
+            auctionDuration: `${formData.duration}시간`, // 문자열로 전송
             deliveryMethod: deliveryMethod,
             location: formData.location,
           },
           formData.images, // 사용자가 업로드한 실제 이미지 사용
+          'AUCTION', // 상품 타입: 경매 상품
         )
-
-        console.log('🔍 상품 등록 API 응답 전체:', response)
 
         if (response.success) {
           console.log('✅ 상품 등록 성공:', response.data)

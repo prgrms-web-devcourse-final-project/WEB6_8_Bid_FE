@@ -23,14 +23,18 @@ import { apiClient } from './api-client'
 
 // API 응답을 표준화하는 헬퍼 함수 (swagger-generated 타입과 일치)
 function normalizeApiResponse<T>(response: any) {
+  const resultCode = String(response.resultCode || '')
+  const success =
+    resultCode === '200' ||
+    resultCode === '200-1' ||
+    resultCode === '200-2' ||
+    resultCode === '201' ||
+    resultCode.startsWith('200')
+
   return {
     data: response.data,
-    success:
-      response.resultCode === '200' ||
-      response.resultCode === '200-1' ||
-      response.resultCode === '200-2' ||
-      response.resultCode === '201',
-    resultCode: response.resultCode,
+    success,
+    resultCode: resultCode,
     msg: response.msg,
   }
 }
@@ -225,7 +229,11 @@ export const productApi = {
   },
 
   // 상품 등록
-  createProduct: async (productData: ProductCreateRequest, images: File[]) => {
+  createProduct: async (
+    productData: ProductCreateRequest,
+    images: File[],
+    productType?: string,
+  ) => {
     const formData = new FormData()
 
     const requestBlob = new Blob([JSON.stringify(productData)], {
@@ -236,6 +244,11 @@ export const productApi = {
     images.forEach((image, index) => {
       formData.append('images', image)
     })
+
+    // 상품 타입 추가 (api-test에서 성공한 방식)
+    if (productType) {
+      formData.append('productType', productType)
+    }
 
     const accessToken =
       typeof document !== 'undefined'
@@ -279,9 +292,17 @@ export const productApi = {
     }
 
     if (deleteImageIds && deleteImageIds.length > 0) {
-      deleteImageIds.forEach((id) => {
-        formData.append('deleteImageIds', id.toString())
+      // 백엔드 요구사항: deleteImageIds를 JSON 배열로 전송
+      const deleteImageIdsBlob = new Blob([JSON.stringify(deleteImageIds)], {
+        type: 'application/json',
       })
+      formData.append('deleteImageIds', deleteImageIdsBlob)
+    }
+
+    // FormData 내용 확인
+    console.log('📋 FormData 전체 내용:')
+    for (const [key, value] of formData.entries()) {
+      console.log(`  ${key}:`, value)
     }
 
     const accessToken =

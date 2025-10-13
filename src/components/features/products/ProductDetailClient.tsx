@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
-import { bidApi, productApi, reviewApi } from '@/lib/api'
+import { bidApi, reviewApi } from '@/lib/api'
 import { Product } from '@/types'
 import {
   Clock,
@@ -29,13 +29,13 @@ export function ProductDetailClient({
   product,
   initialBidStatus,
 }: ProductDetailClientProps) {
+  console.log('🎯 product:', product)
   const router = useRouter()
   const { isLoggedIn, user } = useAuth()
   const [bidAmount, setBidAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
   const [bidStatus, setBidStatus] = useState<any>(initialBidStatus || null)
-  const [productData, setProductData] = useState(product)
   const [reviews, setReviews] = useState<any[]>([])
 
   // product.id를 안전하게 숫자로 변환하는 함수
@@ -46,6 +46,24 @@ export function ProductDetailClient({
       return Number(productId.id || productId.value || productId.productId) || 0
     }
     return 0
+  }
+
+  // API 응답의 영어 status를 한국어로 변환
+  const mapApiStatusToKorean = (apiStatus: string): string => {
+    switch (apiStatus) {
+      case 'BEFORE_START':
+        return '경매 시작 전'
+      case 'BIDDING':
+      case 'SELLING':
+        return '경매 중'
+      case 'SUCCESSFUL':
+      case 'SOLD':
+        return '낙찰'
+      case 'FAILED':
+        return '유찰'
+      default:
+        return apiStatus // 알 수 없는 상태는 그대로 반환
+    }
   }
 
   // 이미지 URL을 안전하게 추출하는 함수
@@ -60,28 +78,23 @@ export function ProductDetailClient({
     return image.imageUrl || ''
   }
 
-  const safeProductId = getSafeProductId(product.id)
+  const safeProductId = getSafeProductId(product.productId)
 
   // 현재 사용자가 상품 판매자인지 확인 (메모이제이션으로 성능 최적화)
   const isOwner = useMemo(() => {
     return (
       user &&
-      productData.seller &&
-      (String(user.id) === String(productData.seller.id) ||
-        user.email === productData.seller.email ||
-        user.nickname === productData.seller.name)
+      product.seller &&
+      (String(user.id) === String(product.seller.id) ||
+        user.email === product.seller.email ||
+        user.nickname === product.seller.name)
     )
-  }, [user, productData.seller])
+  }, [user, product.seller])
 
   // 입찰 현황 조회
   const fetchBidStatus = async () => {
     try {
-      console.log('🔍 입찰 현황 조회 시작', {
-        productId: product.id,
-        safeProductId,
-      })
       const response = await bidApi.getBidStatus(safeProductId)
-      console.log('🔍 입찰 현황 조회 응답:', response)
       if (response.success) {
         setBidStatus(response.data)
       } else {
@@ -95,9 +108,7 @@ export function ProductDetailClient({
   // 리뷰 조회
   const fetchReviews = async () => {
     try {
-      console.log('⭐ 리뷰 조회 시작', { productId: product.id, safeProductId })
       const response = await reviewApi.getReviewsByProduct(safeProductId)
-      console.log('⭐ 리뷰 조회 응답:', response)
       if (response.success && response.data) {
         const reviewsData = Array.isArray(response.data)
           ? response.data
@@ -114,109 +125,13 @@ export function ProductDetailClient({
     }
   }
 
-  // 상품 정보 새로고침 (필요한 경우에만 호출)
-  const refreshProduct = async () => {
-    try {
-      console.log('🔄 상품 정보 새로고침 시작', {
-        productId: product.id,
-        safeProductId,
-      })
-      const response = await productApi.getProduct(safeProductId)
-
-      if (response.success && response.data) {
-        console.log('🔍 API 응답 데이터:', {
-          productId: response.data.productId,
-          id: response.data.id,
-          productIdType: typeof response.data.productId,
-          idType: typeof response.data.id,
-        })
-
-        // API 응답을 컴포넌트에서 사용하는 형식으로 매핑
-        const productId = response.data.productId || response.data.id
-        const safeId =
-          typeof productId === 'object'
-            ? productId?.id || productId?.value || productId
-            : productId
-
-        const mappedProduct: Product = {
-          id: Number(safeId) || 0,
-          title: response.data.name || response.data.title,
-          description: response.data.description || '',
-          category: response.data.category,
-          images: response.data.images
-            ? response.data.images.map((img: any) =>
-                typeof img === 'string' ? img : img.imageUrl || img.url || img,
-              )
-            : [],
-          startingPrice:
-            response.data.initialPrice || response.data.startingPrice,
-          currentPrice: response.data.currentPrice,
-          seller: {
-            id: response.data.seller?.id || '1',
-            email: response.data.seller?.email || '',
-            name:
-              response.data.seller?.name ||
-              response.data.sellerName ||
-              '판매자',
-            phone: response.data.seller?.phone || '',
-            profileImage: response.data.seller?.profileImage,
-            trustScore:
-              response.data.seller?.trustScore ||
-              response.data.sellerTrustScore ||
-              0,
-            reviewCount: response.data.seller?.reviewCount || 0,
-            joinDate: response.data.seller?.joinDate || '',
-            isVerified: response.data.seller?.isVerified || false,
-          },
-          status: response.data.status || 'BIDDING',
-          location: response.data.location || '',
-          createdAt: response.data.createdAt || '',
-          endTime: response.data.endTime || '',
-          bidCount: response.data.bidCount || 0,
-          isLiked: response.data.isLiked || false,
-          thumbnailUrl: response.data.thumbnailUrl || '',
-        }
-        setProductData(mappedProduct)
-        console.log('✅ 상품 정보 새로고침 완료')
-      }
-    } catch (error) {
-      console.error('❌ 상품 정보 새로고침 실패:', error)
-    }
-  }
-
   useEffect(() => {
-    // 서버에서 전달받은 데이터를 그대로 사용
-    setProductData(product)
-
-    // product.id 타입 확인
-    console.log('🔍 Product ID 분석:', {
-      originalId: product.id,
-      idType: typeof product.id,
-      safeId: safeProductId,
-      safeIdType: typeof safeProductId,
-      stringified: String(product.id),
-    })
-
-    // 이미지 데이터 확인
-    console.log('🖼️ 이미지 데이터 분석:', {
-      images: product.images,
-      imagesType: typeof product.images,
-      firstImage: product.images?.[0],
-      firstImageType: typeof product.images?.[0],
-    })
-
     // 토큰 상태 확인
     const cookies = document.cookie.split(';')
     const accessTokenCookie = cookies.find((cookie) =>
       cookie.trim().startsWith('accessToken='),
     )
     const accessToken = accessTokenCookie?.split('=')[1]
-
-    console.log('🔑 상품 상세 페이지 토큰 상태:', {
-      hasToken: !!accessToken,
-      tokenLength: accessToken?.length || 0,
-      tokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : '없음',
-    })
 
     // 서버에서 입찰 현황을 가져오지 못한 경우에만 클라이언트에서 조회
     if (!initialBidStatus && accessToken) {
@@ -227,10 +142,7 @@ export function ProductDetailClient({
     if (accessToken) {
       fetchReviews()
     }
-
-    // 상품 정보는 서버에서 이미 최신 데이터를 가져왔으므로 새로고침 불필요
-    // refreshProduct()
-  }, [product.id]) // product.id를 의존성으로 추가
+  }, [])
 
   const formatPrice = (price: number) => {
     if (isNaN(price) || price === null || price === undefined) {
@@ -343,10 +255,7 @@ export function ProductDetailClient({
 
     const amount = parseInt(bidAmount.replace(/,/g, ''))
 
-    if (
-      !amount ||
-      amount <= (productData.currentPrice || productData.startingPrice)
-    ) {
+    if (!amount || amount <= (product.currentPrice || product.startingPrice)) {
       console.log('🎯 입찰 금액이 현재가보다 낮음')
       setApiError('현재가보다 높은 금액을 입력해주세요.')
       return
@@ -369,12 +278,10 @@ export function ProductDetailClient({
       console.log('🎯 입찰 API 응답:', response)
 
       if (response.success) {
-        console.log('🎯 입찰 성공!')
         alert('입찰이 성공적으로 등록되었습니다.')
         setBidAmount('')
         fetchBidStatus()
-        // 입찰 후에만 상품 정보 새로고침
-        refreshProduct()
+        window.location.reload()
       } else {
         console.log('🎯 입찰 실패:', response.msg)
         setApiError(response.msg || '입찰에 실패했습니다.')
@@ -410,10 +317,10 @@ export function ProductDetailClient({
         {/* 상품 이미지 */}
         <div className="space-y-4">
           <div className="aspect-square rounded-lg bg-neutral-200">
-            {productData.images && productData.images[0] ? (
+            {product.images && product.images[0] ? (
               <img
-                src={getImageUrl(productData.images[0])}
-                alt={productData.title}
+                src={getImageUrl(product.images[0])}
+                alt={product.title}
                 className="h-full w-full rounded-lg object-cover"
                 onError={(e) => {
                   console.error('이미지 로드 실패:', e.currentTarget.src)
@@ -443,16 +350,16 @@ export function ProductDetailClient({
           </div>
 
           {/* 추가 이미지들 */}
-          {productData.images && productData.images.length > 1 && (
+          {product.images && product.images.length > 1 && (
             <div className="grid grid-cols-4 gap-2">
-              {productData.images.slice(1, 5).map((image, index) => (
+              {product.images.slice(1, 5).map((image, index) => (
                 <div
                   key={index}
                   className="aspect-square rounded-lg bg-neutral-200"
                 >
                   <img
                     src={getImageUrl(image)}
-                    alt={`${productData.title} ${index + 2}`}
+                    alt={`${product.title} ${index + 2}`}
                     className="h-full w-full rounded-lg object-cover"
                     onError={(e) => {
                       console.error('이미지 로드 실패:', e.currentTarget.src)
@@ -470,51 +377,44 @@ export function ProductDetailClient({
           {/* 기본 정보 */}
           <div>
             <div className="mb-2 flex items-center space-x-2">
-              <Badge variant="primary">{productData.category}</Badge>
-              {productData.status === 'BIDDING' && (
+              <Badge variant="primary">{product.category}</Badge>
+              {product.status === '경매 중' && (
                 <Badge variant="success">경매중</Badge>
               )}
-              {productData.status === 'BEFORE_START' && (
+              {product.status === '경매 시작 전' && (
                 <Badge variant="secondary">시작전</Badge>
               )}
-              {productData.status === 'SUCCESSFUL' && (
-                <Badge variant="primary">완료</Badge>
+              {product.status === '낙찰' && (
+                <Badge variant="primary">낙찰</Badge>
               )}
-              {productData.status === 'FAILED' && (
-                <Badge variant="error">실패</Badge>
-              )}
+              {product.status === '유찰' && <Badge variant="error">유찰</Badge>}
             </div>
 
             <div className="mb-4 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-neutral-900">
-                {productData.title}
+                {product.title}
               </h1>
               {isOwner && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    console.log('🔍 Edit 버튼 클릭 - productData.id:', {
-                      id: productData.id,
-                      type: typeof productData.id,
-                      stringified: String(productData.id),
-                    })
-                    router.push(`/products/${productData.id}/edit`)
+                    router.push(`/products/${product.productId}/edit`)
                   }}
                   className="flex items-center space-x-2"
                   disabled={
-                    productData.status === 'BIDDING' ||
-                    productData.status === 'SUCCESSFUL' ||
-                    productData.status === 'PAID'
+                    product.status === '경매 중' ||
+                    product.status === '낙찰' ||
+                    product.status === '유찰'
                   }
                 >
                   <Edit className="h-4 w-4" />
                   <span>
-                    {productData.status === 'BIDDING'
+                    {product.status === '경매 중'
                       ? '경매중'
-                      : productData.status === 'SUCCESSFUL'
+                      : product.status === '낙찰'
                         ? '완료'
-                        : productData.status === 'PAID'
+                        : product.status === '유찰'
                           ? '결제완료'
                           : '수정'}
                   </span>
@@ -526,21 +426,19 @@ export function ProductDetailClient({
               <div className="flex items-center justify-between">
                 <span>현재가:</span>
                 <span className="text-success-600 text-lg font-semibold">
-                  {formatPrice(
-                    productData.currentPrice || productData.startingPrice,
-                  )}
+                  {formatPrice(product.currentPrice || product.startingPrice)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span>시작가:</span>
-                <span>{formatPrice(productData.startingPrice)}</span>
+                <span>{formatPrice(product.startingPrice)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>경매 시작:</span>
                 <span className="flex items-center space-x-1">
                   <Clock className="h-4 w-4" />
                   <span>
-                    {formatDateTime((productData as any).auctionStartTime)}
+                    {formatDateTime((product as any).auctionStartTime)}
                   </span>
                 </span>
               </div>
@@ -548,9 +446,7 @@ export function ProductDetailClient({
                 <span>경매 종료:</span>
                 <span className="flex items-center space-x-1">
                   <Clock className="h-4 w-4" />
-                  <span>
-                    {formatDateTime((productData as any).auctionEndTime)}
-                  </span>
+                  <span>{formatDateTime((product as any).auctionEndTime)}</span>
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -559,22 +455,19 @@ export function ProductDetailClient({
                   <Clock className="h-4 w-4" />
                   <span>
                     {formatTimeLeft(
-                      (productData as any).auctionEndTime ||
-                        productData.endTime,
+                      (product as any).auctionEndTime || product.endTime,
                     )}
                   </span>
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span>참여자 수:</span>
-                <span>
-                  {bidStatus?.bidCount || productData.bidCount || 0}명
-                </span>
+                <span>{bidStatus?.bidCount || 0}명</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>배송 방법:</span>
                 <span>
-                  {formatDeliveryMethod((productData as any).deliveryMethod)}
+                  {formatDeliveryMethod((product as any).deliveryMethod)}
                 </span>
               </div>
             </div>
@@ -591,7 +484,7 @@ export function ProductDetailClient({
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    router.push(`/seller/${productData.seller?.id || '1'}`)
+                    router.push(`/seller/${product.seller?.id || '1'}`)
                   }
                 >
                   상세보기
@@ -600,19 +493,19 @@ export function ProductDetailClient({
               <div className="space-y-2 text-sm">
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-neutral-400" />
-                  <span>{productData.seller?.name || '판매자'}</span>
+                  <span>{product.seller?.name || '판매자'}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Heart className="h-4 w-4 text-red-400" />
-                  <span>신뢰도 {productData.seller?.trustScore || 0}점</span>
+                  <span>신뢰도 {product.seller?.trustScore || 0}점</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <MapPin className="h-4 w-4 text-neutral-400" />
-                  <span>{productData.location || '위치 정보 없음'}</span>
+                  <span>{product.location || '위치 정보 없음'}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <MessageSquare className="h-4 w-4 text-neutral-400" />
-                  <span>리뷰 {productData.seller?.reviewCount || 0}개</span>
+                  <span>리뷰 {product.seller?.reviewCount || 0}개</span>
                 </div>
               </div>
             </CardContent>
@@ -620,7 +513,7 @@ export function ProductDetailClient({
 
           {/* 입찰 섹션 */}
           {(() => {
-            const status = (productData as any).status
+            const status = (product as any).status
             const showBidSection = status === 'BIDDING' || status === '경매 중'
             console.log('🎯 입찰 섹션 표시 조건 확인:', {
               status,
@@ -651,8 +544,7 @@ export function ProductDetailClient({
                     <p className="mt-1 text-xs text-neutral-500">
                       최소 입찰가:{' '}
                       {formatPrice(
-                        (productData.currentPrice ||
-                          productData.startingPrice) + 1000,
+                        (product.currentPrice || product.startingPrice) + 1000,
                       )}
                     </p>
                   </div>
@@ -698,24 +590,16 @@ export function ProductDetailClient({
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span>총 입찰 수:</span>
-                  <span>
-                    {bidStatus?.bidCount || productData.bidCount || 0}회
-                  </span>
+                  <span>{bidStatus?.bidCount || product.bidCount || 0}회</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>현재 최고가:</span>
                   <span className="font-semibold">
                     {formatPrice(
                       bidStatus?.currentPrice ||
-                        productData.currentPrice ||
-                        productData.startingPrice,
+                        product.currentPrice ||
+                        product.startingPrice,
                     )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>참여자 수:</span>
-                  <span>
-                    {bidStatus?.bidCount || productData.bidCount || 0}명
                   </span>
                 </div>
               </div>
@@ -726,8 +610,8 @@ export function ProductDetailClient({
           <Card variant="outlined">
             <CardContent className="p-4">
               <div className="text-center">
-                {((productData as any).status === 'BIDDING' ||
-                  (productData as any).status === '경매 중') && (
+                {((product as any).status === 'BIDDING' ||
+                  (product as any).status === '경매 중') && (
                   <div className="text-green-600">
                     <Clock className="mx-auto mb-2 h-8 w-8" />
                     <p className="font-semibold">경매 진행중</p>
@@ -736,8 +620,8 @@ export function ProductDetailClient({
                     </p>
                   </div>
                 )}
-                {((productData as any).status === 'BEFORE_START' ||
-                  (productData as any).status === '경매 시작 전') && (
+                {((product as any).status === 'BEFORE_START' ||
+                  (product as any).status === '경매 시작 전') && (
                   <div className="text-amber-600">
                     <Clock className="mx-auto mb-2 h-8 w-8" />
                     <p className="font-semibold">경매 시작 전</p>
@@ -746,8 +630,8 @@ export function ProductDetailClient({
                     </p>
                   </div>
                 )}
-                {((productData as any).status === 'SUCCESSFUL' ||
-                  (productData as any).status === '경매 완료') && (
+                {((product as any).status === 'SUCCESSFUL' ||
+                  (product as any).status === '경매 완료') && (
                   <div className="text-green-600">
                     <p className="font-semibold">경매 완료</p>
                     <p className="text-sm">
@@ -755,15 +639,15 @@ export function ProductDetailClient({
                     </p>
                   </div>
                 )}
-                {((productData as any).status === 'PAID' ||
-                  (productData as any).status === '결제 완료') && (
+                {((product as any).status === 'PAID' ||
+                  (product as any).status === '결제 완료') && (
                   <div className="text-blue-600">
                     <p className="font-semibold">결제 완료</p>
                     <p className="text-sm">이 상품의 결제가 완료되었습니다.</p>
                   </div>
                 )}
-                {((productData as any).status === 'FAILED' ||
-                  (productData as any).status === '경매 실패') && (
+                {((product as any).status === 'FAILED' ||
+                  (product as any).status === '경매 실패') && (
                   <div className="text-red-600">
                     <p className="font-semibold">경매 실패</p>
                     <p className="text-sm">이 상품의 경매가 실패했습니다.</p>
@@ -782,8 +666,8 @@ export function ProductDetailClient({
             상품 설명
           </h3>
           <div className="prose max-w-none text-neutral-700">
-            {productData.description ? (
-              <p className="whitespace-pre-wrap">{productData.description}</p>
+            {product.description ? (
+              <p className="whitespace-pre-wrap">{product.description}</p>
             ) : (
               <p className="text-neutral-500">상품 설명이 없습니다.</p>
             )}
@@ -799,12 +683,12 @@ export function ProductDetailClient({
               <MessageSquare className="mr-2 h-5 w-5" />
               리뷰
             </h3>
-            {isLoggedIn && (
+            {isLoggedIn && !isOwner && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  router.push(`/review?productId=${productData.id}`)
+                  router.push(`/review?productId=${product.productId}`)
                 }
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
@@ -813,44 +697,28 @@ export function ProductDetailClient({
             )}
           </div>
 
-          {/* 디버깅: 리뷰 개수 확인 */}
-          <div className="mb-2 text-xs text-gray-500">
-            리뷰 개수: {reviews.length}개
-          </div>
-          {reviews.length > 0 ? (
-            <div className="space-y-4">
-              {reviews.map((review: any, index: number) => (
-                <div
-                  key={index}
-                  className="border-b border-neutral-200 pb-4 last:border-b-0"
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-neutral-900">
-                        {review.userName || review.user?.name || '익명'}
-                      </span>
-                      <div className="flex items-center">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < (review.rating || 0)
-                                ? 'fill-current text-yellow-400'
-                                : 'text-neutral-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <span className="text-sm text-neutral-500">
-                      {formatDateTime(review.createdAt || review.createDate)}
+          {product.review ? (
+            <div className="rounded-lg bg-neutral-50 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-neutral-900">
+                    {product.review.reviewerNickname}
+                  </span>
+                  <div className="flex items-center">
+                    <Star
+                      className={`h-4 w-4 ${
+                        product.review.isSatisfied
+                          ? 'fill-current text-yellow-400'
+                          : 'text-neutral-300'
+                      }`}
+                    />
+                    <span className="ml-1 text-sm text-neutral-600">
+                      {product.review.isSatisfied ? '만족' : '불만족'}
                     </span>
                   </div>
-                  <p className="text-neutral-700">
-                    {review.content || review.comment}
-                  </p>
                 </div>
-              ))}
+              </div>
+              <p className="text-neutral-700">{product.review.comment}</p>
             </div>
           ) : (
             <div className="py-8 text-center">
@@ -858,14 +726,14 @@ export function ProductDetailClient({
               <p className="mb-4 text-neutral-600">
                 아직 작성된 리뷰가 없습니다.
               </p>
-              {isLoggedIn && (
+              {isLoggedIn && !isOwner && (
                 <Button
                   onClick={() =>
-                    router.push(`/review?productId=${productData.id}`)
+                    router.push(`/review?productId=${product.productId}`)
                   }
                   className="bg-primary-600 hover:bg-primary-700"
                 >
-                  첫 리뷰 작성하기
+                  리뷰 작성하기
                 </Button>
               )}
             </div>

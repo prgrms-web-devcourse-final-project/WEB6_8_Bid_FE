@@ -120,6 +120,10 @@ class ServerApiClient {
     return this.makeRequest(endpoint)
   }
 
+  async getBidStatus(productId: number) {
+    return this.makeRequest(`/bids/products/${productId}`)
+  }
+
   // 알림 관련 API
   async getNotifications(params?: { page?: number; size?: number }) {
     const searchParams = new URLSearchParams()
@@ -179,6 +183,7 @@ export const serverApi = {
 
   // 입찰 관련
   getMyBids: (params?: any) => serverApiClient.getMyBids(params),
+  getBidStatus: (productId: number) => serverApiClient.getBidStatus(productId),
 
   // 알림 관련
   getNotifications: (params?: any) => serverApiClient.getNotifications(params),

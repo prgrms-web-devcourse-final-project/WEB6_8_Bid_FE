@@ -2,6 +2,7 @@ import { ProductDetailClient } from '@/components/features/products/ProductDetai
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { serverApi } from '@/lib/api/server-api-client'
+import { Product } from '@/types'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 
@@ -31,25 +32,25 @@ export default async function ProductDetailPage({
       notFound()
     }
 
-    // 입찰 현황도 서버에서 가져오기
+    // 해당 상품의 입찰 현황 가져오기
     let bidStatus = null
     try {
-      const bidResponse = await serverApi.getMyBids()
+      const bidResponse = await serverApi.getBidStatus(productId)
       if (bidResponse.success && bidResponse.data) {
-        const bids = Array.isArray(bidResponse.data)
-          ? bidResponse.data
-          : (bidResponse.data as any).content || []
-        // 해당 상품의 입찰 현황 찾기
-        bidStatus = bids.find((bid: any) => bid.productId === productId) || null
+        bidStatus = bidResponse.data
+        console.log('📊 서버에서 가져온 입찰 현황:', bidStatus)
       }
     } catch (error) {
+      console.log('⚠️ 입찰 현황 조회 실패:', error)
       // 입찰 현황 조회 실패 시 무시
     }
 
     // API 응답을 컴포넌트에서 사용하는 형식으로 매핑
     const data = response.data as any
+    console.log('📦 서버에서 가져온 상품 데이터:', data)
+
     const mappedProduct = {
-      id: data.productId || data.id || productId,
+      productId: data.productId || data.id || productId,
       title: data.name || data.title || '상품명 없음',
       description: data.description || '상품 설명이 없습니다.',
       category: data.category || '기타',
@@ -89,7 +90,22 @@ export default async function ProductDetailPage({
       auctionStartTime: data.auctionStartTime,
       auctionEndTime: data.auctionEndTime,
       auctionDuration: data.auctionDuration,
+      thumbnailUrl: data.thumbnailUrl || '',
+      bidder: data.bidder || '',
+      review: data.review
+        ? {
+            reviewerNickname: data.review.reviewerNickname || '',
+            productName: data.review.productName || '',
+            comment: data.review.comment || '',
+            isSatisfied: data.review.isSatisfied || false,
+          }
+        : undefined,
     }
+
+    console.log('🎯 ProductDetailClient에 전달할 props:', {
+      product: mappedProduct,
+      initialBidStatus: bidStatus,
+    })
 
     return (
       <HomeLayout isLoggedIn={!!accessToken}>
@@ -99,7 +115,7 @@ export default async function ProductDetailPage({
           showBackButton
         />
         <ProductDetailClient
-          product={mappedProduct as any}
+          product={mappedProduct as Product}
           initialBidStatus={bidStatus}
         />
       </HomeLayout>

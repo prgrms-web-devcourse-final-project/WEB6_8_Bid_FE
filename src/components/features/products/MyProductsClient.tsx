@@ -44,8 +44,14 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
         ) {
           productsData = response.data.content
         }
-        console.log('📋 처리된 상품 데이터:', productsData)
-        setProducts(productsData)
+        // API 응답의 status를 한글로 변환
+        const processedProducts = productsData.map((product: any) => ({
+          ...product,
+          status: mapApiStatusToKorean(product.status),
+        }))
+
+        console.log('📋 처리된 상품 데이터:', processedProducts)
+        setProducts(processedProducts)
       } else {
         console.error('❌ API 응답 실패:', response)
         setApiError(response.msg || '상품 목록을 불러오는데 실패했습니다.')
@@ -70,7 +76,11 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
       const response = await productApi.deleteProduct(productId)
       if (response.success) {
         alert('상품이 성공적으로 삭제되었습니다.')
-        fetchMyProducts() // 목록 새로고침
+        // 현재 탭과 정렬 상태를 유지하면서 목록 새로고침
+        fetchMyProducts({
+          status: mapTabToApiStatus(selectedTab),
+          sort: sortBy,
+        })
       } else {
         setApiError(response.msg || '상품 삭제에 실패했습니다.')
       }
@@ -84,9 +94,10 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
   // 한국어 탭을 영어 API 파라미터로 매핑
   const mapTabToApiStatus = (
     tab: '경매 시작 전' | '경매 중' | '낙찰' | '유찰',
-  ): 'SELLING' | 'SOLD' | 'FAILED' | undefined => {
+  ): 'BEFORE_START' | 'SELLING' | 'SOLD' | 'FAILED' | undefined => {
     switch (tab) {
       case '경매 시작 전':
+        return 'BEFORE_START'
       case '경매 중':
         return 'SELLING'
       case '낙찰':
@@ -95,6 +106,22 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
         return 'FAILED'
       default:
         return undefined
+    }
+  }
+
+  // API 응답의 영어 status를 한국어로 변환
+  const mapApiStatusToKorean = (apiStatus: string): string => {
+    switch (apiStatus) {
+      case 'BEFORE_START':
+        return '경매 시작 전'
+      case 'SELLING':
+        return '경매 중'
+      case 'SOLD':
+        return '낙찰'
+      case 'FAILED':
+        return '유찰'
+      default:
+        return apiStatus // 알 수 없는 상태는 그대로 반환
     }
   }
 
@@ -300,7 +327,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
 
             return (
               <Card
-                key={product.id}
+                key={product.productId}
                 variant="outlined"
                 className="transition-shadow hover:shadow-md"
               >
@@ -405,7 +432,9 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                               size="sm"
                               variant="outline"
                               onClick={() =>
-                                router.push(`/products/${product.id}/edit`)
+                                router.push(
+                                  `/products/${product.productId}/edit`,
+                                )
                               }
                               className="flex-1"
                             >
@@ -415,7 +444,9 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleDeleteProduct(product.id)}
+                              onClick={() =>
+                                handleDeleteProduct(product.productId)
+                              }
                               disabled={isLoading}
                               className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
                             >
@@ -450,54 +481,22 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                           </>
                         )}
                         {product.status === '경매 중' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                router.push(`/products/${product.id}/edit`)
-                              }
-                              className="flex-1"
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              상품 수정
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDeleteProduct(product.id)}
-                              disabled={isLoading}
-                              className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              상품 삭제
-                            </Button>
-                          </>
+                          <div className="w-full text-center text-sm text-neutral-500">
+                            경매가 진행 중입니다
+                          </div>
                         )}
                         {product.status === '유찰' && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                router.push(
-                                  `/register-product?relist=${product.id}`,
-                                )
-                              }
-                              className="bg-primary-600 hover:bg-primary-700 flex-1"
-                            >
-                              재경매 등록
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDeleteProduct(product.id)}
-                              disabled={isLoading}
-                              className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              상품 삭제
-                            </Button>
-                          </>
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              router.push(
+                                `/register-product?relist=${product.productId}`,
+                              )
+                            }
+                            className="bg-primary-600 hover:bg-primary-700 w-full"
+                          >
+                            재경매 등록
+                          </Button>
                         )}
                       </div>
                     </div>

@@ -471,6 +471,58 @@ export default function ApiTestPage() {
       },
     },
     {
+      name: '상품 수정 (이미지 삭제 포함)',
+      description: 'PUT /api/v1/products/{id} with deleteImageIds',
+      test: async () => {
+        // 먼저 내 상품 목록을 조회해서 방금 등록한 상품 ID를 가져옴
+        const myProductsResponse = await productApi.getMyProducts()
+        if (!myProductsResponse.success || !myProductsResponse.data) {
+          return {
+            success: false,
+            msg: '내 상품 목록 조회 실패',
+          }
+        }
+
+        const products = Array.isArray(myProductsResponse.data)
+          ? myProductsResponse.data
+          : myProductsResponse.data.content || []
+
+        if (products.length === 0) {
+          return {
+            success: false,
+            msg: '수정할 상품이 없습니다. 먼저 상품을 등록하세요.',
+          }
+        }
+
+        // 가장 최근에 등록한 상품 (첫 번째 상품)
+        const latestProduct = products[0]
+        const productId = latestProduct.id
+        console.log(`📦 이미지 삭제 테스트 대상 ID: ${productId}`)
+
+        // 미래 시간으로 경매 시작 시간 설정
+        const futureTime = new Date()
+        futureTime.setDate(futureTime.getDate() + 30)
+        const auctionStartTime = futureTime.toISOString().slice(0, 19)
+
+        // 이미지 삭제 테스트 (첫 번째 이미지 삭제)
+        const deleteImageIds = [0] // 첫 번째 이미지 삭제
+
+        const response = await productApi.updateProduct(
+          productId,
+          {
+            name: '이미지 삭제 테스트 상품',
+            description: '이미지 삭제 테스트입니다.',
+            initialPrice: 1000000,
+            auctionStartTime: auctionStartTime,
+          },
+          [], // 새 이미지 없음
+          deleteImageIds // 삭제할 이미지 ID
+        )
+        console.log('🗑️ 상품 수정 (이미지 삭제):', response)
+        return response
+      },
+    },
+    {
       name: '상품 삭제 (DELETE)',
       description:
         'DELETE /api/v1/products/{새로등록한상품ID} (주의: 실제 삭제됩니다!)',
@@ -1261,8 +1313,8 @@ export default function ApiTestPage() {
                             상세 에러 정보 보기
                           </summary>
                           <pre className="mt-2 max-h-40 overflow-auto text-xs">
-                          {JSON.stringify(results[test.name].error, null, 2)}
-                        </pre>
+                            {JSON.stringify(results[test.name].error, null, 2)}
+                          </pre>
                         </details>
                       </div>
                     )}
@@ -1288,14 +1340,14 @@ export default function ApiTestPage() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
-          <Button
-            onClick={async () => {
+            <Button
+              onClick={async () => {
                 // 모든 활성화된 테스트 실행 (주석 처리된 테스트는 제외)
-              for (const test of tests) {
-                await runTest(test.name, test.test)
-                await new Promise((resolve) => setTimeout(resolve, 1000)) // 1초 대기
-              }
-            }}
+                for (const test of tests) {
+                  await runTest(test.name, test.test)
+                  await new Promise((resolve) => setTimeout(resolve, 1000)) // 1초 대기
+                }
+              }}
               className="flex-1"
               variant="primary"
             >
@@ -1309,7 +1361,7 @@ export default function ApiTestPage() {
               variant="outline"
             >
               🗑️ 결과 초기화
-          </Button>
+            </Button>
           </div>
         </CardContent>
       </Card>

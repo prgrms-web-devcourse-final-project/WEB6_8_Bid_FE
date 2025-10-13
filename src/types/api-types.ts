@@ -153,7 +153,7 @@ export interface ProductListParams {
 export interface MyProductsParams {
   page?: number
   size?: number
-  status?: 'SELLING' | 'SOLD' | 'FAILED'
+  status?: 'BEFORE_START' | 'SELLING' | 'SOLD' | 'FAILED'
   sort?: 'LATEST' | 'PRICE_HIGH' | 'PRICE_LOW' | 'ENDING_SOON' | 'POPULAR'
 }
 

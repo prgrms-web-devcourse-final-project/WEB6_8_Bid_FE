@@ -16,6 +16,11 @@ interface ProductEditClientProps {
 
 export function ProductEditClient({ product }: ProductEditClientProps) {
   const router = useRouter()
+
+  // product 객체 구조 디버깅
+  console.log('🔍 ProductEditClient - product 객체:', product)
+  console.log('🔍 ProductEditClient - product.productId:', product.productId)
+  console.log('🔍 ProductEditClient - product.id:', (product as any).id)
   const [formData, setFormData] = useState({
     title: product.title,
     description: product.description,
@@ -70,20 +75,8 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
   }
 
   const handleDeleteExistingImage = (imageUrl: string) => {
-    console.log('🗑️ 기존 이미지 삭제 시도:', {
-      imageUrl,
-      currentExistingImages: existingImages,
-      currentImagesToDelete: imagesToDelete,
-    })
-
     setExistingImages((prev) => prev.filter((img) => img !== imageUrl))
     setImagesToDelete((prev) => [...prev, imageUrl])
-
-    console.log('🗑️ 기존 이미지 삭제 완료:', {
-      removedImage: imageUrl,
-      remainingImages: existingImages.filter((img) => img !== imageUrl),
-      deletedImages: [...imagesToDelete, imageUrl],
-    })
   }
 
   const handleDeleteNewImage = (index: number) => {
@@ -111,10 +104,14 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
     setApiError('')
 
     try {
-      console.log('🗑️ 상품 삭제 시도:', product.id)
+      const productId = product.productId || (product as any).id
+      if (!productId) {
+        setApiError('상품 ID를 찾을 수 없습니다.')
+        setIsDeleting(false)
+        return
+      }
 
-      const response = await productApi.deleteProduct(product.id)
-      console.log('🗑️ 상품 삭제 응답:', response)
+      const response = await productApi.deleteProduct(productId)
 
       if (response.success || response.resultCode?.startsWith('200')) {
         alert('상품이 성공적으로 삭제되었습니다.')
@@ -184,19 +181,6 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
           | 'TRADE',
       }
 
-      console.log('🔧 상품 수정 요청 데이터:', {
-        productId: product.id,
-        requestData,
-        imagesCount: images.length,
-        imagesToDeleteCount: imagesToDelete.length,
-        existingImagesCount: existingImages.length,
-        imageDetails: images.map((img) => ({
-          name: img.name,
-          size: img.size,
-          type: img.type,
-        })),
-      })
-
       // 삭제할 이미지 ID 계산 (이미지 객체에서 ID 추출)
       const deleteImageIds = imagesToDelete
         .map((deletedUrl) => {
@@ -212,7 +196,8 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
           if (
             originalImage &&
             typeof originalImage === 'object' &&
-            originalImage.id
+            originalImage.id !== undefined &&
+            originalImage.id !== null
           ) {
             return originalImage.id
           } else {
@@ -221,16 +206,26 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
             return index >= 0 ? index : -1
           }
         })
-        .filter((id) => id >= 0)
+        .filter((id) => id !== undefined && id !== null && id >= 0)
 
-      console.log('🗑️ 삭제할 이미지 정보:', {
-        imagesToDelete,
-        deleteImageIds,
-        originalImages: product.images,
-      })
+      console.log('🗑️ 삭제할 이미지 ID들:', deleteImageIds)
+      console.log(
+        '🗑️ 삭제할 이미지 ID 타입들:',
+        deleteImageIds.map((id) => typeof id),
+      )
+
+      // productId를 안전하게 가져오기
+      const productId = product.productId || (product as any).id
+      console.log('🔧 사용할 productId:', productId)
+
+      if (!productId) {
+        setApiError('상품 ID를 찾을 수 없습니다.')
+        setIsLoading(false)
+        return
+      }
 
       const response = await productApi.updateProduct(
-        product.id,
+        productId,
         requestData,
         images,
         deleteImageIds, // 삭제할 이미지 인덱스
@@ -244,10 +239,19 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
         fullResponse: response,
       })
 
-      if (response.success) {
+      console.log('🔧 성공 조건 확인:', {
+        'response.success': response.success,
+        'response.resultCode': response.resultCode,
+        'resultCode?.startsWith("200")': response.resultCode?.startsWith('200'),
+        '최종 성공 조건':
+          response.success || response.resultCode?.startsWith('200'),
+      })
+
+      if (response.success || response.resultCode?.startsWith('200')) {
         console.log('✅ 상품 수정 성공:', response.data)
         alert('상품이 성공적으로 수정되었습니다.')
-        router.push(`/products/${product.id}`)
+        const redirectProductId = product.productId || (product as any).id
+        router.push(`/products/${redirectProductId}`)
       } else {
         console.log('❌ 상품 수정 실패:', response.msg)
         setApiError(response.msg || '상품 수정에 실패했습니다.')
@@ -269,7 +273,8 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
   }
 
   const handleCancel = () => {
-    router.push(`/products/${product.id}`)
+    const productId = product.productId || (product as any).id
+    router.push(`/products/${productId}`)
   }
 
   return (
@@ -315,65 +320,6 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                     </div>
                   ))}
                 </div>
-                {imagesToDelete.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-sm text-red-600">
-                      {imagesToDelete.length}장의 이미지가 삭제 예정입니다
-                    </p>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        console.log('🧪 이미지 삭제만 테스트:', {
-                          imagesToDelete,
-                          deleteImageIds: imagesToDelete
-                            .map((deletedUrl) => {
-                              const originalIndex = (
-                                product.images || []
-                              ).indexOf(deletedUrl)
-                              return originalIndex >= 0 ? originalIndex : -1
-                            })
-                            .filter((id) => id >= 0),
-                        })
-
-                        try {
-                          const response = await productApi.updateProduct(
-                            product.id,
-                            {
-                              name: product.title,
-                              description: product.description || '',
-                              initialPrice: product.startingPrice,
-                              location: product.location,
-                              deliveryMethod:
-                                (product as any).deliveryMethod || 'TRADE',
-                            },
-                            [], // 새 이미지 없음
-                            imagesToDelete
-                              .map((deletedUrl) => {
-                                const originalIndex = (
-                                  product.images || []
-                                ).indexOf(deletedUrl)
-                                return originalIndex >= 0 ? originalIndex : -1
-                              })
-                              .filter((id) => id >= 0), // 삭제할 이미지 인덱스 배열
-                          )
-
-                          if (response.success) {
-                            alert('이미지가 삭제되었습니다!')
-                            window.location.reload()
-                          } else {
-                            alert('이미지 삭제 실패: ' + response.msg)
-                          }
-                        } catch (error) {
-                          console.error('이미지 삭제 오류:', error)
-                          alert('이미지 삭제 중 오류가 발생했습니다.')
-                        }
-                      }}
-                      className="mt-2 rounded bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600"
-                    >
-                      이미지 삭제만 테스트
-                    </button>
-                  </div>
-                )}
               </div>
             )}
 

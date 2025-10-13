@@ -22,7 +22,7 @@ export interface UserInfo {
 
 // 상품 관련 타입
 export interface Product {
-  id: number
+  productId: number
   title: string
   description: string
   category: ProductCategory
@@ -39,6 +39,12 @@ export interface Product {
   isLiked: boolean
   thumbnailUrl: string
   bidder?: string
+  review?: {
+    reviewerNickname: string
+    productName: string
+    comment: string
+    isSatisfied: boolean
+  }
 }
 
 export type ProductCategory =

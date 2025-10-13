@@ -72,6 +72,24 @@ const statusOptions = [
   { value: 'FAILED', label: '유찰' },
 ]
 
+// API 응답의 영어 status를 한국어로 변환
+const mapApiStatusToKorean = (apiStatus: string): string => {
+  switch (apiStatus) {
+    case 'BEFORE_START':
+      return '경매 시작 전'
+    case 'BIDDING':
+    case 'SELLING':
+      return '경매 중'
+    case 'SUCCESSFUL':
+    case 'SOLD':
+      return '낙찰'
+    case 'FAILED':
+      return '유찰'
+    default:
+      return apiStatus // 알 수 없는 상태는 그대로 반환
+  }
+}
+
 export function HomeClient({ stats }: HomeClientProps) {
   const router = useRouter()
   const { isLoggedIn } = useAuth()
@@ -158,7 +176,7 @@ export function HomeClient({ stats }: HomeClientProps) {
 
           // API 응답 필드명을 컴포넌트에서 사용하는 필드명으로 매핑
           const mappedProducts = productsData.map((product: any) => ({
-            id: product.productId || product.id,
+            productId: product.productId || product.id,
             title: product.name || product.title,
             description: product.description || '',
             category: product.category,
@@ -167,7 +185,7 @@ export function HomeClient({ stats }: HomeClientProps) {
             endTime:
               product.endTime ||
               new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 기본값 설정
-            status: product.status || 'BIDDING',
+            status: mapApiStatusToKorean(product.status || 'BIDDING'),
             images: product.thumbnailUrl
               ? [product.thumbnailUrl]
               : product.images || [],
@@ -557,7 +575,7 @@ export function HomeClient({ stats }: HomeClientProps) {
           <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
             {filteredProducts.map((product) => (
               <Card
-                key={product.id}
+                key={product.productId}
                 variant="outlined"
                 className="transition-shadow duration-200 hover:shadow-lg"
               >
@@ -673,7 +691,9 @@ export function HomeClient({ stats }: HomeClientProps) {
                       <Button
                         size="sm"
                         className="flex-1"
-                        onClick={() => router.push(`/products/${product.id}`)}
+                        onClick={() =>
+                          router.push(`/products/${product.productId}`)
+                        }
                       >
                         상세보기
                       </Button>
