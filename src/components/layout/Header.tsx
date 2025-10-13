@@ -151,14 +151,6 @@ export function Header({
                   상품 등록
                 </Link>
 
-                {/* 결제 관리 버튼 */}
-                <Link
-                  href="/payments-methods"
-                  className="hover:text-primary-500 hidden items-center px-4 py-2 text-neutral-600 transition-colors sm:inline-flex"
-                >
-                  결제 관리
-                </Link>
-
                 {/* 알림 */}
                 <Link
                   href="/notifications"
@@ -317,13 +309,6 @@ export function Header({
                       onClick={() => setIsMenuOpen(false)}
                     >
                       결제 관리
-                    </Link>
-                    <Link
-                      href="/my-reviews"
-                      className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      내 리뷰
                     </Link>
                   </>
                 )}
