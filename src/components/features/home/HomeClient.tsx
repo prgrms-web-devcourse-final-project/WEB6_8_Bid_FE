@@ -197,7 +197,7 @@ export function HomeClient({ stats }: HomeClientProps) {
             startingPrice: product.initialPrice || product.startingPrice,
             currentPrice: product.currentPrice,
             endTime:
-              product.endTime ||
+              product.auctionEndTime ||
               new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 기본값 설정
             status: mapApiStatusToKorean(product.status || 'BIDDING'),
             images: product.thumbnailUrl
@@ -207,13 +207,14 @@ export function HomeClient({ stats }: HomeClientProps) {
             seller: {
               name: product.seller?.nickname || '판매자',
               trustScore:
-                product.seller?.trustScore || product.sellerTrustScore || 0,
+                product.seller?.creditScore || product.sellerTrustScore || 0,
               location:
                 product.location ||
                 product.seller?.location ||
                 product.sellerLocation ||
                 '서울',
             },
+            location: product.location,
           }))
 
           console.log('🏠 처리된 상품 목록:', mappedProducts)
@@ -692,10 +693,18 @@ export function HomeClient({ stats }: HomeClientProps) {
                           </span>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <MapPin className="h-4 w-4 text-neutral-400" />
-                          <span className="text-sm text-neutral-600">
-                            {product?.location || '서울'}
-                          </span>
+                          {product.location ? (
+                            <>
+                              <MapPin className="h-4 w-4 text-neutral-400" />
+                              <span className="text-sm text-neutral-600">
+                                {product.location}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-sm text-neutral-600">
+                              배송만 가능
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
