@@ -5,6 +5,8 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { serverApi } from '@/lib/api/server-api-client'
 import { cookies } from 'next/headers'
 
+export const dynamic = 'force-dynamic'
+
 export default async function MyProductsPage() {
   try {
     // 쿠키에서 토큰 가져오기

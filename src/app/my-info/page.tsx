@@ -4,6 +4,8 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { serverApi } from '@/lib/api/server-api-client'
 import { User } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export default async function MyInfoPage() {
   try {
     const response = await serverApi.getMyInfo()

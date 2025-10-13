@@ -3,6 +3,8 @@ import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { cookies } from 'next/headers'
 
+export const dynamic = 'force-dynamic'
+
 export default async function PaymentMethodsPage() {
   try {
     // 쿠키에서 토큰 가져오기
