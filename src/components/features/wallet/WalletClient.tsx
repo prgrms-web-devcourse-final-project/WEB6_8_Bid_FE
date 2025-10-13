@@ -77,6 +77,8 @@ interface PaymentMethodData {
   last4?: string
   expMonth?: number
   expYear?: number
+  expireMonth?: number
+  expireYear?: number
   bankCode?: string
   bankName?: string
   acctLast4?: string
@@ -187,6 +189,27 @@ export function WalletClient() {
               '💳 첫 번째 결제수단의 모든 키:',
               Object.keys(paymentMethodsData[0]),
             )
+            // 각 필드의 값을 자세히 확인
+            const firstPM = paymentMethodsData[0]
+            console.log('💳 상세 필드 값들:', {
+              id: firstPM.id,
+              type: firstPM.type,
+              methodType: firstPM.methodType,
+              alias: firstPM.alias,
+              isDefault: firstPM.isDefault,
+              provider: firstPM.provider,
+              brand: firstPM.brand,
+              last4: firstPM.last4,
+              expMonth: firstPM.expMonth,
+              expYear: firstPM.expYear,
+              expireMonth: firstPM.expireMonth,
+              expireYear: firstPM.expireYear,
+              expirationMonth: firstPM.expirationMonth,
+              expirationYear: firstPM.expirationYear,
+              expDate: firstPM.expDate,
+              expiryMonth: firstPM.expiryMonth,
+              expiryYear: firstPM.expiryYear,
+            })
           }
           setPaymentMethods(paymentMethodsData)
         } else {
@@ -502,30 +525,20 @@ export function WalletClient() {
       ) {
         updateData.brand = originalPaymentMethod.brand
         updateData.last4 = originalPaymentMethod.last4
-        updateData.expMonth = originalPaymentMethod.expMonth
-        updateData.expYear = originalPaymentMethod.expYear
-        console.log('🔍 CARD 필수 필드 추가:', {
-          brand: originalPaymentMethod.brand,
-          last4: originalPaymentMethod.last4,
-          expMonth: originalPaymentMethod.expMonth,
-          expYear: originalPaymentMethod.expYear,
-        })
+
+        updateData.expMonth =
+          originalPaymentMethod.expMonth || originalPaymentMethod.expireMonth
+        updateData.expYear =
+          originalPaymentMethod.expYear || originalPaymentMethod.expireYear
       }
 
-      // BANK_ACCOUNT 타입의 경우 필수 필드들 추가 (type 필드로 확인)
       if (
         originalPaymentMethod.type === 'BANK' ||
         originalPaymentMethod.methodType === 'BANK_ACCOUNT'
       ) {
         updateData.bankCode = originalPaymentMethod.bankCode
         updateData.bankName = originalPaymentMethod.bankName
-        console.log('🔍 BANK_ACCOUNT 필수 필드 추가:', {
-          bankCode: originalPaymentMethod.bankCode,
-          bankName: originalPaymentMethod.bankName,
-        })
       }
-
-      console.log('🔍 최종 수정 요청 데이터:', updateData)
 
       const response = await paymentMethodApi.updatePaymentMethod(
         editingId,
