@@ -6,14 +6,14 @@ import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { authApi } from '@/lib/api'
-import { Camera, Edit, Trophy } from 'lucide-react'
+import { Edit } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 interface MyInfoEditClientProps {
   initialProfile?: {
     name?: string
-    phone?: string
+    phoneNumber?: string
     address?: string
   }
 }
@@ -26,43 +26,16 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
   const [apiError, setApiError] = useState('')
   const [formData, setFormData] = useState({
     nickname: user?.nickname || initialProfile?.name || '',
-    phoneNumber: user?.phone || initialProfile?.phone || '',
+    phoneNumber: user?.phoneNumber || initialProfile?.phoneNumber || '',
     address: (user as any)?.address || initialProfile?.address || '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-
-    // 에러 메시지 초기화
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }))
-    }
-
-    // API 에러 초기화
-    if (apiError) {
-      setApiError('')
-    }
-  }
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setFormData((prev) => ({
-          ...prev,
-          profileImage: e.target?.result as string,
-        }))
-      }
-      reader.readAsDataURL(file)
+  const handleInputChange = (field: string, value: string) => {
+    if (field === 'phoneNumber') {
+      setFormData((prev) => ({ ...prev, [field]: value }))
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }))
     }
   }
 
@@ -101,7 +74,8 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
 
         console.log('🔍 프로필 수정 API 응답:', response)
 
-        if (response.success || response.resultCode === '200') {
+        // 200-4 등 성공 응답 코드 처리
+        if (response.success || response.resultCode?.startsWith('200')) {
           // 성공 시 AuthContext 업데이트
           const updatedUser = {
             ...user,
@@ -130,7 +104,7 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
   const handleCancel = () => {
     setFormData({
       nickname: user?.nickname || initialProfile?.name || '',
-      phoneNumber: user?.phone || initialProfile?.phone || '',
+      phoneNumber: user?.phoneNumber || initialProfile?.phoneNumber || '',
       address: (user as any)?.address || initialProfile?.address || '',
     })
     setErrors({})
@@ -173,159 +147,86 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
               />
             )}
 
-            <div className="flex flex-col items-center space-y-6">
-              {/* 프로필 사진 */}
-              <div className="relative">
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-neutral-200">
-                  <span className="text-2xl font-bold text-neutral-500">
-                    {formData.nickname.charAt(0)}
-                  </span>
-                </div>
-                {isEditing && (
-                  <label className="bg-primary-500 hover:bg-primary-600 absolute -right-1 -bottom-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white">
-                    <Camera className="h-4 w-4" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                  </label>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-700">
+                  닉네임
+                </label>
+                <Input
+                  name="nickname"
+                  value={formData.nickname}
+                  onChange={(e) =>
+                    handleInputChange('nickname', e.target.value)
+                  }
+                  disabled={!isEditing}
+                  error={errors.nickname}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-700">
+                  이메일
+                </label>
+                <Input
+                  name="email"
+                  type="email"
+                  value={user?.email || ''}
+                  disabled={true}
+                  className="bg-neutral-100"
+                />
+                <p className="mt-1 text-xs text-neutral-500">
+                  이메일은 변경할 수 없습니다
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-700">
+                  전화번호
+                </label>
+                <Input
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={(e) =>
+                    handleInputChange('phoneNumber', e.target.value)
+                  }
+                  disabled={!isEditing}
+                  placeholder="010-1234-5678"
+                  error={errors.phoneNumber}
+                  maxLength={13}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-700">
+                  주소
+                </label>
+                <Input
+                  name="address"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="주소를 입력하세요"
+                  error={errors.address}
+                />
+              </div>
+            </div>
+
+            {isEditing && (
+              <Button
+                onClick={handleSave}
+                className="mt-6 w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center">
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    저장 중...
+                  </div>
+                ) : (
+                  '저장'
                 )}
-              </div>
-
-              {/* 사용자 정보 */}
-              <div className="w-full space-y-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-neutral-700">
-                    닉네임
-                  </label>
-                  <Input
-                    name="nickname"
-                    value={formData.nickname}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    error={errors.nickname}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-neutral-700">
-                    이메일
-                  </label>
-                  <Input
-                    name="email"
-                    type="email"
-                    value={user?.email || ''}
-                    disabled={true}
-                    className="bg-neutral-100"
-                  />
-                  <p className="mt-1 text-xs text-neutral-500">
-                    이메일은 변경할 수 없습니다
-                  </p>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-neutral-700">
-                    전화번호
-                  </label>
-                  <Input
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    placeholder="010-1234-5678"
-                    error={errors.phoneNumber}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-neutral-700">
-                    주소
-                  </label>
-                  <Input
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    placeholder="주소를 입력하세요"
-                    error={errors.address}
-                  />
-                </div>
-              </div>
-
-              {isEditing && (
-                <Button
-                  onClick={handleSave}
-                  className="w-full"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center">
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                      저장 중...
-                    </div>
-                  ) : (
-                    '저장'
-                  )}
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 신뢰도 점수 */}
-        <Card variant="outlined">
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-center space-x-2">
-              <Trophy className="text-warning-500 h-5 w-5" />
-              <h2 className="text-lg font-semibold text-neutral-900">
-                신뢰도 점수
-              </h2>
-            </div>
-            <div className="text-center">
-              <div className="text-primary-500 mb-2 text-4xl font-bold">
-                94점
-              </div>
-              <p className="text-neutral-600">상위 15% 신뢰도</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 활동 통계 */}
-        <Card variant="outlined">
-          <CardContent className="p-6">
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-neutral-900">
-                활동 통계
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="bg-primary-100 mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg">
-                  <span className="text-primary-600 text-xl">📦</span>
-                </div>
-                <div className="text-2xl font-bold text-neutral-900">47</div>
-                <div className="text-sm text-neutral-600">판매 완료</div>
-              </div>
-
-              <div className="text-center">
-                <div className="bg-success-100 mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg">
-                  <Trophy className="text-success-600 h-6 w-6" />
-                </div>
-                <div className="text-2xl font-bold text-neutral-900">15</div>
-                <div className="text-sm text-neutral-600">낙찰 성공</div>
-              </div>
-
-              <div className="text-center">
-                <div className="bg-warning-100 mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg">
-                  <span className="text-warning-600 text-xl">⏰</span>
-                </div>
-                <div className="text-2xl font-bold text-neutral-900">8</div>
-                <div className="text-sm text-neutral-600">진행 중</div>
-              </div>
-            </div>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

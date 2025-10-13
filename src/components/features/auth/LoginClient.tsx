@@ -105,21 +105,18 @@ export function LoginClient() {
             response.success ||
             response.resultCode === '200' ||
             response.resultCode === 'SUCCESS' ||
+            response.resultCode?.startsWith('200') ||
             (response.data && response.data !== null)
 
           if (isSuccess) {
-            // 로그인 성공
-            console.log('✅ 로그인 성공:', response.data)
-
-            // 서버 응답에서 실제 사용자 데이터 추출
             const responseData = response.data as any // 타입 단언으로 임시 해결
             const userData = {
               id: responseData?.id || responseData?.memberId || 1,
               email: formData.email,
-              nickname:
-                responseData?.nickname || responseData?.name || '사용자닉네임',
-              phone: responseData?.phone || '01012345678',
-              address: responseData?.address || '서울시 강남구',
+              nickname: responseData?.nickname || responseData?.name || '',
+              phoneNumber:
+                responseData?.phone || responseData?.phoneNumber || '',
+              address: responseData?.address || '',
             }
 
             const tokens = {

@@ -1,5 +1,14 @@
 // 사용자 관련 타입
+
 export interface User {
+  id: number
+  email: string
+  nickname: string
+  phoneNumber: string
+  address: string
+}
+
+export interface UserInfo {
   id: string
   email: string
   name: string
@@ -20,14 +29,16 @@ export interface Product {
   images: (string | { imageUrl: string; id?: number; productId?: number })[]
   startingPrice: number
   currentPrice: number
-  seller: User
+  seller: UserInfo
   status: ProductStatus
   location: string
   createdAt: string
   endTime: string
+  auctionEndTime?: string
   bidCount: number
   isLiked: boolean
   thumbnailUrl: string
+  bidder?: string
 }
 
 export type ProductCategory =
@@ -39,12 +50,7 @@ export type ProductCategory =
   | 'books'
   | 'other'
 
-export type ProductStatus =
-  | 'BEFORE_START'
-  | 'BIDDING'
-  | 'SUCCESSFUL'
-  | 'PAID'
-  | 'FAILED'
+export type ProductStatus = '경매 시작 전' | '경매 중' | '낙찰' | '유찰'
 
 // 입찰 관련 타입
 export interface Bid {

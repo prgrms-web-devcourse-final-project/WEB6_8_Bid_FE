@@ -1,45 +1,13 @@
-import { LoginPrompt } from '@/components/auth/LoginPrompt'
 import { MyInfoClient } from '@/components/features/user/MyInfoClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { serverApi } from '@/lib/api/server-api-client'
-import { cookies } from 'next/headers'
+import { User } from '@/types'
 
 export default async function MyInfoPage() {
   try {
-    // 쿠키에서 토큰 가져오기
-    const cookieStore = await cookies()
-    const accessToken = cookieStore.get('accessToken')?.value
-
-    if (!accessToken) {
-      console.log('❌ 토큰이 없어서 로그인 유도 UI 표시')
-      return (
-        <HomeLayout>
-          <PageHeader
-            title="내 정보"
-            description="프로필 정보와 활동 내역을 확인하세요"
-            showBackButton
-          />
-          <LoginPrompt
-            title="내 정보"
-            description="내 정보를 확인하려면 로그인해주세요."
-          />
-        </HomeLayout>
-      )
-    }
-
-    // 서버 API로 사용자 정보 가져오기
-    console.log('🚀 서버 API 호출 시작: getMyInfo')
     const response = await serverApi.getMyInfo()
-
-    console.log('📊 서버 API 응답:', response)
-
     if (!response.success || !response.data) {
-      console.log('❌ 서버 API 응답에서 데이터 없음:', {
-        success: response.success,
-        hasData: !!response.data,
-        msg: response.msg,
-      })
       return (
         <HomeLayout isLoggedIn={true}>
           <PageHeader
@@ -59,16 +27,15 @@ export default async function MyInfoPage() {
       )
     }
 
-    const user = response.data
-    console.log('✅ 사용자 데이터:', user)
+    const userInfo = response.data
+    console.log('🔍 userInfo', userInfo)
 
-    // 알림 개수 가져오기 (현재는 0으로 설정, 추후 API 연동)
     const notificationCount = 0
 
     return (
       <HomeLayout
         isLoggedIn={true}
-        user={user}
+        user={userInfo as User}
         notificationCount={notificationCount}
       >
         <PageHeader
@@ -76,7 +43,7 @@ export default async function MyInfoPage() {
           description="프로필 정보와 활동 내역을 확인하세요"
           showBackButton
         />
-        <MyInfoClient user={user} />
+        <MyInfoClient user={userInfo} />
       </HomeLayout>
     )
   } catch (error: any) {

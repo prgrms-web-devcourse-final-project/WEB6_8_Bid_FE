@@ -27,11 +27,14 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingImages, setExistingImages] = useState<string[]>(
-    product.images || [],
+    (product.images || []).map((img) =>
+      typeof img === 'string' ? img : img.imageUrl,
+    ),
   )
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [apiError, setApiError] = useState('')
 
   const handleInputChange = (
@@ -94,6 +97,47 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
     URL.revokeObjectURL(imagePreviews[index])
   }
 
+  // 상품 삭제 함수
+  const handleDeleteProduct = async () => {
+    if (
+      !confirm(
+        '정말로 이 상품을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+      )
+    ) {
+      return
+    }
+
+    setIsDeleting(true)
+    setApiError('')
+
+    try {
+      console.log('🗑️ 상품 삭제 시도:', product.id)
+
+      const response = await productApi.deleteProduct(product.id)
+      console.log('🗑️ 상품 삭제 응답:', response)
+
+      if (response.success || response.resultCode?.startsWith('200')) {
+        alert('상품이 성공적으로 삭제되었습니다.')
+        router.push('/my-products')
+      } else {
+        setApiError(response.msg || '상품 삭제에 실패했습니다.')
+      }
+    } catch (error: any) {
+      console.error('상품 삭제 실패:', error)
+
+      if (error.response?.status === 401) {
+        console.log('🔍 401 에러 - 로그인 필요')
+        setApiError('')
+      } else {
+        setApiError(
+          error.response?.data?.msg || '상품 삭제 중 오류가 발생했습니다.',
+        )
+      }
+    }
+
+    setIsDeleting(false)
+  }
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
@@ -153,11 +197,29 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
         })),
       })
 
-      // 삭제할 이미지 인덱스 계산 (원본 이미지 배열에서의 인덱스)
+      // 삭제할 이미지 ID 계산 (이미지 객체에서 ID 추출)
       const deleteImageIds = imagesToDelete
         .map((deletedUrl) => {
-          const originalIndex = (product.images || []).indexOf(deletedUrl)
-          return originalIndex >= 0 ? originalIndex : -1
+          // 이미지가 객체인 경우 ID 추출, 문자열인 경우 인덱스 사용
+          const originalImage = (product.images || []).find((img) => {
+            if (typeof img === 'string') {
+              return img === deletedUrl
+            } else {
+              return img.imageUrl === deletedUrl
+            }
+          })
+
+          if (
+            originalImage &&
+            typeof originalImage === 'object' &&
+            originalImage.id
+          ) {
+            return originalImage.id
+          } else {
+            // 문자열인 경우 인덱스 반환
+            const index = (product.images || []).indexOf(deletedUrl)
+            return index >= 0 ? index : -1
+          }
         })
         .filter((id) => id >= 0)
 
@@ -565,8 +627,18 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
             취소
           </Button>
           <Button
+            type="button"
+            variant="outline"
+            onClick={handleDeleteProduct}
+            disabled={isDeleting || isLoading}
+            className="flex-1 border-red-500 bg-red-500 text-white hover:bg-red-600"
+          >
+            <X className="mr-2 h-4 w-4" />
+            {isDeleting ? '삭제 중...' : '삭제하기'}
+          </Button>
+          <Button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isDeleting}
             className="bg-primary-600 hover:bg-primary-700 flex-1"
           >
             <Save className="mr-2 h-4 w-4" />

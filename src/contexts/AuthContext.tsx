@@ -7,7 +7,7 @@ interface User {
   id: number
   email: string
   nickname: string
-  phone: string
+  phoneNumber: string
   address: string
 }
 
@@ -75,23 +75,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 email: userResponse.data.email || '',
                 nickname:
                   userResponse.data.nickname || userResponse.data.name || '',
-                phone: userResponse.data.phone || '',
+                phoneNumber: userResponse.data.phone || '',
                 address: userResponse.data.address || '',
               }
               setUser(userInfo)
             } else {
-              // 사용자 정보 API 실패 시 기본값 설정
-              const userInfo = {
-                id: 1,
-                email: typeof response.data === 'string' ? response.data : '',
-                nickname:
-                  typeof response.data === 'string'
-                    ? response.data.split('@')[0]
-                    : '',
-                phone: '',
-                address: '',
-              }
-              setUser(userInfo)
             }
           } catch (userError) {}
         } else if (response.resultCode === '200-2') {
@@ -141,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                           userResponse.data.nickname ||
                           userResponse.data.name ||
                           '',
-                        phone: userResponse.data.phone || '',
+                        phoneNumber: userResponse.data.phoneNumber || '',
                         address: userResponse.data.address || '',
                       }
                       setUser(userInfo)

@@ -1261,8 +1261,8 @@ export default function ApiTestPage() {
                             상세 에러 정보 보기
                           </summary>
                           <pre className="mt-2 max-h-40 overflow-auto text-xs">
-                            {JSON.stringify(results[test.name].error, null, 2)}
-                          </pre>
+                          {JSON.stringify(results[test.name].error, null, 2)}
+                        </pre>
                         </details>
                       </div>
                     )}
@@ -1288,14 +1288,14 @@ export default function ApiTestPage() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
-            <Button
-              onClick={async () => {
+          <Button
+            onClick={async () => {
                 // 모든 활성화된 테스트 실행 (주석 처리된 테스트는 제외)
-                for (const test of tests) {
-                  await runTest(test.name, test.test)
-                  await new Promise((resolve) => setTimeout(resolve, 1000)) // 1초 대기
-                }
-              }}
+              for (const test of tests) {
+                await runTest(test.name, test.test)
+                await new Promise((resolve) => setTimeout(resolve, 1000)) // 1초 대기
+              }
+            }}
               className="flex-1"
               variant="primary"
             >
@@ -1309,7 +1309,7 @@ export default function ApiTestPage() {
               variant="outline"
             >
               🗑️ 결과 초기화
-            </Button>
+          </Button>
           </div>
         </CardContent>
       </Card>

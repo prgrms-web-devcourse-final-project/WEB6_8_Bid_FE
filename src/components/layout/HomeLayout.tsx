@@ -1,3 +1,4 @@
+import { User } from '@/types'
 import { ReactNode } from 'react'
 import { BottomNavigation } from './BottomNavigation'
 import { Header } from './Header'
@@ -5,10 +6,7 @@ import { Header } from './Header'
 interface HomeLayoutProps {
   children: ReactNode
   isLoggedIn?: boolean
-  user?: {
-    nickname: string
-    profileImage?: string
-  }
+  user?: User
   notificationCount?: number
 }
 

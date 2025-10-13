@@ -125,7 +125,7 @@ export const authApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 내 정보 수정
+  // 내 정보 수정 (multipart/form-data)
   updateProfile: async (userData: UserInfoUpdate) => {
     // multipart/form-data로 요청
     const formData = new FormData()
@@ -137,6 +137,15 @@ export const authApi = {
     const response = await apiClient.put<ApiResponse<UserInfo>>(
       '/api/v1/members/me',
       formData,
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 내 정보 수정 (JSON)
+  updateMyInfo: async (userData: any) => {
+    const response = await apiClient.put<ApiResponse<UserInfo>>(
+      '/api/v1/members/me',
+      userData,
     )
     return normalizeApiResponse(response.data)
   },
@@ -299,7 +308,7 @@ export const productApi = {
   // 내 상품 목록 조회
   getMyProducts: async (params?: MyProductsParams) => {
     const response = await apiClient.get<ApiResponse<any>>(
-      '/api/v1/products/my',
+      '/api/v1/products/me',
       {
         params,
       },

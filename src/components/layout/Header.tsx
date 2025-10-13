@@ -2,20 +2,14 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { notificationApi } from '@/lib/api'
+import { User } from '@/types'
 import { Bell, Menu, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 interface HeaderProps {
   isLoggedIn?: boolean
-  user?: {
-    id?: number
-    email?: string
-    nickname?: string
-    phone?: string
-    address?: string
-    profileImage?: string
-  }
+  user?: User
   notificationCount?: number
 }
 
