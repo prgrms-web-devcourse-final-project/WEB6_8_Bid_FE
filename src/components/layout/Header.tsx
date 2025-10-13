@@ -305,14 +305,7 @@ export function Header({
                       className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      지갑
-                    </Link>
-                    <Link
-                      href="/payment-methods"
-                      className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      결제 수단
+                      결제 관리
                     </Link>
                     <Link
                       href="/my-reviews"

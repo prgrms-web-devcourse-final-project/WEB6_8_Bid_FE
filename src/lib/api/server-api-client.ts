@@ -145,7 +145,7 @@ class ServerApiClient {
 
   // 결제수단 관련 API
   async getPaymentMethods() {
-    return this.makeRequest('/payment-methods')
+    return this.makeRequest('/paymentMethods')
   }
 
   async getPaymentHistory() {

@@ -4,6 +4,7 @@ import type {
   BidRequest,
   BoardWriteRequest,
   BoardWriteResponse,
+  IdempotencyKey,
   LoginResponse,
   MyProductsParams,
   PaymentMethodCreateRequest,
@@ -15,9 +16,12 @@ import type {
   ReviewCreateRequest,
   ReviewUpdateRequest,
   SignupRequest,
+  TossBillingAuthParams,
   TossIssueBillingKeyRequest,
   UserInfo,
   UserInfoUpdate,
+  WalletChargeRequest,
+  WalletChargeResponse,
 } from '@/types/api-types'
 import { apiClient } from './api-client'
 
@@ -534,17 +538,18 @@ export const paymentMethodApi = {
 // 캐시/지갑 관련 API
 export const cashApi = {
   // 지갑 잔액 조회
-  getWalletBalance: async () => {
-    const response = await apiClient.get<ApiResponse<any>>(
-      '/api/v1/payments/me',
-    )
+  getMyCash: async () => {
+    const response = await apiClient.get<ApiResponse<any>>('/api/v1/cash')
     return normalizeApiResponse(response.data)
   },
 
   // 거래 내역 조회
-  getTransactionHistory: async () => {
+  getCashTransactions: async (params?: { page?: number; size?: number }) => {
     const response = await apiClient.get<ApiResponse<any>>(
-      '/api/v1/payments/history',
+      '/api/v1/cash/transactions',
+      {
+        params,
+      },
     )
     return normalizeApiResponse(response.data)
   },
@@ -552,16 +557,7 @@ export const cashApi = {
   // 거래 상세 조회
   getTransactionDetail: async (transactionId: number) => {
     const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/payments/${transactionId}`,
-    )
-    return normalizeApiResponse(response.data)
-  },
-
-  // 지갑 충전
-  chargeWallet: async (data: PaymentRequest) => {
-    const response = await apiClient.post<ApiResponse<any>>(
-      '/api/v1/payments',
-      data,
+      `/api/v1/cash/transactions/${transactionId}`,
     )
     return normalizeApiResponse(response.data)
   },
@@ -590,6 +586,43 @@ export const paymentApi = {
   issueTossBillingKey: async (data: TossIssueBillingKeyRequest) => {
     const response = await apiClient.post<ApiResponse<any>>(
       '/api/v1/payments/toss/issue-billing-key',
+      data,
+    )
+    return normalizeApiResponse(response.data)
+  },
+}
+
+// 토스 결제 관련 API
+export const tossApi = {
+  // 토스 빌링 인증 파라미터 조회
+  getBillingAuthParams: async () => {
+    const response = await apiClient.get<TossBillingAuthParams>(
+      '/api/v1/payments/toss/billing-auth-params',
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 토스 빌링키 발급
+  issueBillingKey: async (authKey: string) => {
+    const response = await apiClient.post<ApiResponse<any>>(
+      '/api/v1/payments/toss/issue-billing-key',
+      { authKey },
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 멱등키 발급
+  getIdempotencyKey: async () => {
+    const response = await apiClient.get<IdempotencyKey>(
+      '/api/v1/payments/idempotency-key',
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 지갑 충전 (토스 결제)
+  chargeWallet: async (data: WalletChargeRequest) => {
+    const response = await apiClient.post<WalletChargeResponse>(
+      '/api/v1/payments',
       data,
     )
     return normalizeApiResponse(response.data)

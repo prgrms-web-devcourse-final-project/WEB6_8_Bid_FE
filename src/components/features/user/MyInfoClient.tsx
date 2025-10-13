@@ -331,7 +331,7 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
 
           <Card
             className="group cursor-pointer overflow-hidden border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-            onClick={() => router.push('/payment-methods')}
+            onClick={() => router.push('/wallet')}
           >
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">

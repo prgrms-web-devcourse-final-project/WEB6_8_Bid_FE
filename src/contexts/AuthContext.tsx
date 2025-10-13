@@ -39,14 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
       const cookieToken = accessTokenCookie?.split('=')[1]
 
-      console.log('🔍 AuthContext - 쿠키 기반 인증 확인:', {
-        cookie: cookieToken ? '존재' : '없음',
-        cookieLength: cookieToken?.length || 0,
-        allCookies: document.cookie,
-      })
-
       if (!cookieToken) {
-        console.log('⚠️ AuthContext - 쿠키에 토큰이 없음, 로그인 필요')
         setLoading(false)
         return
       }
@@ -54,7 +47,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         // API 클라이언트를 통한 로그인 상태 확인
         const response = await authApi.check()
-        console.log('✅ 로그인 상태 확인 성공:', response)
 
         // 서버에서 받은 사용자 정보로 상태 업데이트
         if (
@@ -62,12 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           response.data &&
           response.data !== null
         ) {
-          console.log('🔍 서버 응답 데이터 구조:', response.data)
-
           // 로그인 상태 확인 후 사용자 정보 API 호출
           try {
             const userResponse = await authApi.getProfile()
-            console.log('👤 사용자 정보 API 응답:', userResponse)
 
             if (userResponse.success && userResponse.data) {
               const userInfo = {
@@ -162,7 +151,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   '❌ Refresh Token이 유효하지 않음:',
                   reissueResponse.msg,
                 )
-                console.log('🔄 로그아웃 처리 진행')
               }
             }
 
@@ -203,8 +191,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
-    console.log('🔓 로그아웃 함수 호출됨')
-
     // 로컬 스토리지 정리
     localStorage.removeItem('auth_state')
     localStorage.removeItem('user')
@@ -218,12 +204,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     document.cookie =
       'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
 
-    console.log('🧹 로그아웃 완료 - 토큰 및 사용자 정보 삭제됨')
     setUser(null)
 
     // 로그인 페이지로 리다이렉트
     if (typeof window !== 'undefined') {
-      console.log('🔄 로그인 페이지로 리다이렉트')
       window.location.href = '/login'
     }
   }

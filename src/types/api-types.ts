@@ -97,6 +97,42 @@ export type TossIssueBillingKeyRequest =
   components['schemas']['TossIssueBillingKeyRequest']
 export type TossIssueBillingKeyResponse = components['schemas']['RsData']
 
+// 토스 결제 관련 타입
+export type TossBillingAuthParamsResponse = {
+  clientKey: string
+  customerKey: string
+  successUrl: string
+  failUrl: string
+}
+
+export type TossBillingAuthParams = {
+  resultCode: string
+  msg: string
+  data: TossBillingAuthParamsResponse
+}
+
+export type IdempotencyKeyResponse = {
+  idempotencyKey: string
+}
+
+export type IdempotencyKey = {
+  resultCode: string
+  msg: string
+  data: IdempotencyKeyResponse
+}
+
+export type WalletChargeRequest = {
+  paymentMethodId: number
+  amount: number
+  idempotencyKey: string
+}
+
+export type WalletChargeResponse = {
+  resultCode: string
+  msg: string
+  data?: any
+}
+
 // 지갑 관련 타입 (Swagger 스펙 기반)
 export type CashResponse = components['schemas']['RsData']
 export type CashTransactionsResponse = components['schemas']['RsData']

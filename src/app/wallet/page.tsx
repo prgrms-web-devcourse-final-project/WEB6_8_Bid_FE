@@ -1,41 +1,14 @@
 import { WalletClient } from '@/components/features/wallet/WalletClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { cookies } from 'next/headers'
 
 export default async function WalletPage() {
   try {
-    // 쿠키에서 토큰 가져오기
-    const cookieStore = await cookies()
-    const accessToken = cookieStore.get('accessToken')?.value
-
-    if (!accessToken) {
-      return (
-        <HomeLayout>
-          <PageHeader
-            title="지갑"
-            description="내 지갑 잔액과 거래 내역을 확인하세요"
-            showBackButton
-          />
-          <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h1 className="mb-4 text-2xl font-bold text-neutral-900">
-                로그인이 필요합니다
-              </h1>
-              <p className="text-neutral-600">
-                지갑을 확인하려면 로그인해주세요.
-              </p>
-            </div>
-          </div>
-        </HomeLayout>
-      )
-    }
-
     return (
       <HomeLayout isLoggedIn={true}>
         <PageHeader
-          title="지갑"
-          description="내 지갑 잔액과 거래 내역을 확인하세요"
+          title="결제 관리"
+          description="내 결제 수단과 거래 내역을 확인하세요"
           showBackButton
         />
         <WalletClient />
@@ -48,7 +21,7 @@ export default async function WalletPage() {
       <HomeLayout isLoggedIn={true}>
         <PageHeader
           title="지갑"
-          description="내 지갑 잔액과 거래 내역을 확인하세요"
+          description="내 결제 수단과 거래 내역을 확인하세요"
           showBackButton
         />
         <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
