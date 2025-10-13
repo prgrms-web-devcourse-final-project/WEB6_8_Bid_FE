@@ -6,7 +6,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
-import { bidApi, reviewApi } from '@/lib/api'
+import { useWebSocketAuctionTimer } from '@/hooks/useWebSocketAuctionTimer'
+import { useWebSocketBid } from '@/hooks/useWebSocketBid'
+import { bidApi, productApi, reviewApi } from '@/lib/api'
 import { Product } from '@/types'
 import {
   Clock,
@@ -16,6 +18,7 @@ import {
   MessageSquare,
   Star,
   User,
+  Zap,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
@@ -37,6 +40,15 @@ export function ProductDetailClient({
   const [apiError, setApiError] = useState('')
   const [bidStatus, setBidStatus] = useState<any>(initialBidStatus || null)
   const [reviews, setReviews] = useState<any[]>([])
+  const [isPriceUpdated, setIsPriceUpdated] = useState(false)
+  const [isBidCountUpdated, setIsBidCountUpdated] = useState(false)
+  const [showBidNotification, setShowBidNotification] = useState(false)
+  const [lastBidInfo, setLastBidInfo] = useState<{
+    price: number
+    bidder: string
+  } | null>(null)
+  const [productData, setProductData] = useState(product)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // product.id를 안전하게 숫자로 변환하는 함수
   const getSafeProductId = (productId: any): number => {
@@ -47,6 +59,43 @@ export function ProductDetailClient({
     }
     return 0
   }
+
+  const safeProductId = getSafeProductId(product.productId)
+
+  // 상품 데이터 새로고침 함수
+  const refreshProductData = async () => {
+    try {
+      setIsRefreshing(true)
+      console.log('🔄 상품 데이터 새로고침 중...')
+      const response = await productApi.getProduct(safeProductId)
+      if (response.success && response.data) {
+        setProductData(response.data)
+        // bidStatus도 함께 업데이트
+        setBidStatus((prev: any) => ({
+          ...prev,
+          currentPrice: response.data.currentPrice,
+          bidCount: response.data.bidCount,
+        }))
+        console.log('✅ 상품 데이터 새로고침 완료:', response.data)
+      }
+    } catch (error) {
+      console.error('❌ 상품 데이터 새로고침 실패:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  // WebSocket 실시간 입찰 정보 구독
+  const {
+    bidUpdate,
+    auctionStatus,
+    isSubscribed,
+    error: wsError,
+  } = useWebSocketBid(safeProductId)
+
+  // WebSocket 실시간 경매 타이머 구독
+  const { timerData, isSubscribed: isTimerSubscribed } =
+    useWebSocketAuctionTimer(safeProductId)
 
   // API 응답의 영어 status를 한국어로 변환
   const mapApiStatusToKorean = (apiStatus: string): string => {
@@ -78,18 +127,16 @@ export function ProductDetailClient({
     return image.imageUrl || ''
   }
 
-  const safeProductId = getSafeProductId(product.productId)
-
   // 현재 사용자가 상품 판매자인지 확인 (메모이제이션으로 성능 최적화)
   const isOwner = useMemo(() => {
     return (
       user &&
-      product.seller &&
-      (String(user.id) === String(product.seller.id) ||
-        user.email === product.seller.email ||
-        user.nickname === product.seller.name)
+      productData.seller &&
+      (String(user.id) === String(productData.seller.id) ||
+        user.email === productData.seller.email ||
+        user.nickname === productData.seller.name)
     )
-  }, [user, product.seller])
+  }, [user, productData.seller])
 
   // 입찰 현황 조회
   const fetchBidStatus = async () => {
@@ -124,6 +171,57 @@ export function ProductDetailClient({
       setReviews([])
     }
   }
+
+  // 실시간 입찰 정보 업데이트
+  useEffect(() => {
+    if (bidUpdate) {
+      console.log('🎯 실시간 입찰 정보 업데이트:', bidUpdate)
+      // 실시간으로 현재가와 입찰 수 업데이트
+      setBidStatus((prev: any) => {
+        const newStatus = {
+          ...prev,
+          currentPrice: bidUpdate.currentPrice,
+          bidCount: bidUpdate.bidCount,
+        }
+
+        // 가격이 변경되었는지 확인
+        if (prev?.currentPrice !== bidUpdate.currentPrice) {
+          setIsPriceUpdated(true)
+          setTimeout(() => setIsPriceUpdated(false), 3000) // 3초 후 하이라이트 제거
+
+          // 새 입찰 알림 표시
+          setLastBidInfo({
+            price: bidUpdate.currentPrice,
+            bidder: bidUpdate.lastBidder || '',
+          })
+          setShowBidNotification(true)
+          setTimeout(() => setShowBidNotification(false), 5000) // 5초 후 알림 제거
+
+          // 상품 데이터 새로고침 (가격 변경 시)
+          refreshProductData()
+        }
+
+        // 입찰 수가 변경되었는지 확인
+        if (prev?.bidCount !== bidUpdate.bidCount) {
+          setIsBidCountUpdated(true)
+          setTimeout(() => setIsBidCountUpdated(false), 3000) // 3초 후 하이라이트 제거
+
+          // 상품 데이터 새로고침 (입찰 수 변경 시)
+          refreshProductData()
+        }
+
+        return newStatus
+      })
+    }
+  }, [bidUpdate])
+
+  // 경매 상태 업데이트
+  useEffect(() => {
+    if (auctionStatus) {
+      console.log('🎯 경매 상태 업데이트:', auctionStatus)
+      // 경매 상태에 따른 UI 업데이트 로직
+    }
+  }, [auctionStatus])
 
   useEffect(() => {
     // 토큰 상태 확인
@@ -255,7 +353,10 @@ export function ProductDetailClient({
 
     const amount = parseInt(bidAmount.replace(/,/g, ''))
 
-    if (!amount || amount <= (product.currentPrice || product.startingPrice)) {
+    if (
+      !amount ||
+      amount <= (productData.currentPrice || productData.startingPrice)
+    ) {
       console.log('🎯 입찰 금액이 현재가보다 낮음')
       setApiError('현재가보다 높은 금액을 입력해주세요.')
       return
@@ -281,7 +382,14 @@ export function ProductDetailClient({
         alert('입찰이 성공적으로 등록되었습니다.')
         setBidAmount('')
         fetchBidStatus()
-        window.location.reload()
+        // 상품 데이터 새로고침
+        refreshProductData()
+
+        // 내 입찰 목록에 추가 (WebSocket을 통해 다른 페이지에서도 알림 받을 수 있도록)
+        console.log('🎯 입찰 성공 - 내 입찰 목록에 추가됨')
+
+        // 페이지 새로고침 대신 실시간 업데이트 사용
+        // window.location.reload()
       } else {
         console.log('🎯 입찰 실패:', response.msg)
         setApiError(response.msg || '입찰에 실패했습니다.')
@@ -313,14 +421,73 @@ export function ProductDetailClient({
         />
       )}
 
+      {/* WebSocket 에러 메시지 */}
+      {wsError && (
+        <ErrorAlert
+          title="실시간 연결 오류"
+          message={wsError}
+          onClose={() => {}}
+        />
+      )}
+
+      {/* 새 입찰 알림 토스트 */}
+      {showBidNotification && lastBidInfo && (
+        <div className="animate-slide-in fixed top-4 right-4 z-50">
+          <div className="rounded-lg bg-green-500 px-6 py-4 text-white shadow-lg">
+            <div className="flex items-center space-x-2">
+              <Zap className="h-5 w-5 animate-pulse" />
+              <div>
+                <div className="font-semibold">새 입찰 발생!</div>
+                <div className="text-sm">{formatPrice(lastBidInfo.price)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 실시간 연결 상태 표시 */}
+      {/* WebSocket 연결 상태 표시 */}
+      <div className="mb-4 space-y-2">
+        {isSubscribed && (
+          <div className="flex items-center justify-center space-x-2 rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
+            <Zap className="h-4 w-4 animate-pulse" />
+            <span>실시간 입찰 정보 연결됨</span>
+          </div>
+        )}
+        {isTimerSubscribed && (
+          <div className="flex items-center justify-center space-x-2 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700">
+            <Clock className="h-4 w-4 animate-pulse" />
+            <span>실시간 경매 타이머 연결됨</span>
+          </div>
+        )}
+        {wsError && (
+          <div className="flex items-center justify-center space-x-2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+            <span>⚠️ 실시간 연결 오류: {wsError}</span>
+          </div>
+        )}
+        {!isSubscribed && !isTimerSubscribed && (
+          <div className="flex items-center justify-center space-x-2 rounded-lg bg-gray-50 px-4 py-2 text-sm text-gray-600">
+            <span>실시간 기능 연결 중...</span>
+          </div>
+        )}
+
+        {/* 데이터 새로고침 상태 */}
+        {isRefreshing && (
+          <div className="flex items-center justify-center space-x-2 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+            <span>데이터 새로고침 중...</span>
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 상품 이미지 */}
         <div className="space-y-4">
           <div className="aspect-square rounded-lg bg-neutral-200">
-            {product.images && product.images[0] ? (
+            {productData.images && productData.images[0] ? (
               <img
-                src={getImageUrl(product.images[0])}
-                alt={product.title}
+                src={getImageUrl(productData.images[0])}
+                alt={productData.title}
                 className="h-full w-full rounded-lg object-cover"
                 onError={(e) => {
                   console.error('이미지 로드 실패:', e.currentTarget.src)
@@ -350,9 +517,9 @@ export function ProductDetailClient({
           </div>
 
           {/* 추가 이미지들 */}
-          {product.images && product.images.length > 1 && (
+          {productData.images && productData.images.length > 1 && (
             <div className="grid grid-cols-4 gap-2">
-              {product.images.slice(1, 5).map((image, index) => (
+              {productData.images.slice(1, 5).map((image, index) => (
                 <div
                   key={index}
                   className="aspect-square rounded-lg bg-neutral-200"
@@ -377,22 +544,24 @@ export function ProductDetailClient({
           {/* 기본 정보 */}
           <div>
             <div className="mb-2 flex items-center space-x-2">
-              <Badge variant="primary">{product.category}</Badge>
-              {product.status === '경매 중' && (
+              <Badge variant="primary">{productData.category}</Badge>
+              {productData.status === '경매 중' && (
                 <Badge variant="success">경매중</Badge>
               )}
-              {product.status === '경매 시작 전' && (
+              {productData.status === '경매 시작 전' && (
                 <Badge variant="secondary">시작전</Badge>
               )}
-              {product.status === '낙찰' && (
+              {productData.status === '낙찰' && (
                 <Badge variant="primary">낙찰</Badge>
               )}
-              {product.status === '유찰' && <Badge variant="error">유찰</Badge>}
+              {productData.status === '유찰' && (
+                <Badge variant="error">유찰</Badge>
+              )}
             </div>
 
             <div className="mb-4 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-neutral-900">
-                {product.title}
+                {productData.title}
               </h1>
               {isOwner && (
                 <Button
@@ -403,18 +572,18 @@ export function ProductDetailClient({
                   }}
                   className="flex items-center space-x-2"
                   disabled={
-                    product.status === '경매 중' ||
-                    product.status === '낙찰' ||
-                    product.status === '유찰'
+                    productData.status === '경매 중' ||
+                    productData.status === '낙찰' ||
+                    productData.status === '유찰'
                   }
                 >
                   <Edit className="h-4 w-4" />
                   <span>
-                    {product.status === '경매 중'
+                    {productData.status === '경매 중'
                       ? '경매중'
-                      : product.status === '낙찰'
+                      : productData.status === '낙찰'
                         ? '완료'
-                        : product.status === '유찰'
+                        : productData.status === '유찰'
                           ? '결제완료'
                           : '수정'}
                   </span>
@@ -425,20 +594,45 @@ export function ProductDetailClient({
             <div className="space-y-3 text-sm text-neutral-600">
               <div className="flex items-center justify-between">
                 <span>현재가:</span>
-                <span className="text-success-600 text-lg font-semibold">
-                  {formatPrice(product.currentPrice || product.startingPrice)}
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span
+                    className={`text-lg font-semibold transition-all duration-500 ${
+                      isPriceUpdated
+                        ? 'animate-pulse rounded bg-yellow-100 px-2 py-1 text-red-600'
+                        : 'text-success-600'
+                    }`}
+                  >
+                    {formatPrice(
+                      bidUpdate?.currentPrice ||
+                        bidStatus?.currentPrice ||
+                        productData.currentPrice ||
+                        productData.startingPrice,
+                    )}
+                  </span>
+                  {bidUpdate && (
+                    <div className="flex items-center space-x-1">
+                      <span className="animate-pulse text-xs text-green-500">
+                        실시간
+                      </span>
+                      {isPriceUpdated && (
+                        <span className="text-xs font-semibold text-red-600">
+                          (새 입찰!)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <span>시작가:</span>
-                <span>{formatPrice(product.startingPrice)}</span>
+                <span>{formatPrice(productData.startingPrice)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>경매 시작:</span>
                 <span className="flex items-center space-x-1">
                   <Clock className="h-4 w-4" />
                   <span>
-                    {formatDateTime((product as any).auctionStartTime)}
+                    {formatDateTime((productData as any).auctionStartTime)}
                   </span>
                 </span>
               </div>
@@ -446,28 +640,69 @@ export function ProductDetailClient({
                 <span>경매 종료:</span>
                 <span className="flex items-center space-x-1">
                   <Clock className="h-4 w-4" />
-                  <span>{formatDateTime((product as any).auctionEndTime)}</span>
+                  <span>
+                    {formatDateTime((productData as any).auctionEndTime)}
+                  </span>
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span>경매 종료까지:</span>
                 <span className="flex items-center space-x-1">
                   <Clock className="h-4 w-4" />
-                  <span>
-                    {formatTimeLeft(
-                      (product as any).auctionEndTime || product.endTime,
-                    )}
+                  <span
+                    className={
+                      timerData?.isEndingSoon
+                        ? 'animate-pulse font-semibold text-red-500'
+                        : ''
+                    }
+                  >
+                    {timerData?.timeLeft ||
+                      formatTimeLeft(
+                        (productData as any).auctionEndTime ||
+                          productData.endTime,
+                      )}
                   </span>
+                  {isTimerSubscribed && (
+                    <span className="ml-1 animate-pulse text-xs text-green-500">
+                      실시간
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span>참여자 수:</span>
-                <span>{product.bidCount || 0}명</span>
+                <div className="flex items-center space-x-2">
+                  <span
+                    className={`font-semibold transition-all duration-500 ${
+                      isBidCountUpdated
+                        ? 'animate-pulse rounded bg-blue-100 px-2 py-1 text-blue-600'
+                        : ''
+                    }`}
+                  >
+                    {bidUpdate?.bidCount ||
+                      bidStatus?.bidCount ||
+                      productData.bidCount ||
+                      0}
+                    명
+                  </span>
+                  {bidUpdate && (
+                    <div className="flex items-center space-x-1">
+                      <span className="animate-pulse text-xs text-green-500">
+                        실시간
+                      </span>
+                      {isBidCountUpdated && (
+                        <span className="text-xs font-semibold text-blue-600">
+                          (새 참여자!)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <span>배송 방법:</span>
                 <span>
-                  {formatDeliveryMethod((product as any).deliveryMethod)}
+                  {formatDeliveryMethod((productData as any).deliveryMethod)}
                 </span>
               </div>
             </div>
@@ -484,7 +719,7 @@ export function ProductDetailClient({
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    router.push(`/seller/${product.seller?.id || '1'}`)
+                    router.push(`/seller/${productData.seller?.id || '1'}`)
                   }
                 >
                   상세보기
@@ -493,19 +728,19 @@ export function ProductDetailClient({
               <div className="space-y-2 text-sm">
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-neutral-400" />
-                  <span>{product.seller?.name || '판매자'}</span>
+                  <span>{productData.seller?.name || '판매자'}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Heart className="h-4 w-4 text-red-400" />
-                  <span>신뢰도 {product.seller?.trustScore || 0}점</span>
+                  <span>신뢰도 {productData.seller?.trustScore || 0}점</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <MapPin className="h-4 w-4 text-neutral-400" />
-                  <span>{product.location || '위치 정보 없음'}</span>
+                  <span>{productData.location || '위치 정보 없음'}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <MessageSquare className="h-4 w-4 text-neutral-400" />
-                  <span>리뷰 {product.seller?.reviewCount || 0}개</span>
+                  <span>리뷰 {productData.seller?.reviewCount || 0}개</span>
                 </div>
               </div>
             </CardContent>
@@ -544,7 +779,8 @@ export function ProductDetailClient({
                     <p className="mt-1 text-xs text-neutral-500">
                       최소 입찰가:{' '}
                       {formatPrice(
-                        (product.currentPrice || product.startingPrice) + 1000,
+                        (productData.currentPrice ||
+                          productData.startingPrice) + 1000,
                       )}
                     </p>
                   </div>
@@ -590,18 +826,43 @@ export function ProductDetailClient({
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span>총 입찰 수:</span>
-                  <span>{bidStatus?.bidCount || product.bidCount || 0}회</span>
+                  <span>
+                    {bidUpdate?.bidCount ||
+                      bidStatus?.bidCount ||
+                      product.bidCount ||
+                      0}
+                    회
+                    {bidUpdate && (
+                      <span className="ml-1 animate-pulse text-xs text-green-500">
+                        실시간
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>현재 최고가:</span>
                   <span className="font-semibold">
                     {formatPrice(
-                      bidStatus?.currentPrice ||
-                        product.currentPrice ||
-                        product.startingPrice,
+                      bidUpdate?.currentPrice ||
+                        bidStatus?.currentPrice ||
+                        productData.currentPrice ||
+                        productData.startingPrice,
+                    )}
+                    {bidUpdate && (
+                      <span className="ml-1 animate-pulse text-xs text-green-500">
+                        실시간
+                      </span>
                     )}
                   </span>
                 </div>
+                {bidUpdate?.lastBidder && (
+                  <div className="flex items-center justify-between">
+                    <span>최근 입찰자:</span>
+                    <span className="text-xs text-neutral-500">
+                      {bidUpdate.lastBidder}
+                    </span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -666,8 +927,8 @@ export function ProductDetailClient({
             상품 설명
           </h3>
           <div className="prose max-w-none text-neutral-700">
-            {product.description ? (
-              <p className="whitespace-pre-wrap">{product.description}</p>
+            {productData.description ? (
+              <p className="whitespace-pre-wrap">{productData.description}</p>
             ) : (
               <p className="text-neutral-500">상품 설명이 없습니다.</p>
             )}

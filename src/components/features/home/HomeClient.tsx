@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
+import { useWebSocketHome } from '@/hooks/useWebSocketHome'
 import { productApi } from '@/lib/api'
 import { Product } from '@/types'
-import { Clock, Filter, MapPin, Search, User, X } from 'lucide-react'
+import { Clock, Filter, MapPin, Search, User, X, Zap } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -98,6 +99,9 @@ export function HomeClient({ stats }: HomeClientProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // WebSocket 실시간 홈 데이터 구독
+  const { homeData, isSubscribed: isHomeDataSubscribed } = useWebSocketHome()
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
     location: [] as string[],
@@ -254,17 +258,21 @@ export function HomeClient({ stats }: HomeClientProps) {
     }
   }
 
-  // 서버 사이드에서 필터링하므로 클라이언트 사이드 필터링 제거
-  const filteredProducts = products
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* 통계 카드 */}
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card variant="outlined">
           <CardContent className="p-4 text-center">
-            <div className="text-primary-500 text-2xl font-bold">
-              {stats.activeAuctions.toLocaleString()}
+            <div className="flex items-center justify-center space-x-2">
+              <div className="text-primary-500 text-2xl font-bold">
+                {(
+                  homeData.totalActiveAuctions || stats.activeAuctions
+                ).toLocaleString()}
+              </div>
+              {isHomeDataSubscribed && (
+                <Zap className="h-4 w-4 animate-pulse text-green-500" />
+              )}
             </div>
             <div className="text-sm text-neutral-600">진행중인 경매</div>
           </CardContent>
@@ -272,19 +280,29 @@ export function HomeClient({ stats }: HomeClientProps) {
 
         <Card variant="outlined">
           <CardContent className="p-4 text-center">
-            <div className="text-warning-500 text-2xl font-bold">
-              {stats.endingToday.toLocaleString()}
+            <div className="flex items-center justify-center space-x-2">
+              <div className="text-warning-500 text-2xl font-bold">
+                {homeData.endingSoonProducts?.length || stats.endingToday}
+              </div>
+              {isHomeDataSubscribed && (
+                <Zap className="h-4 w-4 animate-pulse text-green-500" />
+              )}
             </div>
-            <div className="text-sm text-neutral-600">오늘 마감</div>
+            <div className="text-sm text-neutral-600">마감 임박</div>
           </CardContent>
         </Card>
 
         <Card variant="outlined">
           <CardContent className="p-4 text-center">
-            <div className="text-success-500 text-2xl font-bold">
-              {stats.totalParticipants.toLocaleString()}
+            <div className="flex items-center justify-center space-x-2">
+              <div className="text-success-500 text-2xl font-bold">
+                {homeData.totalBidsToday || stats.totalParticipants}
+              </div>
+              {isHomeDataSubscribed && (
+                <Zap className="h-4 w-4 animate-pulse text-green-500" />
+              )}
             </div>
-            <div className="text-sm text-neutral-600">총 참여자</div>
+            <div className="text-sm text-neutral-600">오늘 입찰</div>
           </CardContent>
         </Card>
 
@@ -567,7 +585,7 @@ export function HomeClient({ stats }: HomeClientProps) {
               </div>
             </CardContent>
           </Card>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">
@@ -587,7 +605,7 @@ export function HomeClient({ stats }: HomeClientProps) {
           </Card>
         ) : (
           <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
-            {filteredProducts.map((product) => (
+            {products.map((product) => (
               <Card
                 key={product.productId}
                 variant="outlined"

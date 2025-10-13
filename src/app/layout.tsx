@@ -1,4 +1,5 @@
 import { AuthProvider } from '@/contexts/AuthContext'
+import { WebSocketProvider } from '@/contexts/WebSocketContext'
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
 import './globals.css'
@@ -47,9 +48,13 @@ export default function RootLayout({
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <script src="https://js.tosspayments.com/v1"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
       </head>
       <body className="font-noto-sans-kr">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <WebSocketProvider>{children}</WebSocketProvider>
+        </AuthProvider>
       </body>
     </html>
   )

@@ -3,10 +3,12 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { useAuth } from '@/contexts/AuthContext'
+import { useWebSocketMyAuctions } from '@/hooks/useWebSocketMyAuctions'
 import { productApi } from '@/lib/api'
 import { Product } from '@/types'
 import { MyProductsParams } from '@/types/api-types'
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, Zap } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -16,6 +18,7 @@ interface MyProductsClientProps {
 
 export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const [selectedTab, setSelectedTab] = useState<
     '경매 시작 전' | '경매 중' | '낙찰' | '유찰'
   >('경매 시작 전')
@@ -23,6 +26,32 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
   const [products, setProducts] = useState(initialProducts || [])
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
+
+  // WebSocket 내 경매 실시간 모니터링
+  const { myAuctionUpdates, isSubscribed: isMyAuctionsSubscribed } =
+    useWebSocketMyAuctions(user?.id || null)
+
+  // 실시간 업데이트를 상품 목록에 반영
+  useEffect(() => {
+    if (myAuctionUpdates.length > 0) {
+      setProducts((prevProducts) => {
+        return prevProducts.map((product) => {
+          const update = myAuctionUpdates.find(
+            (update) => update.productId === product.productId,
+          )
+          if (update) {
+            return {
+              ...product,
+              currentPrice: update.currentPrice,
+              bidCount: update.bidCount,
+              status: update.status,
+            }
+          }
+          return product
+        })
+      })
+    }
+  }, [myAuctionUpdates])
 
   // 내 상품 목록 조회
   const fetchMyProducts = async (params?: MyProductsParams) => {
@@ -238,6 +267,16 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 실시간 연결 상태 */}
+      {isMyAuctionsSubscribed && (
+        <div className="mb-4 flex items-center justify-center space-x-2 rounded-lg bg-green-50 p-3">
+          <Zap className="h-4 w-4 animate-pulse text-green-500" />
+          <span className="text-sm text-green-700">
+            내 경매 실시간 모니터링 중
+          </span>
         </div>
       )}
 

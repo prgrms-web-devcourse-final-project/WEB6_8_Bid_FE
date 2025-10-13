@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { useWebSocketNotifications } from '@/hooks/useWebSocketNotifications'
 import { notificationApi } from '@/lib/api'
 import { User } from '@/types'
 import { Bell, Menu, X } from 'lucide-react'
@@ -28,6 +29,17 @@ export function Header({
   const isLoggedIn = contextIsLoggedIn || propIsLoggedIn
   const user = contextUser || propUser
 
+  // WebSocket 실시간 알림 구독 (로그인된 경우에만)
+  const { unreadCount: wsUnreadCount } = useWebSocketNotifications(isLoggedIn)
+
+  // WebSocket 실시간 알림 개수와 API 알림 개수 합산
+  useEffect(() => {
+    if (isLoggedIn) {
+      const totalCount = (unreadNotificationCount || 0) + (wsUnreadCount || 0)
+      setUnreadNotificationCount(totalCount)
+    }
+  }, [wsUnreadCount, isLoggedIn])
+
   // 읽지 않은 알림 개수 가져오기
   useEffect(() => {
     const fetchUnreadCount = async () => {
@@ -47,8 +59,8 @@ export function Header({
 
     fetchUnreadCount()
 
-    // 30초마다 알림 개수 새로고침
-    const interval = setInterval(fetchUnreadCount, 30000)
+    // 5분마다 알림 개수 새로고침 (성능 최적화)
+    const interval = setInterval(fetchUnreadCount, 300000)
 
     // 알림 개수 업데이트 이벤트 리스너
     const handleNotificationCountUpdate = (event: CustomEvent) => {
@@ -209,7 +221,6 @@ export function Header({
                         <hr className="my-2" />
                         <button
                           onClick={() => {
-                            console.log('🔓 로그아웃 버튼 클릭됨')
                             setIsProfileOpen(false)
                             logout()
                           }}

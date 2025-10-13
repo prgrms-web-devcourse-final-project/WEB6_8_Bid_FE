@@ -1,5 +1,7 @@
 'use client'
 
+import { WebSocketDebug } from '@/components/debug/WebSocketDebug'
+import { WebSocketPerformanceMonitor } from '@/components/debug/WebSocketPerformanceMonitor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
@@ -769,7 +771,7 @@ export default function ApiTestPage() {
       description: 'POST /api/v1/payments/toss/issue-billing-key',
       category: '결제',
       test: async () => {
-        const response = await paymentApi.issueBillingKey({
+        const response = await paymentApi.issueTossBillingKey({
           authKey: 'test_auth_key_12345', // 테스트용 authKey
         })
         console.log('🔑 토스 빌링키 발급:', response)
@@ -822,7 +824,7 @@ export default function ApiTestPage() {
         if (paymentMethods.length > 0) {
           const paymentMethodId = paymentMethods[0].id
           console.log(`💰 충전에 사용할 결제수단 ID: ${paymentMethodId}`)
-          const response = await paymentApi.charge({
+          const response = await paymentApi.createPayment({
             paymentMethodId: paymentMethodId,
             amount: 50000, // 5만원 충전
             idempotencyKey: `charge_${Date.now()}`, // 중복 방지 키
@@ -934,7 +936,10 @@ export default function ApiTestPage() {
       description: 'GET /api/v1/cash/transactions?page=1&size=20',
       category: '캐시',
       test: async () => {
-        const response = await cashApi.getMyTransactions({ page: 1, size: 20 })
+        const response = await cashApi.getCashTransactions({
+          page: 1,
+          size: 20,
+        })
         console.log('💵 지갑 거래 내역 조회:', response)
         return response
       },
@@ -945,7 +950,7 @@ export default function ApiTestPage() {
       category: '캐시',
       test: async () => {
         // 먼저 거래 내역을 조회해서 실제 존재하는 거래 ID를 찾음
-        const listResponse = await cashApi.getMyTransactions({
+        const listResponse = await cashApi.getCashTransactions({
           page: 1,
           size: 20,
         })
@@ -967,7 +972,7 @@ export default function ApiTestPage() {
         }
 
         console.log(`💵 조회할 거래 ID: ${transactionId}`)
-        const response = await cashApi.getMyTransactionDetail(transactionId)
+        const response = await cashApi.getTransactionDetail(transactionId)
         console.log('💵 지갑 거래 상세 조회:', response)
         return response
       },
@@ -1363,6 +1368,26 @@ export default function ApiTestPage() {
               🗑️ 결과 초기화
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* WebSocket 디버그 도구 */}
+      <Card className="mt-6">
+        <CardHeader>
+          <h2 className="text-xl font-bold">WebSocket 디버그 도구</h2>
+        </CardHeader>
+        <CardContent>
+          <WebSocketDebug />
+        </CardContent>
+      </Card>
+
+      {/* WebSocket 성능 모니터 */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-xl font-semibold">WebSocket 성능 모니터</h2>
+        </CardHeader>
+        <CardContent>
+          <WebSocketPerformanceMonitor />
         </CardContent>
       </Card>
     </div>

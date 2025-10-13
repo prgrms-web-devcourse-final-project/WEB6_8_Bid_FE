@@ -1,3 +1,5 @@
+import { MyBidNotifications } from '@/components/features/notifications/MyBidNotifications'
+import { WebSocketStatus } from '@/contexts/WebSocketContext'
 import { User } from '@/types'
 import { ReactNode } from 'react'
 import { BottomNavigation } from './BottomNavigation'
@@ -27,6 +29,12 @@ export function HomeLayout({
       <main className="pb-16 md:pb-0">{children}</main>
 
       <BottomNavigation notificationCount={notificationCount} />
+
+      {/* WebSocket 연결 상태 표시 */}
+      <WebSocketStatus />
+
+      {/* 내 입찰 실시간 알림 */}
+      {isLoggedIn && <MyBidNotifications />}
     </div>
   )
 }
