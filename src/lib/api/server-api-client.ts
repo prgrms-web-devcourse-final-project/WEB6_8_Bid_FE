@@ -148,6 +148,10 @@ class ServerApiClient {
     return this.makeRequest('/payment-methods')
   }
 
+  async getPaymentHistory() {
+    return this.makeRequest('/payments/me')
+  }
+
   // 리뷰 관련 API
   async getReviews(params?: {
     page?: number
@@ -191,6 +195,7 @@ export const serverApi = {
 
   // 결제수단 관련
   getPaymentMethods: () => serverApiClient.getPaymentMethods(),
+  getPaymentHistory: () => serverApiClient.getPaymentHistory(),
 
   // 리뷰 관련
   getReviews: (params?: any) => serverApiClient.getReviews(params),

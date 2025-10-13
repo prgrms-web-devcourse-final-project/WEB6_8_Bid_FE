@@ -141,7 +141,7 @@ export function Header({
 
                 {/* 결제 관리 버튼 */}
                 <Link
-                  href="/payments"
+                  href="/payments-methods"
                   className="hover:text-primary-500 hidden items-center px-4 py-2 text-neutral-600 transition-colors sm:inline-flex"
                 >
                   결제 관리
@@ -154,12 +154,12 @@ export function Header({
                 >
                   <Bell className="h-5 w-5" />
                   {unreadNotificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-xs font-bold text-white shadow-lg ring-2 ring-white animate-pulse">
+                    <span className="absolute -top-1 -right-1 flex h-5 w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-xs font-bold text-white shadow-lg ring-2 ring-white">
                       {unreadNotificationCount > 99
                         ? '99+'
                         : unreadNotificationCount > 9
-                        ? '9+'
-                        : unreadNotificationCount}
+                          ? '9+'
+                          : unreadNotificationCount}
                     </span>
                   )}
                 </Link>
