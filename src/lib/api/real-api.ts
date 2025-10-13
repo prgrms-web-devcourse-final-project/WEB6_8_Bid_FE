@@ -6,10 +6,11 @@ import type {
   BoardWriteResponse,
   IdempotencyKey,
   LoginResponse,
+  MyPaymentDetail,
+  MyPaymentListResponse,
   MyProductsParams,
   PaymentMethodCreateRequest,
   PaymentMethodEditRequest,
-  PaymentRequest,
   ProductCreateRequest,
   ProductListParams,
   ProductModifyRequest,
@@ -17,7 +18,6 @@ import type {
   ReviewUpdateRequest,
   SignupRequest,
   TossBillingAuthParams,
-  TossIssueBillingKeyRequest,
   UserInfo,
   UserInfoUpdate,
   WalletChargeRequest,
@@ -563,34 +563,7 @@ export const cashApi = {
   },
 }
 
-// 결제 관련 API
-export const paymentApi = {
-  // 결제하기
-  createPayment: async (data: PaymentRequest) => {
-    const response = await apiClient.post<ApiResponse<any>>(
-      '/api/v1/payments',
-      data,
-    )
-    return normalizeApiResponse(response.data)
-  },
-
-  // 결제 내역 조회
-  getPaymentHistory: async () => {
-    const response = await apiClient.get<ApiResponse<any>>(
-      '/api/v1/payments/history',
-    )
-    return normalizeApiResponse(response.data)
-  },
-
-  // Toss 결제 키 발급
-  issueTossBillingKey: async (data: TossIssueBillingKeyRequest) => {
-    const response = await apiClient.post<ApiResponse<any>>(
-      '/api/v1/payments/toss/issue-billing-key',
-      data,
-    )
-    return normalizeApiResponse(response.data)
-  },
-}
+// 결제 관련 API (기존 - tossApi로 이동됨)
 
 // 토스 결제 관련 API
 export const tossApi = {
@@ -624,6 +597,28 @@ export const tossApi = {
     const response = await apiClient.post<WalletChargeResponse>(
       '/api/v1/payments',
       data,
+    )
+    return normalizeApiResponse(response.data)
+  },
+}
+
+// 결제 내역 API
+export const paymentApi = {
+  // 내 결제 내역 목록 조회
+  getMyPayments: async (params?: { page?: number; size?: number }) => {
+    const response = await apiClient.get<MyPaymentListResponse>(
+      '/api/v1/payments/me',
+      {
+        params,
+      },
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 결제 상세 정보 조회
+  getPaymentDetail: async (paymentId: number) => {
+    const response = await apiClient.get<MyPaymentDetail>(
+      `/api/v1/payments/me/${paymentId}`,
     )
     return normalizeApiResponse(response.data)
   },

@@ -133,6 +133,38 @@ export type WalletChargeResponse = {
   data?: any
 }
 
+// 결제 내역 관련 타입 (Swagger RsData와 호환)
+export type MyPaymentListItemResponse = {
+  paymentId: number
+  status: string
+  amount: number
+  provider: string
+  methodType: string
+  createdAt: string
+  cashTransactionId?: number
+  balanceAfter?: number
+}
+
+export type MyPaymentListResponse = {
+  resultCode: string
+  msg: string
+  data: {
+    content: MyPaymentListItemResponse[]
+    totalElements: number
+    totalPages: number
+    size: number
+    number: number
+    first: boolean
+    last: boolean
+  }
+}
+
+export type MyPaymentDetail = {
+  resultCode: string
+  msg: string
+  data: any // Swagger의 RsData 타입과 호환
+}
+
 // 지갑 관련 타입 (Swagger 스펙 기반)
 export type CashResponse = components['schemas']['RsData']
 export type CashTransactionsResponse = components['schemas']['RsData']

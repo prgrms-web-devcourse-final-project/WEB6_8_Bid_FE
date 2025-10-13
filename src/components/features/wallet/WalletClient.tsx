@@ -19,7 +19,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useTossPayments } from '@/hooks/useTossPayments'
-import { cashApi, paymentMethodApi, tossApi } from '@/lib/api'
+import {
+  cashApi,
+  paymentApi,
+  paymentMethodApi,
+  tossApi,
+} from '@/lib/api/real-api'
 import { CreditCard, DollarSign, History, Plus, Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -40,6 +45,17 @@ interface CashTransaction {
     }
     summary?: string
   }
+}
+
+interface PaymentTransaction {
+  paymentId: number
+  status: string
+  amount: number
+  provider: string
+  methodType: string
+  createdAt: string
+  cashTransactionId?: number
+  balanceAfter?: number
 }
 
 interface CashResponse {
@@ -75,14 +91,34 @@ export function WalletClient() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<
-    'balance' | 'transactions' | 'paymentMethods'
+    'balance' | 'transactions' | 'paymentMethods' | 'payments'
   >('balance')
 
   // 충전 관련 상태
   const [isChargeDialogOpen, setIsChargeDialogOpen] = useState(false)
+
+  // 디버깅을 위한 로그
+  useEffect(() => {
+    console.log('충전 모달 상태:', isChargeDialogOpen)
+  }, [isChargeDialogOpen])
   const [chargeAmount, setChargeAmount] = useState('')
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('')
   const [isCharging, setIsCharging] = useState(false)
+
+  // 거래 상세 모달 상태
+  const [isTransactionDetailOpen, setIsTransactionDetailOpen] = useState(false)
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null)
+  const [transactionDetail, setTransactionDetail] = useState<any>(null)
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false)
+
+  // 결제 내역 관련 상태
+  const [payments, setPayments] = useState<PaymentTransaction[]>([])
+  const [isLoadingPayments, setIsLoadingPayments] = useState(false)
+  const [isPaymentDetailOpen, setIsPaymentDetailOpen] = useState(false)
+  const [selectedPayment, setSelectedPayment] =
+    useState<PaymentTransaction | null>(null)
+  const [paymentDetail, setPaymentDetail] = useState<any>(null)
+  const [isLoadingPaymentDetail, setIsLoadingPaymentDetail] = useState(false)
 
   // 결제수단 관리 관련 상태
   const [showAddForm, setShowAddForm] = useState(false)
@@ -162,7 +198,6 @@ export function WalletClient() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     if (urlParams.get('paymentMethodAdded') === 'true') {
-      console.log('🎉 토스 카드 등록 완료 감지, 결제수단 목록 새로고침')
       refreshPaymentMethods()
       // URL에서 파라미터 제거
       window.history.replaceState({}, '', '/wallet')
@@ -278,8 +313,24 @@ export function WalletClient() {
   // 결제수단 등록 (토스 팝업)
   const handleAddPaymentMethod = async () => {
     try {
+      // 인증 토큰 확인
+      const cookies = document.cookie.split(';')
+      const accessTokenCookie = cookies.find((cookie) =>
+        cookie.trim().startsWith('accessToken='),
+      )
+      const cookieToken = accessTokenCookie?.split('=')[1]?.trim()
+      const localStorageToken = localStorage.getItem('accessToken')
+      console.log('🔐 토스 카드 등록 - 인증 토큰 상태:', {
+        cookieToken: cookieToken ? '존재함' : '없음',
+        localStorageToken: localStorageToken ? '존재함' : '없음',
+        hasToken: !!(cookieToken || localStorageToken),
+      })
+
       // 1. 토스 빌링 인증 파라미터 조회
+      console.log('📞 토스 빌링 인증 파라미터 조회 시작...')
       const authParamsResponse = await tossApi.getBillingAuthParams()
+      console.log('📞 토스 빌링 인증 파라미터 응답:', authParamsResponse)
+
       if (!authParamsResponse.success) {
         throw new Error('결제수단 등록 정보를 가져오는데 실패했습니다.')
       }
@@ -509,6 +560,87 @@ export function WalletClient() {
     }
   }
 
+  // 결제 내역 불러오기
+  const loadPayments = async () => {
+    try {
+      setIsLoadingPayments(true)
+      const paymentsResponse = await paymentApi.getMyPayments()
+      console.log('💳 결제 내역 응답:', paymentsResponse)
+
+      if (paymentsResponse.success && paymentsResponse.data) {
+        const paymentsData = paymentsResponse.data.content || []
+        console.log('💳 처리된 결제 내역 데이터:', paymentsData)
+        setPayments(paymentsData)
+      } else {
+        console.error('결제 내역 로드 실패:', paymentsResponse.msg)
+        setError(paymentsResponse.msg || '결제 내역을 불러오는데 실패했습니다.')
+      }
+    } catch (err) {
+      console.error('결제 내역 로드 에러:', err)
+      setError('결제 내역을 불러오는데 실패했습니다.')
+    } finally {
+      setIsLoadingPayments(false)
+    }
+  }
+
+  // 거래 상세 정보 조회
+  const handleTransactionClick = async (transaction: any) => {
+    try {
+      setSelectedTransaction(transaction)
+      setIsTransactionDetailOpen(true)
+      setIsLoadingDetail(true)
+
+      console.log('🔍 거래 상세 조회 시작:', transaction.transactionId)
+      const detailResponse = await cashApi.getTransactionDetail(
+        transaction.transactionId,
+      )
+      console.log('🔍 거래 상세 응답:', detailResponse)
+
+      if (detailResponse.success) {
+        setTransactionDetail(detailResponse.data)
+      } else {
+        console.error('거래 상세 조회 실패:', detailResponse.msg)
+        setError(
+          detailResponse.msg || '거래 상세 정보를 불러오는데 실패했습니다.',
+        )
+      }
+    } catch (err) {
+      console.error('거래 상세 조회 에러:', err)
+      setError('거래 상세 정보를 불러오는데 실패했습니다.')
+    } finally {
+      setIsLoadingDetail(false)
+    }
+  }
+
+  // 결제 상세 정보 조회
+  const handlePaymentClick = async (payment: PaymentTransaction) => {
+    try {
+      setSelectedPayment(payment)
+      setIsPaymentDetailOpen(true)
+      setIsLoadingPaymentDetail(true)
+
+      console.log('🔍 결제 상세 조회 시작:', payment.paymentId)
+      const detailResponse = await paymentApi.getPaymentDetail(
+        payment.paymentId,
+      )
+      console.log('🔍 결제 상세 응답:', detailResponse)
+
+      if (detailResponse.success) {
+        setPaymentDetail(detailResponse.data)
+      } else {
+        console.error('결제 상세 조회 실패:', detailResponse.msg)
+        setError(
+          detailResponse.msg || '결제 상세 정보를 불러오는데 실패했습니다.',
+        )
+      }
+    } catch (err) {
+      console.error('결제 상세 조회 에러:', err)
+      setError('결제 상세 정보를 불러오는데 실패했습니다.')
+    } finally {
+      setIsLoadingPaymentDetail(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
       {/* 탭 네비게이션 */}
@@ -543,6 +675,22 @@ export function WalletClient() {
           </button>
           <button
             onClick={() => {
+              setActiveTab('payments')
+              if (payments.length === 0) {
+                loadPayments()
+              }
+            }}
+            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'payments'
+                ? 'text-primary-600 bg-white shadow-sm'
+                : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            <CreditCard className="mr-2 inline h-4 w-4" />
+            결제 내역
+          </button>
+          <button
+            onClick={() => {
               setActiveTab('paymentMethods')
               if (paymentMethods.length === 0) {
                 refreshPaymentMethods()
@@ -563,6 +711,15 @@ export function WalletClient() {
       {/* 잔액 조회 탭 */}
       {activeTab === 'balance' && (
         <div className="space-y-6">
+          {/* 잔액 조회 헤더 */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-neutral-900">잔액 조회</h2>
+              <p className="mt-1 text-sm text-neutral-600">
+                잔액을 확인할 수 있습니다.
+              </p>
+            </div>
+          </div>
           {isLoading ? (
             <Card variant="outlined">
               <CardContent className="py-12 text-center">
@@ -573,7 +730,7 @@ export function WalletClient() {
               </CardContent>
             </Card>
           ) : cashInfo ? (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="">
               {/* 잔액 카드 */}
               <Card variant="outlined">
                 <CardHeader>
@@ -591,7 +748,10 @@ export function WalletClient() {
                   </p>
                   <div className="mt-4 flex space-x-2">
                     <Button
-                      onClick={() => setIsChargeDialogOpen(true)}
+                      onClick={() => {
+                        console.log('충전하기 버튼 클릭됨')
+                        setIsChargeDialogOpen(true)
+                      }}
                       className="flex-1"
                       size="sm"
                     >
@@ -607,26 +767,6 @@ export function WalletClient() {
                       <CreditCard className="mr-2 h-4 w-4" />
                       {isTossLoaded ? '카드 등록' : '로딩 중...'}
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* 지갑 정보 */}
-              <Card variant="outlined">
-                <CardHeader>
-                  <h3 className="flex items-center text-lg font-semibold">
-                    <CreditCard className="mr-2 h-5 w-5 text-neutral-600" />
-                    지갑 정보
-                  </h3>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-neutral-600">생성일:</span>
-                    <span>{formatDate(cashInfo.createDate)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-neutral-600">수정일:</span>
-                    <span>{formatDate(cashInfo.modifyDate)}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -648,7 +788,10 @@ export function WalletClient() {
                   </p>
                   <div className="mt-4 flex space-x-2">
                     <Button
-                      onClick={() => setIsChargeDialogOpen(true)}
+                      onClick={() => {
+                        console.log('충전하기 버튼 클릭됨')
+                        setIsChargeDialogOpen(true)
+                      }}
                       className="flex-1"
                       size="sm"
                     >
@@ -690,63 +833,130 @@ export function WalletClient() {
 
       {/* 거래 내역 탭 */}
       {activeTab === 'transactions' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* 거래 내역 헤더 */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-neutral-900">거래 내역</h2>
+              <p className="mt-2 text-sm text-neutral-500">
+                지갑의 모든 입출금 내역을 확인할 수 있습니다.
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="bg-primary-50 flex items-center space-x-2 rounded-full px-3 py-1.5">
+                <div className="bg-primary-500 h-2 w-2 rounded-full"></div>
+                <span className="text-primary-700 text-sm font-medium">
+                  총 {transactions.length}건
+                </span>
+              </div>
+              <Button
+                onClick={loadTransactions}
+                variant="outline"
+                size="sm"
+                disabled={isLoading}
+                className="border-neutral-200 hover:bg-neutral-50"
+              >
+                <History className="mr-2 h-4 w-4" />
+                새로고침
+              </Button>
+            </div>
+          </div>
           {isLoading ? (
-            <Card variant="outlined">
-              <CardContent className="py-12 text-center">
-                <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
-                <h3 className="text-lg font-semibold text-neutral-900">
+            <Card variant="outlined" className="border-0 bg-white shadow-sm">
+              <CardContent className="py-16 text-center">
+                <div className="border-primary-200 border-t-primary-600 mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-4"></div>
+                <h3 className="mb-2 text-lg font-semibold text-neutral-900">
                   거래 내역을 불러오는 중...
                 </h3>
+                <p className="text-sm text-neutral-500">잠시만 기다려주세요.</p>
               </CardContent>
             </Card>
           ) : transactions.length === 0 ? (
-            <Card variant="outlined">
-              <CardContent className="py-12 text-center">
-                <div className="mb-4">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
-                    <History className="h-8 w-8 text-neutral-400" />
+            <Card variant="outlined" className="border-0 bg-white shadow-sm">
+              <CardContent className="py-16 text-center">
+                <div className="mb-6">
+                  <div className="from-primary-50 to-primary-100 mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br shadow-sm">
+                    <History className="text-primary-400 h-10 w-10" />
                   </div>
-                  <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+                  <h3 className="mb-2 text-xl font-semibold text-neutral-900">
                     거래 내역이 없습니다
                   </h3>
-                  <p className="text-neutral-600">아직 거래 내역이 없습니다.</p>
+                  <p className="mb-6 text-neutral-500">
+                    아직 거래 내역이 없습니다. 첫 충전을 해보세요!
+                  </p>
+                  <Button
+                    onClick={() => setActiveTab('balance')}
+                    size="sm"
+                    className="bg-primary-600 hover:bg-primary-700"
+                  >
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    지갑으로 이동
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ) : (
-            transactions.map((transaction) => {
-              const typeInfo = getTransactionType(transaction.type)
-              const isPositive =
-                transaction.type === 'DEPOSIT' || transaction.type === 'REFUND'
+            <div className="space-y-3">
+              {transactions.map((transaction) => {
+                const typeInfo = getTransactionType(transaction.type)
+                const isPositive =
+                  transaction.type === 'DEPOSIT' ||
+                  transaction.type === 'REFUND'
 
-              return (
-                <Card key={transaction.transactionId} variant="outlined">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4">
+                return (
+                  <Card
+                    key={transaction.transactionId}
+                    variant="outlined"
+                    className="group cursor-pointer border-0 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                    onClick={() => handleTransactionClick(transaction)}
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex items-center space-x-4">
+                        {/* 거래 타입 아이콘 */}
                         <div className="flex-shrink-0">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
+                          <div
+                            className={`flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm transition-all duration-200 group-hover:scale-105 ${
+                              isPositive
+                                ? 'from-success-50 to-success-100 text-success-600 bg-gradient-to-br'
+                                : 'from-error-50 to-error-100 text-error-600 bg-gradient-to-br'
+                            }`}
+                          >
                             <span className="text-2xl">{typeInfo.icon}</span>
                           </div>
                         </div>
 
+                        {/* 거래 정보 */}
                         <div className="min-w-0 flex-1">
-                          <div className="mb-2 flex items-center space-x-2">
-                            <Badge variant={typeInfo.variant}>
-                              {typeInfo.label}
-                            </Badge>
-                          </div>
-
-                          <div className="mb-3 space-y-1 text-sm text-neutral-600">
-                            <div className="flex items-center justify-between">
-                              <span>거래 ID:</span>
-                              <span>{transaction.transactionId}</span>
+                          <div className="mb-3 flex items-start justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <Badge
+                                  variant={typeInfo.variant}
+                                  className="px-2.5 py-1 text-sm font-semibold"
+                                >
+                                  {typeInfo.label}
+                                </Badge>
+                                <span className="text-xs text-neutral-400">
+                                  #{transaction.transactionId}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-3 text-sm text-neutral-500">
+                                <span className="flex items-center">
+                                  <History className="mr-1 h-3 w-3" />
+                                  {formatDate(transaction.createdAt)}
+                                </span>
+                                {transaction.related &&
+                                  transaction.related.summary && (
+                                    <span className="flex items-center">
+                                      <span className="mr-1">🔗</span>
+                                      {transaction.related.summary}
+                                    </span>
+                                  )}
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span>거래 금액:</span>
-                              <span
-                                className={`font-semibold ${
+                            <div className="text-right">
+                              <div
+                                className={`text-xl font-bold ${
                                   isPositive
                                     ? 'text-success-600'
                                     : 'text-error-600'
@@ -754,35 +964,198 @@ export function WalletClient() {
                               >
                                 {isPositive ? '+' : '-'}
                                 {formatPrice(transaction.amount)}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span>잔액:</span>
-                              <span className="text-primary-600 font-semibold">
-                                {formatPrice(transaction.balanceAfter)}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span>거래일:</span>
-                              <span>{formatDate(transaction.createdAt)}</span>
-                            </div>
-                            {transaction.related && (
-                              <div className="flex items-center justify-between">
-                                <span>관련:</span>
-                                <span className="text-xs">
-                                  {transaction.related.summary ||
-                                    `${transaction.related.type} #${transaction.related.id}`}
-                                </span>
                               </div>
-                            )}
+                              <div className="text-xs text-neutral-400">
+                                잔액: {formatPrice(transaction.balanceAfter)}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 결제 내역 탭 */}
+      {activeTab === 'payments' && (
+        <div className="space-y-6">
+          {/* 결제 내역 헤더 */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-neutral-900">결제 내역</h2>
+              <p className="mt-1 text-sm text-neutral-600">
+                결제 내역을 확인할 수 있습니다.
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="bg-primary-50 flex items-center space-x-2 rounded-full px-3 py-1.5">
+                <div className="bg-primary-500 h-2 w-2 rounded-full"></div>
+                <span className="text-primary-700 text-sm font-medium">
+                  총 {payments.length}건
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadPayments}
+                disabled={isLoadingPayments}
+                className="border-neutral-200 hover:bg-neutral-50"
+              >
+                <History className="mr-2 h-4 w-4" />
+                새로고침
+              </Button>
+            </div>
+          </div>
+
+          {/* 결제 내역 목록 */}
+          {isLoadingPayments ? (
+            <Card variant="outlined" className="border-0 bg-white shadow-sm">
+              <CardContent className="py-16 text-center">
+                <div className="border-primary-200 border-t-primary-600 mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-4"></div>
+                <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+                  결제 내역을 불러오는 중...
+                </h3>
+                <p className="text-sm text-neutral-500">잠시만 기다려주세요.</p>
+              </CardContent>
+            </Card>
+          ) : payments.length === 0 ? (
+            <Card variant="outlined" className="border-0 bg-white shadow-sm">
+              <CardContent className="py-16 text-center">
+                <div className="mb-6">
+                  <div className="from-primary-50 to-primary-100 mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br shadow-sm">
+                    <CreditCard className="text-primary-400 h-10 w-10" />
+                  </div>
+                  <h3 className="mb-2 text-xl font-semibold text-neutral-900">
+                    결제 내역이 없습니다
+                  </h3>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {payments.map((payment) => {
+                const getPaymentStatus = (status: string) => {
+                  switch (status) {
+                    case 'SUCCESS':
+                      return {
+                        label: '성공',
+                        variant: 'success' as const,
+                        icon: '✅',
+                      }
+                    case 'FAILED':
+                      return {
+                        label: '실패',
+                        variant: 'error' as const,
+                        icon: '❌',
+                      }
+                    case 'PENDING':
+                      return {
+                        label: '진행중',
+                        variant: 'secondary' as const,
+                        icon: '⏳',
+                      }
+                    default:
+                      return {
+                        label: status,
+                        variant: 'neutral' as const,
+                        icon: '❓',
+                      }
+                  }
+                }
+
+                const getProviderInfo = (provider: string) => {
+                  switch (provider.toLowerCase()) {
+                    case 'toss':
+                      return { name: '토스페이먼츠', color: 'text-blue-600' }
+                    case 'kakao':
+                      return { name: '카카오페이', color: 'text-yellow-600' }
+                    default:
+                      return { name: provider, color: 'text-neutral-600' }
+                  }
+                }
+
+                const statusInfo = getPaymentStatus(payment.status)
+                const providerInfo = getProviderInfo(payment.provider)
+
+                return (
+                  <Card
+                    key={payment.paymentId}
+                    variant="outlined"
+                    className="group cursor-pointer border-0 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                    onClick={() => handlePaymentClick(payment)}
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex items-center space-x-4">
+                        {/* 결제 상태 아이콘 */}
+                        <div className="flex-shrink-0">
+                          <div
+                            className={`flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm transition-all duration-200 group-hover:scale-105 ${
+                              statusInfo.variant === 'success'
+                                ? 'from-success-50 to-success-100 text-success-600 bg-gradient-to-br'
+                                : statusInfo.variant === 'error'
+                                  ? 'from-error-50 to-error-100 text-error-600 bg-gradient-to-br'
+                                  : 'bg-gradient-to-br from-neutral-50 to-neutral-100 text-neutral-600'
+                            }`}
+                          >
+                            <span className="text-2xl">{statusInfo.icon}</span>
+                          </div>
+                        </div>
+
+                        {/* 결제 정보 */}
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-3 flex items-start justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <Badge
+                                  variant={statusInfo.variant}
+                                  className="px-2.5 py-1 text-sm font-semibold"
+                                >
+                                  {statusInfo.label}
+                                </Badge>
+                                <span className="text-xs text-neutral-400">
+                                  #{payment.paymentId}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-3 text-sm text-neutral-500">
+                                <span className="flex items-center">
+                                  <History className="mr-1 h-3 w-3" />
+                                  {formatDate(payment.createdAt)}
+                                </span>
+                                <span
+                                  className={`flex items-center ${providerInfo.color}`}
+                                >
+                                  <span className="mr-1">💳</span>
+                                  {providerInfo.name}
+                                </span>
+                                <span className="flex items-center">
+                                  <span className="mr-1">🔧</span>
+                                  {payment.methodType}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-primary-600 text-xl font-bold">
+                                +{formatPrice(payment.amount)}
+                              </div>
+                              {payment.balanceAfter && (
+                                <div className="text-xs text-neutral-400">
+                                  잔액: {formatPrice(payment.balanceAfter)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
           )}
         </div>
       )}
@@ -793,7 +1166,7 @@ export function WalletClient() {
           {/* 헤더 */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-neutral-900">
+              <h2 className="text-2xl font-semibold text-neutral-900">
                 결제수단 관리
               </h2>
               <p className="mt-1 text-sm text-neutral-600">
@@ -819,7 +1192,7 @@ export function WalletClient() {
                 disabled={!isTossLoaded}
               >
                 <CreditCard className="mr-2 h-4 w-4" />
-                {isTossLoaded ? '토스 카드 등록' : '로딩 중...'}
+                {isTossLoaded ? '카드 등록' : '로딩 중...'}
               </Button>
             </div>
           </div>
@@ -1015,7 +1388,7 @@ export function WalletClient() {
 
       {/* 충전 다이얼로그 */}
       <Dialog open={isChargeDialogOpen} onOpenChange={setIsChargeDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="z-[9998] border-2 border-gray-300 bg-white shadow-2xl sm:max-w-md">
           <DialogHeader>
             <DialogTitle>지갑 충전</DialogTitle>
           </DialogHeader>
@@ -1059,12 +1432,22 @@ export function WalletClient() {
               ) : (
                 <Select
                   value={selectedPaymentMethod}
-                  onValueChange={setSelectedPaymentMethod}
+                  onValueChange={(value) => {
+                    console.log('결제수단 선택됨:', value)
+                    setSelectedPaymentMethod(value)
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger
+                    onClick={() =>
+                      console.log(
+                        'Select 클릭됨, 결제수단 개수:',
+                        paymentMethods.length,
+                      )
+                    }
+                  >
                     <SelectValue placeholder="결제수단을 선택하세요" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[10000]">
                     {paymentMethods.map((method) => (
                       <SelectItem key={method.id} value={method.id.toString()}>
                         {method.alias}
@@ -1101,6 +1484,355 @@ export function WalletClient() {
                 취소
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 거래 상세 모달 */}
+      <Dialog
+        open={isTransactionDetailOpen}
+        onOpenChange={setIsTransactionDetailOpen}
+      >
+        <DialogContent className="z-[9998] border-0 bg-white shadow-2xl sm:max-w-lg">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl font-bold text-neutral-900">
+              거래 상세 내역
+            </DialogTitle>
+          </DialogHeader>
+
+          {isLoadingDetail ? (
+            <div className="py-8 text-center">
+              <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
+              <p className="text-sm text-neutral-600">
+                거래 상세 정보를 불러오는 중...
+              </p>
+            </div>
+          ) : transactionDetail ? (
+            <div className="space-y-6">
+              {/* 거래 기본 정보 */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                      selectedTransaction?.type === 'DEPOSIT' ||
+                      selectedTransaction?.type === 'REFUND'
+                        ? 'bg-success-50 text-success-600'
+                        : 'bg-error-50 text-error-600'
+                    }`}
+                  >
+                    <span className="text-xl">
+                      {selectedTransaction &&
+                        getTransactionType(selectedTransaction.type).icon}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      {selectedTransaction &&
+                        getTransactionType(selectedTransaction.type).label}
+                    </h3>
+                    <p className="text-sm text-neutral-600">
+                      거래 ID: #{selectedTransaction?.transactionId}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 거래 금액 */}
+                <div className="rounded-2xl bg-gradient-to-r from-neutral-50 to-neutral-100 p-6 shadow-sm">
+                  <div className="text-center">
+                    <p className="mb-2 text-sm font-medium text-neutral-600">
+                      거래 금액
+                    </p>
+                    <p
+                      className={`text-3xl font-bold ${
+                        selectedTransaction?.type === 'DEPOSIT' ||
+                        selectedTransaction?.type === 'REFUND'
+                          ? 'text-success-600'
+                          : 'text-error-600'
+                      }`}
+                    >
+                      {selectedTransaction?.type === 'DEPOSIT' ||
+                      selectedTransaction?.type === 'REFUND'
+                        ? '+'
+                        : '-'}
+                      {selectedTransaction &&
+                        formatPrice(selectedTransaction.amount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 상세 정보 */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-neutral-900">
+                  거래 정보
+                </h4>
+                <div className="space-y-3 rounded-xl bg-neutral-50 p-4">
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm font-medium text-neutral-600">
+                      거래일시
+                    </span>
+                    <span className="text-sm text-neutral-900">
+                      {selectedTransaction &&
+                        formatDate(selectedTransaction.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm font-medium text-neutral-600">
+                      거래 후 잔액
+                    </span>
+                    <span className="text-primary-600 text-sm font-bold">
+                      {selectedTransaction &&
+                        formatPrice(selectedTransaction.balanceAfter)}
+                    </span>
+                  </div>
+                  {transactionDetail.description && (
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-sm font-medium text-neutral-600">
+                        설명
+                      </span>
+                      <span className="text-sm text-neutral-900">
+                        {transactionDetail.description}
+                      </span>
+                    </div>
+                  )}
+                  {transactionDetail.reference && (
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-sm font-medium text-neutral-600">
+                        참조
+                      </span>
+                      <span className="text-sm text-neutral-900">
+                        {transactionDetail.reference}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 관련 정보 */}
+              {selectedTransaction?.related && (
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-neutral-900">
+                    관련 정보
+                  </h4>
+                  <div className="from-primary-50 to-primary-100 rounded-xl bg-gradient-to-r p-4 shadow-sm">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm font-medium text-neutral-600">
+                          타입
+                        </span>
+                        <span className="text-sm text-neutral-900">
+                          {selectedTransaction.related.type}
+                        </span>
+                      </div>
+                      {selectedTransaction.related.id && (
+                        <div className="flex items-center justify-between py-2">
+                          <span className="text-sm font-medium text-neutral-600">
+                            ID
+                          </span>
+                          <span className="text-sm text-neutral-900">
+                            #{selectedTransaction.related.id}
+                          </span>
+                        </div>
+                      )}
+                      {selectedTransaction.related.summary && (
+                        <div className="flex items-center justify-between py-2">
+                          <span className="text-sm font-medium text-neutral-600">
+                            요약
+                          </span>
+                          <span className="text-sm text-neutral-900">
+                            {selectedTransaction.related.summary}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-12 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
+                <History className="h-6 w-6 text-neutral-400" />
+              </div>
+              <p className="text-neutral-600">
+                거래 상세 정보를 불러올 수 없습니다.
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-6">
+            <Button
+              variant="outline"
+              onClick={() => setIsTransactionDetailOpen(false)}
+              className="border-neutral-200 hover:bg-neutral-50"
+            >
+              닫기
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 결제 상세 모달 */}
+      <Dialog open={isPaymentDetailOpen} onOpenChange={setIsPaymentDetailOpen}>
+        <DialogContent className="z-[9998] border-0 bg-white shadow-2xl sm:max-w-lg">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl font-bold text-neutral-900">
+              결제 상세 내역
+            </DialogTitle>
+          </DialogHeader>
+
+          {isLoadingPaymentDetail ? (
+            <div className="py-8 text-center">
+              <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
+              <p className="text-sm text-neutral-600">
+                결제 상세 정보를 불러오는 중...
+              </p>
+            </div>
+          ) : paymentDetail ? (
+            <div className="space-y-6">
+              {/* 결제 기본 정보 */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-full ${
+                      selectedPayment?.status === 'SUCCESS'
+                        ? 'bg-success-50 text-success-600'
+                        : selectedPayment?.status === 'FAILED'
+                          ? 'bg-error-50 text-error-600'
+                          : 'bg-neutral-50 text-neutral-600'
+                    }`}
+                  >
+                    <span className="text-xl">
+                      {selectedPayment?.status === 'SUCCESS'
+                        ? '✅'
+                        : selectedPayment?.status === 'FAILED'
+                          ? '❌'
+                          : '⏳'}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      {selectedPayment?.status === 'SUCCESS'
+                        ? '결제 성공'
+                        : selectedPayment?.status === 'FAILED'
+                          ? '결제 실패'
+                          : '결제 진행중'}
+                    </h3>
+                    <p className="text-sm text-neutral-600">
+                      결제 ID: #{selectedPayment?.paymentId}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 결제 금액 */}
+                <div className="from-primary-50 to-primary-100 rounded-2xl bg-gradient-to-r p-6 shadow-sm">
+                  <div className="text-center">
+                    <p className="mb-2 text-sm font-medium text-neutral-600">
+                      결제 금액
+                    </p>
+                    <p className="text-primary-600 text-3xl font-bold">
+                      +{selectedPayment && formatPrice(selectedPayment.amount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 상세 정보 */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-neutral-900">
+                  결제 정보
+                </h4>
+                <div className="space-y-3 rounded-xl bg-neutral-50 p-4">
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm font-medium text-neutral-600">
+                      결제일시
+                    </span>
+                    <span className="text-sm text-neutral-900">
+                      {selectedPayment && formatDate(selectedPayment.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm font-medium text-neutral-600">
+                      결제 서비스
+                    </span>
+                    <span className="text-sm text-neutral-900">
+                      {selectedPayment?.provider === 'toss'
+                        ? '토스페이먼츠'
+                        : selectedPayment?.provider === 'kakao'
+                          ? '카카오페이'
+                          : selectedPayment?.provider}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm font-medium text-neutral-600">
+                      결제 수단
+                    </span>
+                    <span className="text-sm text-neutral-900">
+                      {selectedPayment?.methodType}
+                    </span>
+                  </div>
+                  {selectedPayment?.balanceAfter && (
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-sm font-medium text-neutral-600">
+                        충전 후 잔액
+                      </span>
+                      <span className="text-primary-600 text-sm font-bold">
+                        {selectedPayment &&
+                          formatPrice(selectedPayment.balanceAfter)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 연결된 거래 정보 */}
+              {selectedPayment?.cashTransactionId && (
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-neutral-900">
+                    연결된 거래
+                  </h4>
+                  <div className="from-primary-50 to-primary-100 rounded-xl bg-gradient-to-r p-4 shadow-sm">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm font-medium text-neutral-600">
+                          거래 ID
+                        </span>
+                        <span className="text-sm text-neutral-900">
+                          #{selectedPayment.cashTransactionId}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm font-medium text-neutral-600">
+                          상태
+                        </span>
+                        <span className="text-sm text-neutral-900">
+                          지갑 충전 완료
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="py-12 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
+                <CreditCard className="h-6 w-6 text-neutral-400" />
+              </div>
+              <p className="text-neutral-600">
+                결제 상세 정보를 불러올 수 없습니다.
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-6">
+            <Button
+              variant="outline"
+              onClick={() => setIsPaymentDetailOpen(false)}
+              className="border-neutral-200 hover:bg-neutral-50"
+            >
+              닫기
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

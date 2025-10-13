@@ -123,12 +123,7 @@ export function Header({
                 >
                   입찰 현황
                 </Link>
-                <Link
-                  href="/purchase-history"
-                  className="hover:text-primary-500 text-neutral-600 transition-colors"
-                >
-                  구매 내역
-                </Link>
+
                 <Link
                   href="/wallet"
                   className="hover:text-primary-500 text-neutral-600 transition-colors"
@@ -296,13 +291,7 @@ export function Header({
                     >
                       상품 등록
                     </Link>
-                    <Link
-                      href="/purchase-history"
-                      className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      구매 내역
-                    </Link>
+
                     <Link
                       href="/wallet"
                       className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
