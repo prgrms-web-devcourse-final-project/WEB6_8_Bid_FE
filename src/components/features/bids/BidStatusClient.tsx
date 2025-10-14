@@ -304,9 +304,6 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                   <Button onClick={() => router.push('/')} size="lg">
                     경매 둘러보기
                   </Button>
-                  <Button variant="outline" onClick={refresh} size="lg">
-                    새로고침
-                  </Button>
                 </div>
               </div>
             </CardContent>
