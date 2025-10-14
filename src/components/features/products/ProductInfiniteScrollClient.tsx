@@ -15,7 +15,9 @@ interface ProductInfiniteScrollClientProps {
   initialProducts?: Product[]
 }
 
-export function ProductInfiniteScrollClient({ initialProducts }: ProductInfiniteScrollClientProps) {
+export function ProductInfiniteScrollClient({
+  initialProducts,
+}: ProductInfiniteScrollClientProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -30,24 +32,27 @@ export function ProductInfiniteScrollClient({ initialProducts }: ProductInfinite
   ]
 
   // API 호출 함수
-  const fetchProducts = useCallback(async ({ page, size }: { page: number; size: number }) => {
-    const selectedCategoryData = categories.find(
-      (cat) => cat.id === selectedCategory,
-    )
+  const fetchProducts = useCallback(
+    async ({ page, size }: { page: number; size: number }) => {
+      const selectedCategoryData = categories.find(
+        (cat) => cat.id === selectedCategory,
+      )
 
-    const requestParams = {
-      page,
-      size,
-      keyword: searchQuery.trim() || undefined,
-      category: selectedCategoryData?.apiId
-        ? [selectedCategoryData.apiId]
-        : undefined,
-      sort: 'LATEST' as const,
-      status: 'BIDDING' as const,
-    }
+      const requestParams = {
+        page,
+        size,
+        keyword: searchQuery.trim() || undefined,
+        category: selectedCategoryData?.apiId
+          ? [selectedCategoryData.apiId]
+          : undefined,
+        sort: 'LATEST' as const,
+        status: 'BIDDING' as const,
+      }
 
-    return await productApi.getProducts(requestParams)
-  }, [selectedCategory, searchQuery])
+      return await productApi.getProducts(requestParams)
+    },
+    [selectedCategory, searchQuery],
+  )
 
   // 무한 스크롤 훅 사용
   const {
@@ -139,7 +144,9 @@ export function ProductInfiniteScrollClient({ initialProducts }: ProductInfinite
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* 헤더 */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-neutral-900">무한 스크롤 상품 목록</h1>
+        <h1 className="text-3xl font-bold text-neutral-900">
+          무한 스크롤 상품 목록
+        </h1>
         <p className="mt-2 text-neutral-600">
           스크롤하면 자동으로 더 많은 상품을 불러옵니다
         </p>
@@ -378,7 +385,9 @@ export function ProductInfiniteScrollClient({ initialProducts }: ProductInfinite
               {isLoadingMore && (
                 <div className="text-center">
                   <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
-                  <p className="text-neutral-600">더 많은 상품을 불러오는 중...</p>
+                  <p className="text-neutral-600">
+                    더 많은 상품을 불러오는 중...
+                  </p>
                 </div>
               )}
               {!hasMore && transformedProducts.length > 0 && (
@@ -390,19 +399,6 @@ export function ProductInfiniteScrollClient({ initialProducts }: ProductInfinite
           </>
         )}
       </div>
-
-      {/* 디버그 정보 */}
-      <div className="mt-8 rounded-lg bg-neutral-100 p-4">
-        <h3 className="mb-2 font-semibold">디버그 정보</h3>
-        <div className="text-sm text-neutral-600">
-          <p>현재 페이지: {currentPage}</p>
-          <p>로드된 상품 수: {transformedProducts.length}</p>
-          <p>더 불러올 수 있음: {hasMore ? '예' : '아니오'}</p>
-          <p>로딩 중: {isLoading ? '예' : '아니오'}</p>
-          <p>추가 로딩 중: {isLoadingMore ? '예' : '아니오'}</p>
-        </div>
-      </div>
     </div>
   )
 }
-

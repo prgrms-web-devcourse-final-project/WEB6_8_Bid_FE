@@ -496,21 +496,6 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
 
             {/* 페이지네이션 UI */}
             <div className="mt-8 space-y-4">
-              {/* 디버그 정보 */}
-              <div className="rounded-lg bg-gray-100 p-4 text-sm">
-                <h4 className="mb-2 font-semibold">
-                  🎯 입찰 내역 디버그 정보:
-                </h4>
-                <p>현재 페이지: {currentPage}</p>
-                <p>전체 페이지: {totalPages}</p>
-                <p>전체 요소: {totalElements}</p>
-                <p>페이지 크기: {pageSize}</p>
-                <p>다음 페이지 있음: {hasNext ? '예' : '아니오'}</p>
-                <p>이전 페이지 있음: {hasPrevious ? '예' : '아니오'}</p>
-                <p>로딩 중: {isLoading ? '예' : '아니오'}</p>
-                <p>데이터 개수: {transformedBids.length}</p>
-              </div>
-
               {/* 페이지 정보 및 페이지 크기 선택 */}
               <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
                 <PaginationInfo
