@@ -74,13 +74,10 @@ class ApiClient {
         return response
       },
       async (error) => {
-        // 400 에러 시 잘못된 요청 처리
+        // 400 에러 시 잘못된 요청 처리 (자동 알림 비활성화 - 각 컴포넌트에서 처리)
         if (error.response?.status === 400) {
-          if (typeof window !== 'undefined') {
-            const errorMessage =
-              error.response.data?.errorMessage || '잘못된 요청입니다.'
-            alert(`요청 실패: ${errorMessage}`)
-          }
+          console.log('400 에러 응답:', error.response.data)
+          // 자동 알림을 제거하고 각 컴포넌트에서 에러를 처리하도록 함
         }
 
         // 403 에러 시 로그인 필요 알림

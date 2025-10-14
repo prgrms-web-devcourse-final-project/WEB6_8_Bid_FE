@@ -25,7 +25,7 @@ import {
   paymentMethodApi,
   tossApi,
 } from '@/lib/api/real-api'
-import { CreditCard, DollarSign, History, Plus, Settings } from 'lucide-react'
+import { CreditCard, DollarSign, History, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 interface CashTransaction {
@@ -94,8 +94,8 @@ export function WalletClient() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<
-    'balance' | 'transactions' | 'paymentMethods' | 'payments'
-  >('balance')
+    'wallet' | 'transactions' | 'payments'
+  >('wallet')
 
   // 충전 관련 상태
   const [isChargeDialogOpen, setIsChargeDialogOpen] = useState(false)
@@ -153,6 +153,40 @@ export function WalletClient() {
     createTossPayments,
   } = useTossPayments()
 
+  // 토스 SDK 로드 상태 디버깅
+  useEffect(() => {
+    console.log('토스 SDK 상태:', { isTossLoaded, tossError })
+  }, [isTossLoaded, tossError])
+
+  // URL 쿼리 파라미터로 탭 설정
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const tab = urlParams.get('tab')
+
+      if (tab === 'transactions') {
+        setActiveTab('transactions')
+        // 거래 내역이 비어있으면 로드
+        if (transactions.length === 0) {
+          loadTransactions()
+        }
+      } else if (tab === 'payments') {
+        setActiveTab('payments')
+        // 결제 내역이 비어있으면 로드
+        if (payments.length === 0) {
+          loadPayments()
+        }
+      } else if (tab === 'wallet') {
+        setActiveTab('wallet')
+      }
+
+      // URL에서 쿼리 파라미터 제거 (깔끔한 URL 유지)
+      if (tab) {
+        window.history.replaceState({}, '', '/wallet')
+      }
+    }
+  }, [])
+
   // 지갑 정보 및 결제수단 로드
   useEffect(() => {
     const loadData = async () => {
@@ -161,59 +195,53 @@ export function WalletClient() {
         setError('')
 
         // 지갑 정보 로드
-        const cashResponse = await cashApi.getMyCash()
-        if (cashResponse.success) {
-          setCashInfo(cashResponse.data)
+        try {
+          const cashResponse = await cashApi.getMyCash()
+          if (cashResponse.success) {
+            setCashInfo(cashResponse.data)
+          } else {
+            console.warn('지갑 정보 로드 실패:', cashResponse.msg)
+            // 지갑이 없는 경우는 정상적인 상황일 수 있음
+          }
+        } catch (cashError: any) {
+          console.error('지갑 정보 로드 에러:', cashError)
+          // 지갑이 생성되지 않은 경우는 정상적인 상황일 수 있음
+          if (cashError.response?.status !== 404) {
+            setError('지갑 정보를 불러오는데 실패했습니다.')
+          }
         }
 
         // 결제수단 목록 로드
-        const paymentMethodsResponse =
-          await paymentMethodApi.getPaymentMethods()
-        console.log('💳 결제수단 목록 응답:', paymentMethodsResponse)
+        try {
+          const paymentMethodsResponse =
+            await paymentMethodApi.getPaymentMethods()
+          console.log('💳 결제수단 목록 응답:', paymentMethodsResponse)
 
-        if (paymentMethodsResponse.success && paymentMethodsResponse.data) {
-          // API 응답 데이터 구조에 맞게 변환
-          let paymentMethodsData = []
-          if (Array.isArray(paymentMethodsResponse.data)) {
-            paymentMethodsData = paymentMethodsResponse.data
-          } else if (
-            paymentMethodsResponse.data.content &&
-            Array.isArray(paymentMethodsResponse.data.content)
-          ) {
-            paymentMethodsData = paymentMethodsResponse.data.content
+          if (paymentMethodsResponse.success && paymentMethodsResponse.data) {
+            // API 응답 데이터 구조에 맞게 변환
+            let paymentMethodsData = []
+            if (Array.isArray(paymentMethodsResponse.data)) {
+              paymentMethodsData = paymentMethodsResponse.data
+            } else if (
+              paymentMethodsResponse.data.content &&
+              Array.isArray(paymentMethodsResponse.data.content)
+            ) {
+              paymentMethodsData = paymentMethodsResponse.data.content
+            }
+            console.log('💳 처리된 결제수단 데이터:', paymentMethodsData)
+            setPaymentMethods(paymentMethodsData)
+          } else {
+            console.warn('결제수단 로드 실패:', paymentMethodsResponse.msg)
+            // 결제수단이 없는 경우는 정상적인 상황일 수 있음
+            setPaymentMethods([])
           }
-          console.log('💳 처리된 결제수단 데이터:', paymentMethodsData)
-          if (paymentMethodsData.length > 0) {
-            console.log('💳 첫 번째 결제수단 구조:', paymentMethodsData[0])
-            console.log(
-              '💳 첫 번째 결제수단의 모든 키:',
-              Object.keys(paymentMethodsData[0]),
-            )
-            // 각 필드의 값을 자세히 확인
-            const firstPM = paymentMethodsData[0]
-            console.log('💳 상세 필드 값들:', {
-              id: firstPM.id,
-              type: firstPM.type,
-              methodType: firstPM.methodType,
-              alias: firstPM.alias,
-              isDefault: firstPM.isDefault,
-              provider: firstPM.provider,
-              brand: firstPM.brand,
-              last4: firstPM.last4,
-              expMonth: firstPM.expMonth,
-              expYear: firstPM.expYear,
-              expireMonth: firstPM.expireMonth,
-              expireYear: firstPM.expireYear,
-              expirationMonth: firstPM.expirationMonth,
-              expirationYear: firstPM.expirationYear,
-              expDate: firstPM.expDate,
-              expiryMonth: firstPM.expiryMonth,
-              expiryYear: firstPM.expiryYear,
-            })
+        } catch (paymentError: any) {
+          console.error('결제수단 로드 에러:', paymentError)
+          // 결제수단 로드 실패 시 빈 배열로 설정
+          setPaymentMethods([])
+          if (paymentError.response?.status !== 404) {
+            setError('결제수단을 불러오는데 실패했습니다.')
           }
-          setPaymentMethods(paymentMethodsData)
-        } else {
-          console.error('결제수단 로드 실패:', paymentMethodsResponse.msg)
         }
       } catch (err) {
         console.error('데이터 로드 에러:', err)
@@ -278,6 +306,7 @@ export function WalletClient() {
     switch (type) {
       case 'DEPOSIT':
         return { label: '입금', variant: 'success' as const, icon: '💰' }
+      case 'WITHDRAW':
       case 'WITHDRAWAL':
         return { label: '출금', variant: 'error' as const, icon: '💸' }
       case 'PAYMENT':
@@ -324,19 +353,182 @@ export function WalletClient() {
         setChargeAmount('')
         setSelectedPaymentMethod('')
 
-        // 지갑 정보 새로고침
-        const cashResponse = await cashApi.getMyCash()
-        if (cashResponse.success) {
-          setCashInfo(cashResponse.data)
+        // 지갑 정보 및 거래 내역 새로고침
+        try {
+          console.log('충전 완료 후 데이터 새로고침 시작...')
+
+          // 1. 지갑 정보 새로고침
+          const cashResponse = await cashApi.getMyCash()
+          if (cashResponse.success) {
+            setCashInfo(cashResponse.data)
+            console.log('지갑 정보 새로고침 완료:', cashResponse.data)
+          } else {
+            console.warn('지갑 정보 새로고침 실패:', cashResponse.msg)
+          }
+
+          // 2. 거래 내역 새로고침 (현재 탭이 거래 내역인 경우)
+          if (activeTab === 'transactions') {
+            try {
+              await loadTransactions()
+              console.log('거래 내역 새로고침 완료')
+            } catch (transactionError) {
+              console.error('거래 내역 새로고침 실패:', transactionError)
+            }
+          }
+
+          // 3. 결제 내역 새로고침 (현재 탭이 결제 내역인 경우)
+          if (activeTab === 'payments') {
+            try {
+              await loadPayments()
+              console.log('결제 내역 새로고침 완료')
+            } catch (paymentError) {
+              console.error('결제 내역 새로고침 실패:', paymentError)
+            }
+          }
+        } catch (refreshError) {
+          console.error('데이터 새로고침 실패:', refreshError)
+          // 새로고침 실패해도 충전은 성공했으므로 사용자에게는 알리지 않음
         }
       } else {
-        throw new Error(chargeResponse.msg || '충전에 실패했습니다.')
+        // API 응답에서 구체적인 에러 메시지 처리
+        console.log('충전 API 응답 전체:', chargeResponse)
+
+        // 다양한 경로에서 에러 메시지 추출 시도
+        let errorMessage = chargeResponse.msg || '충전에 실패했습니다.'
+
+        // API 응답의 다른 필드들도 확인
+        if (chargeResponse.data?.message) {
+          errorMessage = chargeResponse.data.message
+        } else if (chargeResponse.data?.msg) {
+          errorMessage = chargeResponse.data.msg
+        } else if (chargeResponse.data?.errorMessage) {
+          errorMessage = chargeResponse.data.errorMessage
+        } else if ((chargeResponse as any).message) {
+          errorMessage = (chargeResponse as any).message
+        } else if ((chargeResponse as any).errorMessage) {
+          errorMessage = (chargeResponse as any).errorMessage
+        }
+
+        console.log('추출된 에러 메시지:', errorMessage)
+
+        if (
+          errorMessage.includes('최대 충전 한도') ||
+          errorMessage.includes('한도를 초과')
+        ) {
+          alert(
+            `충전 한도 초과: ${errorMessage}\n\n더 작은 금액으로 충전하거나 다른 결제수단을 사용해주세요.`,
+          )
+        } else if (
+          errorMessage.includes('잔액') ||
+          errorMessage.includes('부족')
+        ) {
+          alert(
+            `결제수단 잔액 부족: ${errorMessage}\n\n다른 결제수단을 선택해주세요.`,
+          )
+        } else if (
+          errorMessage.includes('카드') ||
+          errorMessage.includes('결제수단')
+        ) {
+          alert(
+            `결제수단 오류: ${errorMessage}\n\n다른 결제수단을 선택해주세요.`,
+          )
+        } else {
+          alert(`충전 실패: ${errorMessage}`)
+        }
+
+        // API 응답에서 에러를 처리했으므로 catch 블록에서 중복 처리하지 않도록 return
+        return
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('충전 에러:', err)
-      alert(
-        `충전에 실패했습니다: ${err instanceof Error ? err.message : '알 수 없는 오류'}`,
-      )
+
+      // 4xx 에러 처리 (API 응답에서 처리되지 않은 경우)
+      if (err.response?.status >= 400 && err.response?.status < 500) {
+        console.log('4xx 에러 - catch 블록에서 처리:', err.response?.data)
+
+        // 4xx 에러에서도 구체적인 에러 메시지 추출하여 사용자에게 표시
+        let errorMessage = ''
+
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message
+        } else if (err.response?.data?.msg) {
+          errorMessage = err.response.data.msg
+        } else if (err.response?.data?.errorMessage) {
+          errorMessage = err.response.data.errorMessage
+        } else {
+          errorMessage = '요청 처리 중 오류가 발생했습니다.'
+        }
+
+        console.log('4xx 에러에서 추출된 메시지:', errorMessage)
+
+        // 구체적인 에러 메시지에 따라 적절한 알림 표시
+        if (
+          errorMessage.includes('최대 충전 한도') ||
+          errorMessage.includes('한도를 초과')
+        ) {
+          alert(
+            `충전 한도 초과: ${errorMessage}\n\n더 작은 금액으로 충전하거나 다른 결제수단을 사용해주세요.`,
+          )
+        } else if (
+          errorMessage.includes('잔액') ||
+          errorMessage.includes('부족')
+        ) {
+          alert(
+            `결제수단 잔액 부족: ${errorMessage}\n\n다른 결제수단을 선택해주세요.`,
+          )
+        } else {
+          alert(`충전 실패: ${errorMessage}`)
+        }
+
+        return
+      }
+
+      // 네트워크 에러나 기타 예외 처리
+      console.log('Catch 블록 에러 전체:', err)
+      console.log('err.response?.data:', err.response?.data)
+
+      // 다양한 경로에서 에러 메시지 추출 시도
+      let errorMessage = ''
+
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message
+      } else if (err.response?.data?.msg) {
+        errorMessage = err.response.data.msg
+      } else if (err.response?.data?.data?.message) {
+        errorMessage = err.response.data.data.message
+      } else if (err.response?.data?.errorMessage) {
+        errorMessage = err.response.data.errorMessage
+      } else if (err.message) {
+        errorMessage = err.message
+      } else {
+        errorMessage = '충전 중 알 수 없는 오류가 발생했습니다.'
+      }
+
+      console.log('Catch 블록에서 추출된 에러 메시지:', errorMessage)
+
+      if (errorMessage) {
+        if (
+          errorMessage.includes('최대 충전 한도') ||
+          errorMessage.includes('한도를 초과')
+        ) {
+          alert(
+            `충전 한도 초과: ${errorMessage}\n\n더 작은 금액으로 충전하거나 다른 결제수단을 사용해주세요.`,
+          )
+        } else if (
+          errorMessage.includes('잔액') ||
+          errorMessage.includes('부족')
+        ) {
+          alert(
+            `결제수단 잔액 부족: ${errorMessage}\n\n다른 결제수단을 선택해주세요.`,
+          )
+        } else {
+          alert(`충전 실패: ${errorMessage}`)
+        }
+      } else {
+        alert(
+          '충전 중 알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        )
+      }
     } finally {
       setIsCharging(false)
     }
@@ -471,18 +663,23 @@ export function WalletClient() {
           provider: 'toss',
         })
         // 목록 새로고침
-        const listResponse = await paymentMethodApi.getPaymentMethods()
-        if (listResponse.success && listResponse.data) {
-          let paymentMethodsData = []
-          if (Array.isArray(listResponse.data)) {
-            paymentMethodsData = listResponse.data
-          } else if (
-            listResponse.data.content &&
-            Array.isArray(listResponse.data.content)
-          ) {
-            paymentMethodsData = listResponse.data.content
+        try {
+          const listResponse = await paymentMethodApi.getPaymentMethods()
+          if (listResponse.success && listResponse.data) {
+            let paymentMethodsData = []
+            if (Array.isArray(listResponse.data)) {
+              paymentMethodsData = listResponse.data
+            } else if (
+              listResponse.data.content &&
+              Array.isArray(listResponse.data.content)
+            ) {
+              paymentMethodsData = listResponse.data.content
+            }
+            setPaymentMethods(paymentMethodsData)
           }
-          setPaymentMethods(paymentMethodsData)
+        } catch (refreshError) {
+          console.error('결제수단 목록 새로고침 실패:', refreshError)
+          // 새로고침 실패해도 추가는 성공했으므로 에러 표시하지 않음
         }
       } else {
         alert(response.msg || '결제수단 추가에 실패했습니다.')
@@ -550,18 +747,23 @@ export function WalletClient() {
         setEditingId(null)
         setEditFormData({ alias: '', isDefault: false })
         // 목록 새로고침
-        const listResponse = await paymentMethodApi.getPaymentMethods()
-        if (listResponse.success && listResponse.data) {
-          let paymentMethodsData = []
-          if (Array.isArray(listResponse.data)) {
-            paymentMethodsData = listResponse.data
-          } else if (
-            listResponse.data.content &&
-            Array.isArray(listResponse.data.content)
-          ) {
-            paymentMethodsData = listResponse.data.content
+        try {
+          const listResponse = await paymentMethodApi.getPaymentMethods()
+          if (listResponse.success && listResponse.data) {
+            let paymentMethodsData = []
+            if (Array.isArray(listResponse.data)) {
+              paymentMethodsData = listResponse.data
+            } else if (
+              listResponse.data.content &&
+              Array.isArray(listResponse.data.content)
+            ) {
+              paymentMethodsData = listResponse.data.content
+            }
+            setPaymentMethods(paymentMethodsData)
           }
-          setPaymentMethods(paymentMethodsData)
+        } catch (refreshError) {
+          console.error('결제수단 목록 새로고침 실패:', refreshError)
+          // 새로고침 실패해도 수정은 성공했으므로 에러 표시하지 않음
         }
       } else {
         alert(response.msg || '결제수단 수정에 실패했습니다.')
@@ -603,6 +805,8 @@ export function WalletClient() {
   const refreshPaymentMethods = async () => {
     try {
       setIsLoading(true)
+      setError('')
+
       const paymentMethodsResponse = await paymentMethodApi.getPaymentMethods()
       console.log('💳 결제수단 새로고침 응답:', paymentMethodsResponse)
 
@@ -619,14 +823,17 @@ export function WalletClient() {
         console.log('💳 처리된 결제수단 데이터:', paymentMethodsData)
         setPaymentMethods(paymentMethodsData)
       } else {
-        console.error('결제수단 로드 실패:', paymentMethodsResponse.msg)
-        setError(
-          paymentMethodsResponse.msg || '결제수단을 불러오는데 실패했습니다.',
-        )
+        console.warn('결제수단 로드 실패:', paymentMethodsResponse.msg)
+        // 결제수단이 없는 경우는 정상적인 상황일 수 있음
+        setPaymentMethods([])
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('결제수단 새로고침 에러:', err)
-      setError('결제수단을 불러오는데 실패했습니다.')
+      // 결제수단 로드 실패 시 빈 배열로 설정
+      setPaymentMethods([])
+      if (err.response?.status !== 404) {
+        setError('결제수단을 불러오는데 실패했습니다.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -719,15 +926,15 @@ export function WalletClient() {
       <div className="mb-6">
         <div className="flex space-x-1 rounded-lg bg-neutral-100 p-1">
           <button
-            onClick={() => setActiveTab('balance')}
+            onClick={() => setActiveTab('wallet')}
             className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'balance'
+              activeTab === 'wallet'
                 ? 'text-primary-600 bg-white shadow-sm'
                 : 'text-neutral-600 hover:text-neutral-900'
             }`}
           >
             <DollarSign className="mr-2 inline h-4 w-4" />
-            잔액 조회
+            지갑 관리
           </button>
           <button
             onClick={() => {
@@ -761,34 +968,18 @@ export function WalletClient() {
             <CreditCard className="mr-2 inline h-4 w-4" />
             결제 내역
           </button>
-          <button
-            onClick={() => {
-              setActiveTab('paymentMethods')
-              if (paymentMethods.length === 0) {
-                refreshPaymentMethods()
-              }
-            }}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'paymentMethods'
-                ? 'text-primary-600 bg-white shadow-sm'
-                : 'text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            <Settings className="mr-2 inline h-4 w-4" />
-            결제수단 관리
-          </button>
         </div>
       </div>
 
-      {/* 잔액 조회 탭 */}
-      {activeTab === 'balance' && (
+      {/* 지갑 관리 탭 */}
+      {activeTab === 'wallet' && (
         <div className="space-y-6">
-          {/* 잔액 조회 헤더 */}
+          {/* 지갑 관리 헤더 */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-neutral-900">잔액 조회</h2>
+              <h2 className="text-2xl font-bold text-neutral-900">지갑 관리</h2>
               <p className="mt-1 text-sm text-neutral-600">
-                잔액을 확인할 수 있습니다.
+                잔액 확인 및 결제수단을 관리할 수 있습니다.
               </p>
             </div>
           </div>
@@ -830,15 +1021,6 @@ export function WalletClient() {
                       <Plus className="mr-2 h-4 w-4" />
                       충전하기
                     </Button>
-                    <Button
-                      onClick={handleAddPaymentMethod}
-                      variant="outline"
-                      size="sm"
-                      disabled={!isTossLoaded}
-                    >
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      {isTossLoaded ? '카드 등록' : '로딩 중...'}
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -855,9 +1037,7 @@ export function WalletClient() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-primary-600 text-3xl font-bold">0원</div>
-                  <p className="mt-2 text-sm text-neutral-600">
-                    지갑이 생성되지 않았습니다
-                  </p>
+
                   <div className="mt-4 flex space-x-2">
                     <Button
                       onClick={() => {
@@ -870,36 +1050,205 @@ export function WalletClient() {
                       <Plus className="mr-2 h-4 w-4" />
                       충전하기
                     </Button>
-                    <Button
-                      onClick={handleAddPaymentMethod}
-                      variant="outline"
-                      size="sm"
-                      disabled={!isTossLoaded}
-                    >
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      {isTossLoaded ? '카드 등록' : '로딩 중...'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* 안내 카드 */}
-              <Card variant="outlined">
-                <CardHeader>
-                  <h3 className="flex items-center text-lg font-semibold">
-                    <CreditCard className="mr-2 h-5 w-5 text-neutral-600" />
-                    지갑 안내
-                  </h3>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-sm text-neutral-600">
-                    <p className="mb-2">아직 지갑이 생성되지 않았습니다.</p>
-                    <p>첫 충전 시 자동으로 지갑이 생성됩니다.</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
           )}
+
+          {/* 결제수단 목록 */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-neutral-900">
+                등록된 결제수단
+              </h3>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={refreshPaymentMethods}
+                  variant="outline"
+                  size="sm"
+                >
+                  새로고침
+                </Button>
+                <Button onClick={() => setShowAddForm(true)} size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  수동 추가
+                </Button>
+                <Button
+                  onClick={handleAddPaymentMethod}
+                  variant="outline"
+                  size="sm"
+                  disabled={!isTossLoaded}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  {isTossLoaded ? '카드 등록' : '로딩 중...'}
+                </Button>
+              </div>
+            </div>
+
+            {paymentMethods.length === 0 ? (
+              <Card variant="outlined">
+                <CardContent className="py-12 text-center">
+                  <div className="mb-4">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
+                      <CreditCard className="h-8 w-8 text-neutral-400" />
+                    </div>
+                    <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+                      등록된 결제수단이 없습니다
+                    </h3>
+                    <p className="text-neutral-600">
+                      새로운 결제수단을 추가해보세요.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {paymentMethods.map((method) => (
+                  <Card key={method.id} variant="outlined">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                              <span className="text-xl">
+                                {method.type === 'CARD'
+                                  ? getCardTypeIcon(method.brand)
+                                  : getBankIcon(method.bankName)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-2 flex items-center space-x-2">
+                              <Badge
+                                variant={
+                                  method.isDefault ? 'primary' : 'neutral'
+                                }
+                              >
+                                {method.isDefault ? '기본' : '일반'}
+                              </Badge>
+                              <Badge variant="neutral">{method.type}</Badge>
+                            </div>
+
+                            {editingId === method.id ? (
+                              <div className="mb-2 space-y-2">
+                                <Input
+                                  value={editFormData.alias}
+                                  onChange={(e) =>
+                                    setEditFormData((prev) => ({
+                                      ...prev,
+                                      alias: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="별칭을 입력하세요"
+                                />
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={editFormData.isDefault}
+                                    onChange={(e) =>
+                                      setEditFormData((prev) => ({
+                                        ...prev,
+                                        isDefault: e.target.checked,
+                                      }))
+                                    }
+                                    className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
+                                  />
+                                  <span className="ml-2 text-sm text-neutral-600">
+                                    기본 결제수단으로 설정
+                                  </span>
+                                </label>
+                              </div>
+                            ) : (
+                              <h4 className="mb-1 text-base font-semibold text-neutral-900">
+                                {method.alias}
+                              </h4>
+                            )}
+
+                            <div className="space-y-1 text-sm text-neutral-600">
+                              <div className="flex items-center justify-between">
+                                <span>제공업체:</span>
+                                <span>{method.provider}</span>
+                              </div>
+                              {method.type === 'CARD' && (
+                                <>
+                                  <div className="flex items-center justify-between">
+                                    <span>카드 브랜드:</span>
+                                    <span>{method.brand}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span>카드 번호:</span>
+                                    <span>**** **** **** {method.last4}</span>
+                                  </div>
+                                </>
+                              )}
+                              {method.type === 'BANK' && (
+                                <>
+                                  <div className="flex items-center justify-between">
+                                    <span>은행:</span>
+                                    <span>{method.bankName}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span>계좌 번호:</span>
+                                    <span>****{method.acctLast4}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 액션 버튼들 */}
+                        <div className="flex space-x-2">
+                          {editingId === method.id ? (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={handleEditPaymentMethod}
+                                disabled={isEditing}
+                              >
+                                {isEditing ? '저장 중...' : '저장'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingId(null)}
+                                disabled={isEditing}
+                              >
+                                취소
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => startEdit(method)}
+                              >
+                                수정
+                              </Button>
+                              {!method.isDefault && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleDeletePaymentMethod(method.id)
+                                  }
+                                >
+                                  삭제
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -909,15 +1258,15 @@ export function WalletClient() {
           {/* 거래 내역 헤더 */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-neutral-900">거래 내역</h2>
-              <p className="mt-2 text-sm text-neutral-500">
+              <h2 className="text-3xl font-bold text-neutral-900">거래 내역</h2>
+              <p className="mt-2 text-base text-neutral-600">
                 지갑의 모든 입출금 내역을 확인할 수 있습니다.
               </p>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="bg-primary-50 flex items-center space-x-2 rounded-full px-3 py-1.5">
-                <div className="bg-primary-500 h-2 w-2 rounded-full"></div>
-                <span className="text-primary-700 text-sm font-medium">
+            <div className="flex items-center space-x-4">
+              <div className="from-primary-50 to-primary-100 flex items-center space-x-3 rounded-full bg-gradient-to-r px-4 py-2 shadow-sm">
+                <div className="bg-primary-500 h-2.5 w-2.5 animate-pulse rounded-full"></div>
+                <span className="text-primary-700 text-sm font-semibold">
                   총 {transactions.length}건
                 </span>
               </div>
@@ -926,10 +1275,10 @@ export function WalletClient() {
                 variant="outline"
                 size="sm"
                 disabled={isLoading}
-                className="border-neutral-200 hover:bg-neutral-50"
+                className="hover:border-primary-200 border-neutral-200 transition-colors hover:bg-neutral-50"
               >
                 <History className="mr-2 h-4 w-4" />
-                새로고침
+                {isLoading ? '새로고침 중...' : '새로고침'}
               </Button>
             </div>
           </div>
@@ -957,7 +1306,7 @@ export function WalletClient() {
                     아직 거래 내역이 없습니다. 첫 충전을 해보세요!
                   </p>
                   <Button
-                    onClick={() => setActiveTab('balance')}
+                    onClick={() => setActiveTab('wallet')}
                     size="sm"
                     className="bg-primary-600 hover:bg-primary-700"
                   >
@@ -971,56 +1320,55 @@ export function WalletClient() {
             <div className="space-y-3">
               {transactions.map((transaction) => {
                 const typeInfo = getTransactionType(transaction.type)
-                const isPositive =
-                  transaction.type === 'DEPOSIT' ||
-                  transaction.type === 'REFUND'
+                const isPositive = transaction.amount > 0
+                const absoluteAmount = Math.abs(transaction.amount)
 
                 return (
                   <Card
                     key={transaction.transactionId}
                     variant="outlined"
-                    className="group cursor-pointer border-0 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                    className="group hover:border-primary-200 cursor-pointer border-0 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
                     onClick={() => handleTransactionClick(transaction)}
                   >
-                    <CardContent className="p-5">
-                      <div className="flex items-center space-x-4">
+                    <CardContent className="p-6">
+                      <div className="flex items-center space-x-5">
                         {/* 거래 타입 아이콘 */}
                         <div className="flex-shrink-0">
                           <div
-                            className={`flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm transition-all duration-200 group-hover:scale-105 ${
+                            className={`flex h-16 w-16 items-center justify-center rounded-2xl shadow-sm transition-all duration-200 group-hover:scale-105 ${
                               isPositive
-                                ? 'from-success-50 to-success-100 text-success-600 bg-gradient-to-br'
-                                : 'from-error-50 to-error-100 text-error-600 bg-gradient-to-br'
+                                ? 'bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600'
+                                : 'bg-gradient-to-br from-rose-50 to-rose-100 text-rose-600'
                             }`}
                           >
-                            <span className="text-2xl">{typeInfo.icon}</span>
+                            <span className="text-3xl">{typeInfo.icon}</span>
                           </div>
                         </div>
 
                         {/* 거래 정보 */}
                         <div className="min-w-0 flex-1">
-                          <div className="mb-3 flex items-start justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center space-x-2">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-3">
                                 <Badge
                                   variant={typeInfo.variant}
-                                  className="px-2.5 py-1 text-sm font-semibold"
+                                  className="px-3 py-1.5 text-sm font-semibold shadow-sm"
                                 >
                                   {typeInfo.label}
                                 </Badge>
-                                <span className="text-xs text-neutral-400">
+                                <span className="font-mono text-xs text-neutral-400">
                                   #{transaction.transactionId}
                                 </span>
                               </div>
-                              <div className="flex items-center space-x-3 text-sm text-neutral-500">
+                              <div className="flex items-center space-x-4 text-sm text-neutral-500">
                                 <span className="flex items-center">
-                                  <History className="mr-1 h-3 w-3" />
+                                  <History className="mr-1.5 h-3.5 w-3.5" />
                                   {formatDate(transaction.createdAt)}
                                 </span>
                                 {transaction.related &&
                                   transaction.related.summary && (
                                     <span className="flex items-center">
-                                      <span className="mr-1">🔗</span>
+                                      <span className="mr-1.5">🔗</span>
                                       {transaction.related.summary}
                                     </span>
                                   )}
@@ -1028,17 +1376,20 @@ export function WalletClient() {
                             </div>
                             <div className="text-right">
                               <div
-                                className={`text-xl font-bold ${
+                                className={`text-2xl font-bold ${
                                   isPositive
-                                    ? 'text-success-600'
-                                    : 'text-error-600'
+                                    ? 'text-emerald-600'
+                                    : 'text-rose-600'
                                 }`}
                               >
                                 {isPositive ? '+' : '-'}
-                                {formatPrice(transaction.amount)}
+                                {formatPrice(absoluteAmount)}
                               </div>
-                              <div className="text-xs text-neutral-400">
-                                잔액: {formatPrice(transaction.balanceAfter)}
+                              <div className="mt-1 text-sm text-neutral-500">
+                                잔액:{' '}
+                                <span className="font-semibold">
+                                  {formatPrice(transaction.balanceAfter)}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -1232,8 +1583,8 @@ export function WalletClient() {
         </div>
       )}
 
-      {/* 결제수단 관리 탭 */}
-      {activeTab === 'paymentMethods' && (
+      {/* 결제수단 관리 탭 - 제거됨 (지갑 관리 탭에 통합) */}
+      {false && (
         <div className="space-y-6">
           {/* 헤더 */}
           <div className="flex items-center justify-between">
@@ -1480,6 +1831,10 @@ export function WalletClient() {
               />
               <p className="text-sm text-neutral-600">
                 최소 충전 금액: 1,000원
+              </p>
+              <p className="text-sm text-amber-600">
+                ⚠️ 1회 최대 충전 한도가 있습니다. 한도 초과 시 더 작은 금액으로
+                충전해주세요.
               </p>
             </div>
 

@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ErrorAlert } from '@/components/ui/error-alert'
-import { bidApi } from '@/lib/api'
+import { bidApi, cashApi } from '@/lib/api'
 import { Bid } from '@/types'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -17,6 +17,7 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
   const [bids, setBids] = useState((initialBids as any) || [])
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
+  const [payingBidId, setPayingBidId] = useState<number | null>(null)
 
   // 내 입찰 내역 조회
   const fetchMyBids = async () => {
@@ -95,7 +96,19 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
   }
 
   const getStatusInfo = (bid: any) => {
-    if (bid.isWinning && bid.status === 'BIDDING') {
+    // 상품 상태가 "낙찰"인 경우를 우선적으로 확인
+    if (bid.productStatus === '낙찰' || bid.status === 'SUCCESSFUL') {
+      return {
+        label: bid.paidAt ? '결제 완료' : '낙찰',
+        color: bid.paidAt ? 'text-blue-600' : 'text-green-600',
+        bgColor: bid.paidAt ? 'bg-blue-50' : 'bg-green-50',
+        icon: bid.paidAt ? '✅' : '🎉',
+      }
+    } else if (
+      bid.isWinning &&
+      bid.status === 'BIDDING' &&
+      bid.productStatus !== '낙찰'
+    ) {
       return {
         label: '현재 최고가',
         color: 'text-green-600',
@@ -108,13 +121,6 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
         color: 'text-blue-600',
         bgColor: 'bg-blue-50',
         icon: '⏳',
-      }
-    } else if (bid.status === 'SUCCESSFUL') {
-      return {
-        label: '낙찰',
-        color: 'text-green-600',
-        bgColor: 'bg-green-50',
-        icon: '🎉',
       }
     } else if (bid.status === 'FAILED') {
       return {
@@ -131,6 +137,137 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
         icon: '⏳',
       }
     }
+  }
+
+  // 결제 가능 여부 확인
+  const canPayBid = (bid: any) => {
+    return (
+      (bid.productStatus === '낙찰' || bid.status === 'SUCCESSFUL') && // 낙찰 상태
+      bid.isWinning === true && // 최고가 입찰
+      !bid.paidAt // 아직 결제 안함
+    )
+  }
+
+  // 잔액 확인
+  const checkBalance = async (bidAmount: number) => {
+    try {
+      const cashInfo = await cashApi.getMyCash()
+      if (cashInfo.success && cashInfo.data) {
+        const balance = cashInfo.data.balance || 0
+        if (balance < bidAmount) {
+          const shouldGoToWallet = confirm(
+            `잔액이 부족합니다.\n현재 잔액: ${balance.toLocaleString()}원\n필요 금액: ${bidAmount.toLocaleString()}원\n\n지갑을 충전하시겠습니까?`,
+          )
+          if (shouldGoToWallet) {
+            router.push('/wallet')
+          }
+          return false
+        }
+        return true
+      }
+      return false
+    } catch (error: any) {
+      console.error('잔액 확인 실패:', error)
+
+      // 지갑이 생성되지 않은 경우
+      if (error.response?.status === 404) {
+        const shouldGoToWallet = confirm(
+          '잔액이 없습니다.\n잔액을 충전하시겠습니까?',
+        )
+        if (shouldGoToWallet) {
+          router.push('/wallet')
+        }
+        return false
+      }
+
+      alert('잔액 확인 중 오류가 발생했습니다.')
+      return false
+    }
+  }
+
+  // 낙찰 결제 처리
+  const handlePayBid = async (bidId: number, bidAmount: number) => {
+    setPayingBidId(bidId)
+    try {
+      const result = await bidApi.payBid(bidId)
+
+      if (result.success) {
+        // 결제 성공 처리
+        console.log('결제 완료:', result.data)
+        alert(
+          `결제가 완료되었습니다!\n금액: ${result.data?.amount?.toLocaleString()}원\n잔액: ${result.data?.balanceAfter?.toLocaleString()}원\n\n거래내역을 확인하시겠습니까?`,
+        )
+
+        // UI 업데이트
+        setBids((prevBids: any) =>
+          prevBids.map((bid: any) =>
+            bid.bidId === bidId
+              ? { ...bid, status: 'PAID', paidAt: result.data?.paidAt }
+              : bid,
+          ),
+        )
+
+        // 지갑의 거래내역 탭으로 이동
+        router.push('/wallet?tab=transactions')
+      } else {
+        // 결제 실패 처리
+        if (result.msg?.includes('잔액') || result.msg?.includes('지갑')) {
+          const shouldGoToWallet = confirm(
+            `결제 실패: ${result.msg}\n\n지갑을 충전하시겠습니까?`,
+          )
+          if (shouldGoToWallet) {
+            router.push('/wallet')
+          }
+        } else {
+          alert(`결제 실패: ${result.msg}`)
+        }
+      }
+    } catch (error: any) {
+      console.error('결제 오류:', error)
+
+      // 지갑 관련 에러 처리
+      if (
+        error.response?.status === 404 ||
+        error.message?.includes('지갑이 아직 생성되지 않았습니다')
+      ) {
+        const shouldGoToWallet = confirm(
+          '지갑이 아직 생성되지 않았습니다.\n지갑을 생성하고 충전하시겠습니까?',
+        )
+        if (shouldGoToWallet) {
+          router.push('/wallet')
+        }
+      } else if (
+        error.response?.status === 400 &&
+        error.response?.data?.msg?.includes('잔액')
+      ) {
+        const shouldGoToWallet = confirm(
+          `결제 실패: ${error.response.data.msg}\n\n지갑을 충전하시겠습니까?`,
+        )
+        if (shouldGoToWallet) {
+          router.push('/wallet')
+        }
+      } else {
+        alert('결제 중 오류가 발생했습니다.')
+      }
+    } finally {
+      setPayingBidId(null)
+    }
+  }
+
+  // 완전한 결제 플로우
+  const completePaymentFlow = async (bidId: number, bidAmount: number) => {
+    // 1. 잔액 확인
+    const hasEnoughBalance = await checkBalance(bidAmount)
+    if (!hasEnoughBalance) return
+
+    // 2. 사용자 확인
+    const confirmed = confirm(
+      `정말로 ${bidAmount.toLocaleString()}원을 결제하시겠습니까?`,
+    )
+    if (!confirmed) return
+
+    // 3. 결제 처리
+    await handlePayBid(bidId, bidAmount)
   }
 
   return (
@@ -255,55 +392,90 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                         </div>
                       </div>
 
-                      {bid.status === 'SUCCESSFUL' && (
-                        <div className="bg-success-50 mb-4 rounded-lg p-3">
-                          <div className="text-success-900 mb-2 text-sm font-medium">
-                            🎉 축하합니다! 낙찰되었습니다!
+                      {bid.isWinning &&
+                        bid.status === 'BIDDING' &&
+                        bid.productStatus !== '낙찰' && (
+                          <div className="bg-primary-50 mb-4 rounded-lg p-3">
+                            <div className="text-primary-900 mb-2 text-sm font-medium">
+                              🏆 현재 최고가 입찰자입니다!
+                            </div>
+                            <p className="text-primary-700 text-sm">
+                              경매 종료까지 기다려주세요.
+                            </p>
                           </div>
-                          <p className="text-success-700 text-sm">
-                            판매자와 연락하여 거래를 진행하세요.
-                          </p>
-                        </div>
-                      )}
+                        )}
 
-                      {bid.isWinning && bid.status === 'BIDDING' && (
-                        <div className="bg-primary-50 mb-4 rounded-lg p-3">
-                          <div className="text-primary-900 mb-2 text-sm font-medium">
-                            🏆 현재 최고가 입찰자입니다!
+                      {(bid.productStatus === '낙찰' ||
+                        bid.status === 'SUCCESSFUL') &&
+                        !bid.paidAt && (
+                          <div className="mb-4 rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4">
+                            <div className="mb-2 text-sm font-bold text-yellow-900">
+                              🎉 낙찰 성공! 결제를 진행해주세요
+                            </div>
+                            <p className="text-sm text-yellow-800">
+                              {formatPrice(bid.myBidPrice)}을 결제하여 거래를
+                              완료하세요.
+                            </p>
                           </div>
-                          <p className="text-primary-700 text-sm">
-                            경매 종료까지 기다려주세요.
-                          </p>
-                        </div>
-                      )}
+                        )}
+
+                      {(bid.productStatus === '낙찰' ||
+                        bid.status === 'SUCCESSFUL') &&
+                        bid.paidAt && (
+                          <div className="mb-4 rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+                            <div className="mb-2 text-sm font-bold text-blue-900">
+                              ✅ 결제 완료!
+                            </div>
+                            <p className="text-sm text-blue-800">
+                              결제가 완료되었습니다. 판매자와 연락하여 상품을
+                              받아보세요.
+                            </p>
+                          </div>
+                        )}
 
                       {/* 액션 버튼들 */}
                       <div className="flex flex-wrap gap-2">
-                        {bid.status === 'SUCCESSFUL' && (
+                        {(bid.productStatus === '낙찰' ||
+                          bid.status === 'SUCCESSFUL') && (
                           <>
-                            <Button size="sm" variant="outline">
-                              판매자 연락처
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              거래 완료 처리
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              리뷰 작성
-                            </Button>
+                            {canPayBid(bid) ? (
+                              <Button
+                                size="md"
+                                onClick={() =>
+                                  completePaymentFlow(bid.bidId, bid.myBidPrice)
+                                }
+                                disabled={payingBidId === bid.bidId}
+                                className="bg-green-600 font-bold text-white shadow-lg hover:bg-green-700"
+                              >
+                                {payingBidId === bid.bidId
+                                  ? '결제 중...'
+                                  : '💳 결제하기'}
+                              </Button>
+                            ) : bid.paidAt ? (
+                              <Button
+                                size="md"
+                                variant="outline"
+                                disabled
+                                className="font-bold"
+                              >
+                                ✅ 결제 완료
+                              </Button>
+                            ) : null}
                           </>
                         )}
-                        {bid.status === 'BIDDING' && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                router.push(`/products/${bid.productId}`)
-                              }
-                            >
-                              재입찰하기
-                            </Button>
-                          </>
-                        )}
+                        {bid.status === 'BIDDING' &&
+                          bid.productStatus !== '낙찰' && (
+                            <>
+                              <Button
+                                size="md"
+                                onClick={() =>
+                                  router.push(`/products/${bid.productId}`)
+                                }
+                              >
+                                재입찰하기
+                              </Button>
+                            </>
+                          )}
                         {bid.status === 'FAILED' && (
                           <>
                             <Button size="sm">비슷한 상품 찾기</Button>

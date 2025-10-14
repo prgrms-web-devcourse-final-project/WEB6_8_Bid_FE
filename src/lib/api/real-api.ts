@@ -1,6 +1,7 @@
 // 실제 백엔드 API 연결
 import type {
   ApiResponse,
+  BidPayResponseDto,
   BidRequest,
   BoardWriteRequest,
   BoardWriteResponse,
@@ -404,6 +405,14 @@ export const bidApi = {
   cancelBid: async (bidId: number) => {
     const response = await apiClient.delete<ApiResponse<any>>(
       `/api/v1/bids/${bidId}`,
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 낙찰 결제
+  payBid: async (bidId: number) => {
+    const response = await apiClient.post<ApiResponse<BidPayResponseDto>>(
+      `/api/v1/bids/${bidId}/pay`,
     )
     return normalizeApiResponse(response.data)
   },

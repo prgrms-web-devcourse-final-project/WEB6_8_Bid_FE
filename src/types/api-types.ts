@@ -48,6 +48,16 @@ export type LoginFormData = components['schemas']['LoginRequestDto']
 // 입찰 관련 타입
 export type BidRequest = components['schemas']['BidRequestDto']
 
+// 낙찰 결제 관련 타입
+export type BidPayResponseDto = {
+  bidId: number
+  productId: number
+  amount: number
+  paidAt: string
+  cashTransactionId: number | null
+  balanceAfter: number | null
+}
+
 // 알림 관련 타입
 export type NotificationListResponse = {
   content: Notification[]
