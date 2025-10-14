@@ -28,14 +28,13 @@ const categories = [
 export function ProductRegistrationClient() {
   const router = useRouter()
   const [formData, setFormData] = useState<ProductForm>({
-    title: '',
+    name: '',
     description: '',
-    category: 1,
+    categoryId: 1,
     images: [],
-    startingPrice: 0,
-    duration: 24,
-    startTime: 'immediate',
-    scheduledTime: '',
+    initialPrice: 0,
+    auctionDuration: '24시간',
+    auctionStartTime: '',
     deliveryMethod: [],
     location: '',
   })
@@ -52,31 +51,42 @@ export function ProductRegistrationClient() {
 
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked
-      const method = name as 'shipping' | 'pickup' | 'both'
+      const method = name as 'TRADE' | 'DELIVERY'
 
-      if (method === 'both') {
-        // "둘 다" 선택 시 다른 옵션들 제거하고 both만 추가
-        setFormData((prev) => ({
-          ...prev,
-          deliveryMethod: checked ? ['both'] : [],
-        }))
-      } else {
-        // 개별 옵션 선택 시 both 제거하고 해당 옵션 추가/제거
-        setFormData((prev) => ({
-          ...prev,
-          deliveryMethod: checked
-            ? [...prev.deliveryMethod.filter((m) => m !== 'both'), method]
-            : prev.deliveryMethod.filter((m) => m !== method),
-        }))
-      }
-    } else {
+      // 개별 옵션 선택 시 해당 옵션 추가/제거 (중복 방지)
       setFormData((prev) => ({
         ...prev,
-        [name]:
-          name === 'startingPrice' || name === 'duration'
-            ? parseInt(value) || 0
-            : value,
+        deliveryMethod: checked
+          ? prev.deliveryMethod.includes(method)
+            ? prev.deliveryMethod // 이미 포함되어 있으면 그대로 유지
+            : [...prev.deliveryMethod, method] // 없으면 추가
+          : prev.deliveryMethod.filter((m) => m !== method), // 체크 해제 시 제거
       }))
+    } else {
+      setFormData((prev) => {
+        if (name === 'initialPrice') {
+          // 숫자만 추출하고 안전하게 변환
+          const cleanValue = value.replace(/[^0-9]/g, '') // 숫자가 아닌 문자 제거
+          const numericValue = cleanValue ? Number(cleanValue) : 0
+
+          // 디버깅용 로그
+          console.log('💰 시작가 입력:', {
+            originalValue: value,
+            cleanValue,
+            finalValue: numericValue,
+          })
+
+          return {
+            ...prev,
+            [name]: numericValue,
+          }
+        }
+
+        return {
+          ...prev,
+          [name]: value,
+        }
+      })
     }
 
     // 에러 메시지 초기화
@@ -111,37 +121,15 @@ export function ProductRegistrationClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('🚀 상품 등록 폼 제출 시작')
-    console.log('📝 폼 데이터:', formData)
     setIsLoading(true)
     setApiError('')
-
-    // 쿠키에서 토큰 확인
-    const cookies = document.cookie.split(';')
-    const accessTokenCookie = cookies.find((cookie) =>
-      cookie.trim().startsWith('accessToken='),
-    )
-    const accessToken = accessTokenCookie?.split('=')[1]
-
-    if (!accessToken) {
-      console.log('❌ 쿠키에 토큰이 없음 - 로그인 필요')
-      setApiError('상품 등록에 실패했습니다. 잠시 후 다시 시도해주세요.')
-      setIsLoading(false)
-      return
-    }
-
-    console.log('🔑 쿠키 토큰 상태 확인:', {
-      accessToken: accessToken ? '존재' : '없음',
-      tokenLength: accessToken?.length || 0,
-      allCookies: document.cookie,
-    })
 
     // 유효성 검사
     const newErrors: Record<string, string> = {}
 
-    if (!formData.title) {
+    if (!formData.name) {
       newErrors.title = '제목을 입력해주세요'
-    } else if (formData.title.length < 1 || formData.title.length > 100) {
+    } else if (formData.name.length < 1 || formData.name.length > 100) {
       newErrors.title = '제목은 1~100자 사이로 입력해주세요'
     }
 
@@ -152,27 +140,28 @@ export function ProductRegistrationClient() {
       newErrors.description = '상품 설명은 1~1000자 사이로 입력해주세요'
     }
 
-    if (!formData.startingPrice || formData.startingPrice < 1000) {
-      newErrors.startingPrice = '시작가는 1,000원 이상이어야 합니다'
+    if (!formData.initialPrice || formData.initialPrice < 1000) {
+      newErrors.initialPrice = '시작가는 1,000원 이상이어야 합니다'
     }
 
     if (
-      !formData.duration ||
-      formData.duration < 1 ||
-      formData.duration > 168
+      !formData.auctionDuration ||
+      (formData.auctionDuration !== '24시간' &&
+        formData.auctionDuration !== '48시간')
     ) {
-      newErrors.duration = '경매 기간은 1~168시간 사이로 입력해주세요'
+      newErrors.auctionDuration =
+        '경매 기간을 선택해주세요 (24시간 또는 48시간)'
     }
 
-    if (formData.startTime === 'scheduled' && !formData.scheduledTime) {
-      newErrors.scheduledTime = '예약 시작 시간을 선택해주세요'
-    }
-
-    if (formData.startTime === 'scheduled' && formData.scheduledTime) {
-      const scheduledDate = new Date(formData.scheduledTime)
+    if (
+      formData.auctionStartTime === 'scheduled' &&
+      formData.auctionStartTime
+    ) {
+      const scheduledDate = new Date(formData.auctionStartTime)
       const now = new Date()
       if (scheduledDate <= now) {
-        newErrors.scheduledTime = '예약 시작 시간은 현재 시간 이후여야 합니다'
+        newErrors.auctionStartTime =
+          '예약 시작 시간은 현재 시간 이후여야 합니다'
       }
     }
 
@@ -180,16 +169,10 @@ export function ProductRegistrationClient() {
       newErrors.deliveryMethod = '거래 방법을 선택해주세요'
     }
 
-    // 직거래나 둘 다 선택한 경우 위치 필수
-    if (
-      (formData.deliveryMethod.includes('pickup') ||
-        formData.deliveryMethod.includes('both')) &&
-      !formData.location
-    ) {
+    if (formData.deliveryMethod.includes('TRADE') && !formData.location) {
       newErrors.location = '직거래 선택 시 위치를 입력해주세요'
     }
 
-    // 이미지 필수 (1~5개)
     if (formData.images.length === 0) {
       newErrors.images = '상품 이미지를 1개 이상 업로드해주세요'
     } else if (formData.images.length > 5) {
@@ -197,81 +180,46 @@ export function ProductRegistrationClient() {
     }
 
     setErrors(newErrors)
-    console.log('🔍 유효성 검사 결과:', newErrors)
 
     if (Object.keys(newErrors).length === 0) {
-      console.log('✅ 유효성 검사 통과, API 호출 시작')
-
       // 배송 방법 매핑
       let deliveryMethod: 'DELIVERY' | 'BOTH' | 'TRADE' = 'DELIVERY'
-      if (formData.deliveryMethod.includes('both')) {
+      if (
+        formData.deliveryMethod.includes('TRADE') &&
+        formData.deliveryMethod.includes('DELIVERY')
+      ) {
         deliveryMethod = 'BOTH'
-      } else if (formData.deliveryMethod.includes('pickup')) {
+      } else if (formData.deliveryMethod.includes('TRADE')) {
         deliveryMethod = 'TRADE'
-      } else if (formData.deliveryMethod.includes('shipping')) {
+      } else if (formData.deliveryMethod.includes('DELIVERY')) {
         deliveryMethod = 'DELIVERY'
       }
 
-      console.log('📋 전송할 데이터:', {
-        name: formData.title,
-        description: formData.description,
-        categoryId: formData.category,
-        initialPrice: formData.startingPrice,
-        auctionStartTime:
-          formData.startTime === 'immediate'
-            ? new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 19) // 5분 후 시작 (YYYY-MM-DDTHH:mm:ss 형식)
-            : formData.scheduledTime
-              ? new Date(formData.scheduledTime).toISOString().slice(0, 19)
-              : new Date().toISOString().slice(0, 19), // datetime-local 값을 YYYY-MM-DDTHH:mm:ss 형식으로 변환
-        auctionDuration: `${formData.duration}시간`,
-        deliveryMethod: deliveryMethod,
-        location: formData.location,
-        images: formData.images.length,
-      })
-
       try {
-        // 상품 등록 API 호출
-
-        console.log(
-          '🚚 배송 방법 매핑:',
-          formData.deliveryMethod,
-          '→',
-          deliveryMethod,
-        )
-
-        console.log('🔑 상품 등록 전 쿠키 토큰 상태:', {
-          cookie: accessToken ? '존재' : '없음',
-          tokenLength: accessToken?.length || 0,
-          tokenPreview: accessToken
-            ? accessToken.substring(0, 20) + '...'
-            : '없음',
-          allCookies: document.cookie,
-        })
-
-        console.log('🖼️ 업로드된 이미지 정보:', {
-          imageCount: formData.images.length,
-          images: formData.images.map((img) => ({
-            name: img.name,
-            size: img.size,
-            type: img.type,
-          })),
+        console.log('🚀 API 전송 데이터:', {
+          name: formData.name,
+          description: formData.description,
+          categoryId: formData.categoryId,
+          initialPrice: formData.initialPrice,
         })
 
         const response = await productApi.createProduct(
           {
-            name: formData.title,
+            name: formData.name,
             description: formData.description,
-            categoryId: formData.category,
-            initialPrice: formData.startingPrice,
+            categoryId: formData.categoryId,
+            initialPrice: formData.initialPrice,
             auctionStartTime:
-              formData.startTime === 'immediate'
+              formData.auctionStartTime === 'immediate'
                 ? new Date(Date.now() + 5 * 60 * 1000)
                     .toISOString()
                     .slice(0, 19) // 5분 후 시작 (YYYY-MM-DDTHH:mm:ss 형식)
-                : formData.scheduledTime
-                  ? new Date(formData.scheduledTime).toISOString().slice(0, 19)
+                : formData.auctionStartTime
+                  ? new Date(formData.auctionStartTime)
+                      .toISOString()
+                      .slice(0, 19)
                   : new Date().toISOString().slice(0, 19), // datetime-local 값을 YYYY-MM-DDTHH:mm:ss 형식으로 변환
-            auctionDuration: `${formData.duration}시간`, // 문자열로 전송
+            auctionDuration: formData.auctionDuration, // 문자열로 전송
             deliveryMethod: deliveryMethod,
             location: formData.location,
           },
@@ -280,17 +228,9 @@ export function ProductRegistrationClient() {
         )
 
         if (response.success) {
-          console.log('✅ 상품 등록 성공:', response.data)
           alert('상품이 성공적으로 등록되었습니다.')
           router.push('/my-products')
         } else {
-          console.log('❌ 상품 등록 실패:', response)
-          console.log('❌ 실패 상세 정보:', {
-            success: response.success,
-            msg: response.msg,
-            resultCode: response.resultCode,
-            data: response.data,
-          })
           setApiError(
             response.msg || '상품 등록에 실패했습니다. 다시 시도해주세요.',
           )
@@ -333,14 +273,14 @@ export function ProductRegistrationClient() {
         <Card variant="outlined">
           <CardContent className="p-6">
             <h2 className="mb-4 text-lg font-semibold text-neutral-900">
-              상품 사진
+              상품 사진 *
             </h2>
 
             <div className="rounded-lg border-2 border-dashed border-neutral-300 p-8 text-center">
               <Camera className="mx-auto mb-4 h-12 w-12 text-neutral-400" />
               <p className="mb-2 text-neutral-600">사진을 선택해주세요</p>
               <p className="mb-4 text-sm text-neutral-500">
-                최대 10장까지 업로드 가능 (JPG, PNG)
+                1장 이상 필수 (JPG, PNG)
               </p>
 
               <input
@@ -401,8 +341,8 @@ export function ProductRegistrationClient() {
             <div className="space-y-4">
               <Input
                 label="제목 *"
-                name="title"
-                value={formData.title}
+                name="name"
+                value={formData.name}
                 onChange={handleInputChange}
                 placeholder="상품명을 입력하세요"
                 error={errors.title}
@@ -413,8 +353,8 @@ export function ProductRegistrationClient() {
                   카테고리 *
                 </label>
                 <select
-                  name="category"
-                  value={formData.category}
+                  name="categoryId"
+                  value={formData.categoryId}
                   onChange={handleInputChange}
                   className="focus:ring-primary-500 focus:border-primary-500 block w-full rounded-lg border border-neutral-300 px-3 py-2 focus:ring-2 focus:outline-none"
                 >
@@ -458,11 +398,16 @@ export function ProductRegistrationClient() {
                 </label>
                 <Input
                   type="number"
-                  name="startingPrice"
-                  value={formData.startingPrice}
+                  name="initialPrice"
+                  value={formData.initialPrice}
                   onChange={handleInputChange}
                   placeholder="시작가를 입력하세요"
-                  error={errors.startingPrice}
+                  min="1000"
+                  step="100"
+                  autoComplete="off"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  error={errors.initialPrice}
                 />
                 <div className="mt-2 text-sm text-neutral-500">
                   경매 시작가를 설정해주세요
@@ -471,21 +416,40 @@ export function ProductRegistrationClient() {
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  경매 기간 (시간) *
+                  경매 기간 *
                 </label>
-                <Input
-                  type="number"
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  placeholder="경매 기간을 시간 단위로 입력하세요"
-                  error={errors.duration}
-                  min="1"
-                  max="168"
-                />
-                <div className="mt-2 text-sm text-neutral-500">
-                  경매 진행 기간을 시간 단위로 입력해주세요 (1~168시간)
+                <div className="space-y-3">
+                  <label className="flex cursor-pointer items-center">
+                    <input
+                      type="radio"
+                      name="auctionDuration"
+                      value="24시간"
+                      checked={formData.auctionDuration === '24시간'}
+                      onChange={handleInputChange}
+                      className="text-primary-600 focus:ring-primary-500 mr-3"
+                    />
+                    <span>24시간</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center">
+                    <input
+                      type="radio"
+                      name="auctionDuration"
+                      value="48시간"
+                      checked={formData.auctionDuration === '48시간'}
+                      onChange={handleInputChange}
+                      className="text-primary-600 focus:ring-primary-500 mr-3"
+                    />
+                    <span>48시간</span>
+                  </label>
                 </div>
+                <div className="mt-2 text-sm text-neutral-500">
+                  경매 진행 기간을 선택해주세요
+                </div>
+                {errors.auctionDuration && (
+                  <p className="text-error-500 mt-1 text-sm">
+                    {errors.auctionDuration}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -496,9 +460,9 @@ export function ProductRegistrationClient() {
                   <label className="flex cursor-pointer items-center">
                     <input
                       type="radio"
-                      name="startTime"
+                      name="auctionStartTime"
                       value="immediate"
-                      checked={formData.startTime === 'immediate'}
+                      checked={formData.auctionStartTime === 'immediate'}
                       onChange={handleInputChange}
                       className="text-primary-600 focus:ring-primary-500 mr-3"
                     />
@@ -507,9 +471,9 @@ export function ProductRegistrationClient() {
                   <label className="flex cursor-pointer items-center">
                     <input
                       type="radio"
-                      name="startTime"
+                      name="auctionStartTime"
                       value="scheduled"
-                      checked={formData.startTime === 'scheduled'}
+                      checked={formData.auctionStartTime === 'scheduled'}
                       onChange={handleInputChange}
                       className="text-primary-600 focus:ring-primary-500 mr-3"
                     />
@@ -517,15 +481,15 @@ export function ProductRegistrationClient() {
                   </label>
                 </div>
 
-                {formData.startTime === 'scheduled' && (
+                {formData.auctionStartTime === 'scheduled' && (
                   <div className="mt-3">
                     <Input
                       type="datetime-local"
-                      name="scheduledTime"
-                      value={formData.scheduledTime}
+                      name="auctionStartTime"
+                      value={formData.auctionStartTime}
                       onChange={handleInputChange}
                       placeholder="경매 시작 시간을 선택하세요"
-                      error={errors.scheduledTime}
+                      error={errors.auctionStartTime}
                     />
                     <div className="mt-2 text-sm text-neutral-500">
                       경매 시작 시간을 선택해주세요 (현재 시간 이후)
@@ -550,7 +514,7 @@ export function ProductRegistrationClient() {
                   error={errors.location}
                 />
                 <div className="mt-2 text-sm text-neutral-500">
-                  직거래 선택 시 필수입니다. 형식: "시/도 시/군/구"
+                  직거래 선택 시 필수입니다.
                 </div>
               </div>
             </div>
@@ -579,8 +543,8 @@ export function ProductRegistrationClient() {
                   <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
                     <input
                       type="checkbox"
-                      name="shipping"
-                      checked={formData.deliveryMethod.includes('shipping')}
+                      name="DELIVERY"
+                      checked={formData.deliveryMethod.includes('DELIVERY')}
                       onChange={handleInputChange}
                       className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
                     />
@@ -596,8 +560,8 @@ export function ProductRegistrationClient() {
                   <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
                     <input
                       type="checkbox"
-                      name="pickup"
-                      checked={formData.deliveryMethod.includes('pickup')}
+                      name="TRADE"
+                      checked={formData.deliveryMethod.includes('TRADE')}
                       onChange={handleInputChange}
                       className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
                     />
@@ -608,26 +572,6 @@ export function ProductRegistrationClient() {
                       </div>
                       <p className="text-sm text-neutral-500">
                         직접 만나서 거래
-                      </p>
-                    </div>
-                  </label>
-
-                  <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
-                    <input
-                      type="checkbox"
-                      name="both"
-                      checked={formData.deliveryMethod.includes('both')}
-                      onChange={handleInputChange}
-                      className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
-                    />
-                    <div className="ml-3">
-                      <div className="flex items-center space-x-2">
-                        <Package className="h-5 w-5 text-neutral-600" />
-                        <MapPin className="h-5 w-5 text-neutral-600" />
-                        <span className="font-medium">둘 다</span>
-                      </div>
-                      <p className="text-sm text-neutral-500">
-                        택배/직거래 모두 가능
                       </p>
                     </div>
                   </label>

@@ -17,17 +17,21 @@ interface ProductEditClientProps {
 export function ProductEditClient({ product }: ProductEditClientProps) {
   const router = useRouter()
 
-  // product 객체 구조 디버깅
-  console.log('🔍 ProductEditClient - product 객체:', product)
-  console.log('🔍 ProductEditClient - product.productId:', product.productId)
-  console.log('🔍 ProductEditClient - product.id:', (product as any).id)
   const [formData, setFormData] = useState({
-    title: product.title,
+    name: product.name,
     description: product.description,
     category: product.category,
-    startingPrice: product.startingPrice,
+    initialPrice: product.initialPrice,
     location: product.location,
-    deliveryMethod: (product as any).deliveryMethod || 'TRADE',
+    auctionDuration: '24시간', // 기본값 24시간
+    deliveryMethod:
+      product.deliveryMethod === 'BOTH'
+        ? ['TRADE', 'DELIVERY']
+        : product.deliveryMethod === 'DELIVERY'
+          ? ['DELIVERY']
+          : product.deliveryMethod === 'TRADE'
+            ? ['TRADE']
+            : [],
   })
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -47,11 +51,41 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'startingPrice' ? parseInt(value) || 0 : value,
-    }))
+    const { name, value, type } = e.target
+
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked
+      const method = name as 'TRADE' | 'DELIVERY'
+
+      // 개별 옵션 선택 시 해당 옵션 추가/제거 (중복 방지)
+      setFormData((prev) => ({
+        ...prev,
+        deliveryMethod: checked
+          ? prev.deliveryMethod.includes(method)
+            ? prev.deliveryMethod // 이미 포함되어 있으면 그대로 유지
+            : [...prev.deliveryMethod, method] // 없으면 추가
+          : prev.deliveryMethod.filter((m) => m !== method), // 체크 해제 시 제거
+      }))
+    } else {
+      setFormData((prev) => {
+        if (name === 'initialPrice') {
+          // 숫자만 추출하고 안전하게 변환
+          const cleanValue = value.replace(/[^0-9]/g, '') // 숫자가 아닌 문자 제거
+          const numericValue = cleanValue ? Number(cleanValue) : 0
+
+          return {
+            ...prev,
+            [name]: numericValue,
+          }
+        }
+
+        return {
+          ...prev,
+          [name]: value,
+        }
+      })
+    }
+
     // 에러 메시지 제거
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }))
@@ -138,20 +172,33 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.title.trim()) {
-      newErrors.title = '상품명을 입력해주세요'
+    if (!formData.name.trim()) {
+      newErrors.name = '상품명을 입력해주세요'
     }
 
     if (!formData.description.trim()) {
       newErrors.description = '상품 설명을 입력해주세요'
     }
 
-    if (formData.startingPrice <= 0) {
-      newErrors.startingPrice = '시작가를 입력해주세요'
+    if (formData.initialPrice <= 0) {
+      newErrors.initialPrice = '시작가를 입력해주세요'
     }
 
     if (!formData.location.trim()) {
       newErrors.location = '위치를 입력해주세요'
+    }
+
+    if (
+      !formData.auctionDuration ||
+      (formData.auctionDuration !== '24시간' &&
+        formData.auctionDuration !== '48시간')
+    ) {
+      newErrors.auctionDuration =
+        '경매 기간을 선택해주세요 (24시간 또는 48시간)'
+    }
+
+    if (formData.deliveryMethod.length === 0) {
+      newErrors.deliveryMethod = '거래 방법을 선택해주세요'
     }
 
     setErrors(newErrors)
@@ -169,16 +216,26 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
     setApiError('')
 
     try {
+      // 배송 방법 매핑
+      let deliveryMethod: 'DELIVERY' | 'BOTH' | 'TRADE' = 'DELIVERY'
+      if (
+        formData.deliveryMethod.includes('TRADE') &&
+        formData.deliveryMethod.includes('DELIVERY')
+      ) {
+        deliveryMethod = 'BOTH'
+      } else if (formData.deliveryMethod.includes('TRADE')) {
+        deliveryMethod = 'TRADE'
+      } else if (formData.deliveryMethod.includes('DELIVERY')) {
+        deliveryMethod = 'DELIVERY'
+      }
+
       // 상품 수정 API 호출 (api-test와 동일한 방식)
       const requestData = {
-        name: formData.title,
+        name: formData.name,
         description: formData.description,
-        initialPrice: formData.startingPrice,
+        initialPrice: formData.initialPrice,
         location: formData.location,
-        deliveryMethod: formData.deliveryMethod as
-          | 'DELIVERY'
-          | 'BOTH'
-          | 'TRADE',
+        deliveryMethod: deliveryMethod,
       }
 
       // 삭제할 이미지 ID 계산 (이미지 객체에서 ID 추출)
@@ -397,11 +454,11 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                   상품명 *
                 </label>
                 <Input
-                  name="title"
-                  value={formData.title}
+                  name="name"
+                  value={formData.name}
                   onChange={handleInputChange}
                   placeholder="상품명을 입력하세요"
-                  error={errors.title}
+                  error={errors.name}
                 />
               </div>
 
@@ -457,13 +514,57 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                   시작가 *
                 </label>
                 <Input
-                  name="startingPrice"
+                  name="initialPrice"
                   type="number"
-                  value={formData.startingPrice}
+                  value={formData.initialPrice}
                   onChange={handleInputChange}
                   placeholder="시작가를 입력하세요"
-                  error={errors.startingPrice}
+                  min="1000"
+                  step="100"
+                  autoComplete="off"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  error={errors.initialPrice}
                 />
+              </div>
+
+              {/* 경매 기간 */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-700">
+                  경매 기간 *
+                </label>
+                <div className="space-y-3">
+                  <label className="flex cursor-pointer items-center">
+                    <input
+                      type="radio"
+                      name="auctionDuration"
+                      value="24시간"
+                      checked={formData.auctionDuration === '24시간'}
+                      onChange={handleInputChange}
+                      className="text-primary-600 focus:ring-primary-500 mr-3"
+                    />
+                    <span>24시간</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center">
+                    <input
+                      type="radio"
+                      name="auctionDuration"
+                      value="48시간"
+                      checked={formData.auctionDuration === '48시간'}
+                      onChange={handleInputChange}
+                      className="text-primary-600 focus:ring-primary-500 mr-3"
+                    />
+                    <span>48시간</span>
+                  </label>
+                </div>
+                <div className="mt-2 text-sm text-neutral-500">
+                  경매 진행 기간을 선택해주세요
+                </div>
+                {errors.auctionDuration && (
+                  <p className="text-error-500 mt-1 text-sm">
+                    {errors.auctionDuration}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -491,18 +592,40 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                 />
               </div>
 
-              {/* 배송 방법 */}
+              {/* 거래 방식 */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  배송 방법 *
+                  거래 방법 * (중복 선택 가능)
                 </label>
+                {errors.deliveryMethod && (
+                  <p className="text-error-500 mb-2 text-sm">
+                    {errors.deliveryMethod}
+                  </p>
+                )}
+
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
                     <input
-                      type="radio"
-                      name="deliveryMethod"
-                      value="TRADE"
-                      checked={formData.deliveryMethod === 'TRADE'}
+                      type="checkbox"
+                      name="DELIVERY"
+                      checked={formData.deliveryMethod.includes('DELIVERY')}
+                      onChange={handleInputChange}
+                      className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
+                    />
+                    <div className="ml-3">
+                      <div className="flex items-center space-x-2">
+                        <Package className="h-5 w-5 text-neutral-600" />
+                        <span className="font-medium">배송</span>
+                      </div>
+                      <p className="text-sm text-neutral-500">택배, 우편 등</p>
+                    </div>
+                  </label>
+
+                  <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
+                    <input
+                      type="checkbox"
+                      name="TRADE"
+                      checked={formData.deliveryMethod.includes('TRADE')}
                       onChange={handleInputChange}
                       className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
                     />
@@ -513,45 +636,6 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                       </div>
                       <p className="text-sm text-neutral-500">
                         직접 만나서 거래
-                      </p>
-                    </div>
-                  </label>
-
-                  <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
-                    <input
-                      type="radio"
-                      name="deliveryMethod"
-                      value="DELIVERY"
-                      checked={formData.deliveryMethod === 'DELIVERY'}
-                      onChange={handleInputChange}
-                      className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
-                    />
-                    <div className="ml-3">
-                      <div className="flex items-center space-x-2">
-                        <Package className="h-5 w-5 text-neutral-600" />
-                        <span className="font-medium">택배</span>
-                      </div>
-                      <p className="text-sm text-neutral-500">택배, 우편 등</p>
-                    </div>
-                  </label>
-
-                  <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
-                    <input
-                      type="radio"
-                      name="deliveryMethod"
-                      value="BOTH"
-                      checked={formData.deliveryMethod === 'BOTH'}
-                      onChange={handleInputChange}
-                      className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
-                    />
-                    <div className="ml-3">
-                      <div className="flex items-center space-x-2">
-                        <Package className="h-5 w-5 text-neutral-600" />
-                        <MapPin className="h-5 w-5 text-neutral-600" />
-                        <span className="font-medium">둘 다</span>
-                      </div>
-                      <p className="text-sm text-neutral-500">
-                        택배와 직접거래 모두 가능
                       </p>
                     </div>
                   </label>

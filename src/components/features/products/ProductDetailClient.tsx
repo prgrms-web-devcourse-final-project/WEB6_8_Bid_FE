@@ -23,7 +23,6 @@ export function ProductDetailClient({
   product,
   initialBidStatus,
 }: ProductDetailClientProps) {
-  console.log('🎯 product:', product)
   const router = useRouter()
   const { isLoggedIn, user } = useAuth()
   const [bidAmount, setBidAmount] = useState('')
@@ -40,7 +39,6 @@ export function ProductDetailClient({
   const [productData, setProductData] = useState(product)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  // product.id를 안전하게 숫자로 변환하는 함수
   const getSafeProductId = (productId: any): number => {
     if (typeof productId === 'number') return productId
     if (typeof productId === 'string') return parseInt(productId) || 0
@@ -75,7 +73,6 @@ export function ProductDetailClient({
     }
   }
 
-  // WebSocket 실시간 입찰 정보 구독
   const {
     bidUpdate,
     auctionStatus,
@@ -83,11 +80,9 @@ export function ProductDetailClient({
     error: wsError,
   } = useWebSocketBid(safeProductId)
 
-  // WebSocket 실시간 경매 타이머 구독
   const { timerData, isSubscribed: isTimerSubscribed } =
     useWebSocketAuctionTimer(safeProductId)
 
-  // API 응답의 영어 status를 한국어로 변환
   const mapApiStatusToKorean = (apiStatus: string): string => {
     switch (apiStatus) {
       case 'BEFORE_START':
@@ -101,11 +96,10 @@ export function ProductDetailClient({
       case 'FAILED':
         return '유찰'
       default:
-        return apiStatus // 알 수 없는 상태는 그대로 반환
+        return apiStatus
     }
   }
 
-  // 이미지 URL을 안전하게 추출하는 함수
   const getImageUrl = (
     image:
       | string
@@ -117,14 +111,11 @@ export function ProductDetailClient({
     return image.imageUrl || ''
   }
 
-  // 현재 사용자가 상품 판매자인지 확인 (메모이제이션으로 성능 최적화)
   const isOwner = useMemo(() => {
     return (
       user &&
       productData.seller &&
-      (String(user.id) === String(productData.seller.id) ||
-        user.email === productData.seller.email ||
-        user.nickname === productData.seller.name)
+      String(user.id) === String(productData.seller.id)
     )
   }, [user, productData.seller])
 
@@ -145,8 +136,6 @@ export function ProductDetailClient({
   // 실시간 입찰 정보 업데이트
   useEffect(() => {
     if (bidUpdate) {
-      console.log('🎯 실시간 입찰 정보 업데이트:', bidUpdate)
-      // 실시간으로 현재가와 입찰 수 업데이트
       setBidStatus((prev: any) => {
         const newStatus = {
           ...prev,
@@ -253,8 +242,8 @@ export function ProductDetailClient({
     return deliveryMethods[method] || method
   }
 
-  const formatTimeLeft = (endTime: string) => {
-    if (!endTime || endTime === '') {
+  const formatTimeLeft = (auctionEndTime: string) => {
+    if (!auctionEndTime || auctionEndTime === '') {
       return '경매 시간 미정'
     }
 
@@ -263,21 +252,21 @@ export function ProductDetailClient({
       let end: number
 
       // 다양한 날짜 형식 처리
-      if (typeof endTime === 'string') {
+      if (typeof auctionEndTime === 'string') {
         // ISO 형식 처리 (2025-11-11T03:27:27)
-        if (endTime.includes('T')) {
-          end = new Date(endTime).getTime()
+        if (auctionEndTime.includes('T')) {
+          end = new Date(auctionEndTime).getTime()
         }
         // YYYY-MM-DD 형식인 경우
-        else if (endTime.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          end = new Date(endTime + 'T23:59:59').getTime()
+        else if (auctionEndTime.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          end = new Date(auctionEndTime + 'T23:59:59').getTime()
         }
         // 기타 형식
         else {
-          end = new Date(endTime).getTime()
+          end = new Date(auctionEndTime).getTime()
         }
       } else {
-        end = new Date(endTime).getTime()
+        end = new Date(auctionEndTime).getTime()
       }
 
       if (isNaN(end)) {
@@ -304,7 +293,7 @@ export function ProductDetailClient({
         return '곧 종료'
       }
     } catch (error) {
-      console.error('시간 계산 오류:', error, endTime)
+      console.error('시간 계산 오류:', error, auctionEndTime)
       return '경매 시간 미정'
     }
   }
@@ -318,7 +307,7 @@ export function ProductDetailClient({
 
     const amount = parseInt(bidAmount.replace(/,/g, ''))
 
-    const currentPrice = productData.currentPrice || productData.startingPrice
+    const currentPrice = productData.currentPrice || productData.initialPrice
     const minBidAmount = currentPrice + 100
 
     if (!amount || amount < minBidAmount) {
@@ -454,7 +443,7 @@ export function ProductDetailClient({
             {productData.images && productData.images[0] ? (
               <img
                 src={getImageUrl(productData.images[0])}
-                alt={productData.title}
+                alt={productData.name}
                 className="h-full w-full rounded-lg object-cover"
                 onError={(e) => {
                   console.error('이미지 로드 실패:', e.currentTarget.src)
@@ -493,7 +482,7 @@ export function ProductDetailClient({
                 >
                   <img
                     src={getImageUrl(image)}
-                    alt={`${product.title} ${index + 2}`}
+                    alt={`${product.name} ${index + 2}`}
                     className="h-full w-full rounded-lg object-cover"
                     onError={(e) => {
                       console.error('이미지 로드 실패:', e.currentTarget.src)
@@ -528,7 +517,7 @@ export function ProductDetailClient({
 
             <div className="mb-4 flex items-center justify-between">
               <h1 className="text-2xl font-bold text-neutral-900">
-                {productData.title}
+                {productData.name}
               </h1>
               {isOwner && (
                 <Button
@@ -573,7 +562,7 @@ export function ProductDetailClient({
                       bidUpdate?.currentPrice ||
                         bidStatus?.currentPrice ||
                         productData.currentPrice ||
-                        productData.startingPrice,
+                        productData.initialPrice,
                     )}
                   </span>
                   {bidUpdate && (
@@ -592,7 +581,7 @@ export function ProductDetailClient({
               </div>
               <div className="flex items-center justify-between">
                 <span>시작가:</span>
-                <span>{formatPrice(productData.startingPrice)}</span>
+                <span>{formatPrice(productData.initialPrice)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>경매 시작:</span>
@@ -626,7 +615,7 @@ export function ProductDetailClient({
                     {timerData?.timeLeft ||
                       formatTimeLeft(
                         (productData as any).auctionEndTime ||
-                          productData.endTime,
+                          productData.auctionEndTime,
                       )}
                   </span>
                   {isTimerSubscribed && (
@@ -648,7 +637,7 @@ export function ProductDetailClient({
                   >
                     {bidUpdate?.bidCount ||
                       bidStatus?.bidCount ||
-                      productData.bidCount ||
+                      productData.bidderCount ||
                       0}
                     명
                   </span>
@@ -695,11 +684,11 @@ export function ProductDetailClient({
               <div className="space-y-2 text-sm">
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-neutral-400" />
-                  <span>{productData.seller?.name || '판매자'}</span>
+                  <span>{productData.seller?.nickname || '판매자'}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Heart className="h-4 w-4 text-red-400" />
-                  <span>신뢰도 {productData.seller?.trustScore || 0}점</span>
+                  <span>신뢰도 {productData.seller?.creditScore || 0}점</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <MapPin className="h-4 w-4 text-neutral-400" />
@@ -742,8 +731,8 @@ export function ProductDetailClient({
                     <p className="mt-1 text-xs text-neutral-500">
                       최소 입찰가:{' '}
                       {formatPrice(
-                        (productData.currentPrice ||
-                          productData.startingPrice) + 100,
+                        (productData.currentPrice || productData.initialPrice) +
+                          100,
                       )}
                     </p>
                   </div>
@@ -792,7 +781,7 @@ export function ProductDetailClient({
                   <span>
                     {bidUpdate?.bidCount ||
                       bidStatus?.bidCount ||
-                      product.bidCount ||
+                      product.bidderCount ||
                       0}
                     회
                     {bidUpdate && (
@@ -809,7 +798,7 @@ export function ProductDetailClient({
                       bidUpdate?.currentPrice ||
                         bidStatus?.currentPrice ||
                         productData.currentPrice ||
-                        productData.startingPrice,
+                        productData.initialPrice,
                     )}
                     {bidUpdate && (
                       <span className="ml-1 animate-pulse text-xs text-green-500">

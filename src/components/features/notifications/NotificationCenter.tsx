@@ -48,14 +48,18 @@ export function NotificationCenter({
     switch (type) {
       case 'BID_SUCCESS':
         return '🎯'
-      case 'BID_FAILED':
-        return '❌'
+      case 'BID_OUTBID':
+        return '📈'
       case 'AUCTION_WON':
         return '🏆'
       case 'AUCTION_LOST':
         return '😞'
-      case 'AUCTION_ENDING':
+      case 'AUCTION_START':
+        return '🚀'
+      case 'AUCTION_ENDING_SOON':
         return '⏰'
+      case 'AUCTION_END':
+        return '🏁'
       case 'PAYMENT_REMINDER':
         return '💳'
       default:
@@ -68,11 +72,16 @@ export function NotificationCenter({
       case 'BID_SUCCESS':
       case 'AUCTION_WON':
         return 'text-green-600'
-      case 'BID_FAILED':
+      case 'BID_OUTBID':
+        return 'text-orange-600'
       case 'AUCTION_LOST':
         return 'text-red-600'
-      case 'AUCTION_ENDING':
+      case 'AUCTION_START':
+        return 'text-blue-600'
+      case 'AUCTION_ENDING_SOON':
         return 'text-amber-600'
+      case 'AUCTION_END':
+        return 'text-purple-600'
       case 'PAYMENT_REMINDER':
         return 'text-blue-600'
       default:

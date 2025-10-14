@@ -14,7 +14,7 @@ export interface UserInfo {
   name: string
   phone: string
   profileImage?: string
-  trustScore: number
+  creditScore: number
   reviewCount: number
   joinDate: string
   isVerified: boolean
@@ -23,22 +23,28 @@ export interface UserInfo {
 // 상품 관련 타입
 export interface Product {
   productId: number
-  title: string
+  name: string
   description: string
   category: ProductCategory
   images: (string | { imageUrl: string; id?: number; productId?: number })[]
-  startingPrice: number
+  initialPrice: number
   currentPrice: number
-  seller: UserInfo
+  seller: {
+    id: string
+    nickname: string
+    profileImage: string
+    creditScore: number
+    reviewCount: number
+  }
   status: ProductStatus
   location: string
-  createdAt: string
-  endTime: string
-  auctionEndTime?: string
-  bidCount: number
-  isLiked: boolean
+  createDate: string
+  modifyDate: string
+  auctionStartTime: string
+  auctionEndTime: string
+  deliveryMethod: 'DELIVERY' | 'TRADE' | 'BOTH'
+  bidderCount: number
   thumbnailUrl: string
-  bidder?: string
 }
 
 export type ProductCategory =
@@ -68,7 +74,7 @@ export interface BidHistory {
   bidAmount: number
   status: BidStatus
   bidTime: string
-  endTime: string
+  auctionEndTime: string
   currentPrice: number
 }
 
@@ -174,15 +180,14 @@ export interface SignupForm {
 }
 
 export interface ProductForm {
-  title: string
+  name: string
   description: string
-  category: number
+  categoryId: number
   images: File[]
-  startingPrice: number
-  duration: number
-  startTime: 'immediate' | 'scheduled'
-  scheduledTime?: string
-  deliveryMethod: ('shipping' | 'pickup' | 'both')[]
+  initialPrice: number
+  auctionStartTime: string
+  auctionDuration: string
+  deliveryMethod: ('TRADE' | 'DELIVERY' | 'BOTH')[]
   location: string
 }
 

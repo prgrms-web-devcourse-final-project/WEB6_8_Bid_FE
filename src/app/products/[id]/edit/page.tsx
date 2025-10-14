@@ -38,43 +38,31 @@ export default async function ProductEditPage({
     // API 응답을 컴포넌트에서 사용하는 형식으로 매핑
     const data = response.data as any
     const mappedProduct = {
-      id: data.productId || data.id || productId,
-      productId: data.productId || data.id || productId, // ProductEditClient에서 사용
-      title: data.name || data.title || '상품명 없음',
+      productId: data.productId || productId,
+      name: data.name || '상품명 없음',
       description: data.description || '상품 설명이 없습니다.',
       category: data.category || '기타',
       images: data.images || [],
-      startingPrice: Number(data.initialPrice || data.startingPrice || 0),
-      currentPrice: Number(
-        data.currentPrice || data.initialPrice || data.startingPrice || 0,
-      ),
+      initialPrice: Number(data.initialPrice || 0),
+      currentPrice: Number(data.currentPrice || data.initialPrice || 0),
       seller: {
         id: data.seller?.id || '1',
         email: data.seller?.email || '',
-        name: data.seller?.nickname || '판매자',
-        phone: data.seller?.phone || '',
+        nickname: data.seller?.nickname || '판매자',
         profileImage: data.seller?.profileImage || null,
-        trustScore: Number(
-          data.seller?.trustScore || data.sellerTrustScore || 0,
-        ),
+        creditScore: Number(data.seller?.creditScore || 0),
         reviewCount: Number(data.seller?.reviewCount || 0),
-        joinDate: data.seller?.joinDate || '',
-        isVerified: data.seller?.isVerified || false,
       },
-      status: data.status || 'BIDDING',
+      status: data.status || '경매 중',
       location: data.location || data.seller?.location || '위치 정보 없음',
-      createdAt: data.createdAt || new Date().toISOString(),
-      endTime:
+      createDate: data.createDate || new Date().toISOString(),
+      modifyDate: data.modifyDate || new Date().toISOString(),
+      auctionEndTime:
         data.auctionEndTime ||
-        data.endTime ||
-        data.endDate ||
         new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7일 후
-      bidCount: Number(data.bidderCount || data.bidCount || 0),
-      isLiked: data.isLiked || false,
+      bidderCount: Number(data.bidderCount || 0),
       deliveryMethod: data.deliveryMethod || '직접거래',
       auctionStartTime: data.auctionStartTime,
-      auctionEndTime: data.auctionEndTime,
-      auctionDuration: data.auctionDuration,
     }
 
     return (

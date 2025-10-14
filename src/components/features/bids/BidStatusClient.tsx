@@ -26,10 +26,8 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
     try {
       const response = await bidApi.getMyBids({
         page: 1,
-        size: 100, // 충분히 큰 값으로 설정
-        // status 필터를 제거하여 모든 상태의 입찰 조회
+        size: 100,
       })
-      console.log('🔍 입찰 내역 API 응답:', response)
 
       if (response.success && response.data) {
         // API 응답 데이터 구조에 맞게 변환
@@ -42,11 +40,7 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
         ) {
           bidsData = response.data.content
         }
-        console.log('🔍 변환된 입찰 데이터:', bidsData)
         setBids(bidsData)
-
-        // 입찰 내역이 비어있을 때는 에러 메시지 설정하지 않음 (정상 상태)
-        // setApiError('입찰 내역이 없습니다. 입찰 후 잠시 기다려주세요.')
       } else {
         // API 실패 시에만 에러 메시지 표시
         console.log('🔍 API 응답 실패:', response.msg)
@@ -69,16 +63,9 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
 
   // 컴포넌트 마운트 시 입찰 내역 조회
   useEffect(() => {
-    console.log('🔍 BidStatusClient 마운트됨')
-    console.log('🔍 initialBids:', initialBids)
-    console.log('🔍 initialBids 길이:', initialBids?.length || 0)
-
     if (!initialBids || initialBids.length === 0) {
-      console.log('🔍 fetchMyBids 호출 시작')
       fetchMyBids()
     } else {
-      console.log('🔍 initialBids 사용:', initialBids)
-      console.log('🔍 initialBids 상세:', JSON.stringify(initialBids, null, 2))
       setBids(initialBids)
     }
   }, [])
@@ -88,7 +75,10 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
+    if (!dateString) return '미정'
+    const d = new Date(dateString)
+    if (isNaN(d.getTime())) return '미정'
+    return d.toLocaleDateString('ko-KR', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -96,7 +86,6 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
   }
 
   const getStatusInfo = (bid: any) => {
-    // 상품 상태가 "낙찰"인 경우를 우선적으로 확인
     if (bid.productStatus === '낙찰' || bid.status === 'SUCCESSFUL') {
       return {
         label: bid.paidAt ? '결제 완료' : '낙찰',

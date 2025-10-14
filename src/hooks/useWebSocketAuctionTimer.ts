@@ -16,7 +16,7 @@ export interface AuctionTimerData {
     | 'ENDED'
     | 'SUCCESSFUL'
     | 'FAILED'
-  endTime: string
+  auctionEndTime: string
   lastUpdate: string
 }
 
@@ -90,7 +90,7 @@ export function useWebSocketAuctionTimer(
                   isEndingSoon: message.data.isEndingSoon || false,
                   isEnded: message.data.isEnded || false,
                   status: message.data.status || 'BIDDING',
-                  endTime: message.data.endTime || '',
+                  auctionEndTime: message.data.auctionEndTime || '',
                   lastUpdate: message.timestamp || new Date().toISOString(),
                 }
 
@@ -144,7 +144,7 @@ export function useWebSocketAuctionTimer(
 
         // 간단한 카운트다운 로직 (실제로는 서버에서 정확한 시간을 받아야 함)
         const now = new Date().getTime()
-        const endTime = new Date(prev.endTime).getTime()
+        const endTime = new Date(prev.auctionEndTime).getTime()
         const diff = endTime - now
 
         if (diff <= 0) {

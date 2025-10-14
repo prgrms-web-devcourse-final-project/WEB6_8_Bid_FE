@@ -95,11 +95,6 @@ export function LoginClient() {
             formData.password,
           )
 
-          console.log('🔍 로그인 API 응답 전체:', response)
-          console.log('🔍 response.success:', response.success)
-          console.log('🔍 response.data:', response.data)
-          console.log('🔍 response.resultCode:', response.resultCode)
-
           // 성공 조건 확인 (다양한 형식 지원)
           const isSuccess =
             response.success ||
@@ -234,26 +229,8 @@ export function LoginClient() {
     setIsLoading(false)
   }
 
-  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
-    setIsLoading(true)
-    setApiError('')
-
-    try {
-      // 소셜 로그인 처리 (실제 구현에서는 OAuth 플로우 사용)
-      console.log(`${provider} 로그인 시도`)
-
-      // 임시 처리 - 실제로는 OAuth 인증 플로우를 구현해야 함
-      alert(`${provider} 로그인 기능은 준비 중입니다.`)
-    } catch (error) {
-      console.error('소셜 로그인 에러:', error)
-      setApiError(`${provider} 로그인에 실패했습니다.`)
-    }
-
-    setIsLoading(false)
-  }
-
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex items-center h-full justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         {/* 앱 로고 및 제목 */}
         <div className="text-center">

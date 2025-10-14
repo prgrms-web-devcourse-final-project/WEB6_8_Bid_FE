@@ -3,21 +3,30 @@
 import { useWebSocket, WebSocketMessage } from '@/contexts/WebSocketContext'
 import { useEffect, useRef, useState } from 'react'
 
-// 알림 타입 정의
 export interface Notification {
   id: string
   type:
     | 'BID_SUCCESS'
-    | 'BID_FAILED'
+    | 'BID_OUTBID'
     | 'AUCTION_WON'
     | 'AUCTION_LOST'
-    | 'AUCTION_ENDING'
+    | 'AUCTION_START'
+    | 'AUCTION_ENDING_SOON'
+    | 'AUCTION_END'
     | 'PAYMENT_REMINDER'
     | 'SYSTEM'
   title: string
   message: string
   productId?: number
+  productName?: string // 백엔드 가이드에서 productName 사용
   productTitle?: string
+  bidAmount?: number
+  myBidAmount?: number // 백엔드 가이드에서 myBidAmount 사용
+  newHighestBid?: number // 백엔드 가이드에서 newHighestBid 사용
+  finalPrice?: number
+  initialPrice?: number // 백엔드 가이드에서 initialPrice 사용
+  startTime?: string // 백엔드 가이드에서 startTime 사용
+  auctionEndTime?: string // 백엔드 가이드에서 auctionEndTime 사용
   timestamp: string
   isRead: boolean
 }
@@ -74,15 +83,28 @@ export function useWebSocketNotifications(
     try {
       const subscriptionId = subscribeToNotifications(
         (message: WebSocketMessage) => {
-          console.log('🔔 알림 수신:', message)
+          console.log('🔔 개인 알림 수신:', message)
 
+          // 백엔드 메시지 구조에 맞게 처리
+          const notificationData = message.data
+          const notificationType = notificationData?.type
+
+          // 백엔드 가이드에 맞춰 알림 데이터 처리
           const notification: Notification = {
             id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            type: getNotificationType(message.type, message.content),
-            title: getNotificationTitle(message.type, message.content),
+            type: notificationType || 'SYSTEM',
+            title: getNotificationTitle(notificationType, message.content),
             message: message.content,
-            productId: message.data?.productId,
-            productTitle: message.data?.productTitle,
+            productId: notificationData?.productId,
+            productName: notificationData?.productName, // 백엔드 가이드에서 productName 사용
+            productTitle: notificationData?.productName, // productName을 productTitle에도 매핑
+            bidAmount: notificationData?.bidAmount,
+            myBidAmount: notificationData?.myBidAmount, // 백엔드 가이드에서 myBidAmount 사용
+            newHighestBid: notificationData?.newHighestBid, // 백엔드 가이드에서 newHighestBid 사용
+            finalPrice: notificationData?.finalPrice,
+            initialPrice: notificationData?.initialPrice, // 백엔드 가이드에서 initialPrice 사용
+            startTime: notificationData?.startTime, // 백엔드 가이드에서 startTime 사용
+            auctionEndTime: notificationData?.auctionEndTime, // 백엔드 가이드에서 auctionEndTime 사용
             timestamp: message.timestamp || new Date().toISOString(),
             isRead: false,
           }
@@ -97,6 +119,9 @@ export function useWebSocketNotifications(
 
           // 브라우저 알림 표시 (사용자 권한이 있는 경우)
           showBrowserNotification(notification)
+
+          // 토스트 알림 표시
+          showToastNotification(notification)
         },
       )
 
@@ -121,46 +146,70 @@ export function useWebSocketNotifications(
     }
   }
 
-  // 알림 타입 결정
-  const getNotificationType = (
-    messageType: string,
-    content: string,
-  ): Notification['type'] => {
-    if (messageType === 'BID') {
-      if (content.includes('성공') || content.includes('등록'))
-        return 'BID_SUCCESS'
-      if (content.includes('실패') || content.includes('오류'))
-        return 'BID_FAILED'
-    }
-
-    if (content.includes('낙찰') || content.includes('당첨'))
-      return 'AUCTION_WON'
-    if (content.includes('유찰') || content.includes('낙찰 실패'))
-      return 'AUCTION_LOST'
-    if (content.includes('종료 임박') || content.includes('10분 후'))
-      return 'AUCTION_ENDING'
-    if (content.includes('결제') || content.includes('입금'))
-      return 'PAYMENT_REMINDER'
-
-    return 'SYSTEM'
-  }
-
-  // 알림 제목 생성
+  // 알림 제목 생성 (백엔드 알림 타입에 맞춤)
   const getNotificationTitle = (
-    messageType: string,
+    notificationType: string,
     content: string,
   ): string => {
-    switch (messageType) {
-      case 'BID':
-        return '입찰 알림'
-      case 'AUCTION_TIMER':
-        return '경매 알림'
-      case 'NOTIFICATION':
-        return '알림'
+    switch (notificationType) {
+      case 'BID_SUCCESS':
+        return '입찰 성공'
+      case 'BID_OUTBID':
+        return '입찰 밀림'
+      case 'AUCTION_WON':
+        return '낙찰 성공'
+      case 'AUCTION_LOST':
+        return '낙찰 실패'
+      case 'AUCTION_START':
+        return '경매 시작'
+      case 'AUCTION_ENDING_SOON':
+        return '경매 종료 임박'
+      case 'AUCTION_END':
+        return '경매 종료'
+      case 'PAYMENT_REMINDER':
+        return '결제 알림'
       case 'SYSTEM':
         return '시스템 알림'
       default:
         return '알림'
+    }
+  }
+
+  // 토스트 알림 표시
+  const showToastNotification = (notification: Notification) => {
+    // 토스트 라이브러리가 있다면 사용, 없다면 console.log
+    if (typeof window !== 'undefined') {
+      // 간단한 토스트 알림 구현
+      const toast = document.createElement('div')
+      toast.className = `fixed top-4 right-4 z-50 max-w-sm p-4 rounded-lg shadow-lg transition-all duration-300 ${
+        notification.type === 'AUCTION_WON' ||
+        notification.type === 'BID_SUCCESS'
+          ? 'bg-green-500 text-white'
+          : notification.type === 'BID_OUTBID' ||
+              notification.type === 'AUCTION_ENDING_SOON'
+            ? 'bg-yellow-500 text-white'
+            : notification.type === 'AUCTION_LOST'
+              ? 'bg-red-500 text-white'
+              : 'bg-blue-500 text-white'
+      }`
+
+      toast.innerHTML = `
+        <div class="font-semibold">${notification.title}</div>
+        <div class="text-sm mt-1">${notification.message}</div>
+      `
+
+      document.body.appendChild(toast)
+
+      // 5초 후 자동 제거
+      setTimeout(() => {
+        toast.style.opacity = '0'
+        toast.style.transform = 'translateX(100%)'
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.parentNode.removeChild(toast)
+          }
+        }, 300)
+      }, 5000)
     }
   }
 

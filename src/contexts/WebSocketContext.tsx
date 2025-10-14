@@ -12,7 +12,22 @@ import { Client, Message } from 'stompjs'
 
 // WebSocket 메시지 타입 정의
 export interface WebSocketMessage {
-  type: 'CHAT' | 'BID' | 'AUCTION_TIMER' | 'NOTIFICATION' | 'SYSTEM' | 'HOME_UPDATE' | 'POPULAR_PRODUCTS' | 'RECENT_BIDS' | 'ENDING_SOON' | 'AUCTION_STATS' | 'BID_UPDATE' | 'AUCTION_END' | 'RANKING_UPDATE' | 'NEW_BID_RANKING' | 'RANKING_REFRESH'
+  type:
+    | 'CHAT'
+    | 'BID'
+    | 'AUCTION_TIMER'
+    | 'NOTIFICATION'
+    | 'SYSTEM'
+    | 'HOME_UPDATE'
+    | 'POPULAR_PRODUCTS'
+    | 'RECENT_BIDS'
+    | 'ENDING_SOON'
+    | 'AUCTION_STATS'
+    | 'BID_UPDATE'
+    | 'AUCTION_END'
+    | 'RANKING_UPDATE'
+    | 'NEW_BID_RANKING'
+    | 'RANKING_REFRESH'
   sender?: string
   content: string
   data?: any
@@ -257,6 +272,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         try {
           const parsedMessage: WebSocketMessage = JSON.parse(message.body)
           console.log('🔌 메시지 수신:', destination, parsedMessage)
+          console.log('🔌 원본 메시지 body:', message.body)
           callback(parsedMessage)
         } catch (error) {
           console.error('🔌 메시지 파싱 오류:', error, message.body)
@@ -271,12 +287,20 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
   // 구독 해제
   const unsubscribe = (subscriptionId: string) => {
+    console.log('🔌 unsubscribe 호출됨:', subscriptionId)
+    console.log(
+      '🔌 현재 구독 목록:',
+      Array.from(subscriptionsRef.current.keys()),
+    )
+
     const subscription = subscriptionsRef.current.get(subscriptionId)
     if (subscription) {
       subscription.unsubscribe()
       subscriptionsRef.current.delete(subscriptionId)
       subscriptionCallbacksRef.current.delete(subscriptionId)
-      console.log('🔌 구독 해제:', subscriptionId)
+      console.log('🔌 구독 해제 완료:', subscriptionId)
+    } else {
+      console.log('🔌 구독을 찾을 수 없음:', subscriptionId)
     }
   }
 

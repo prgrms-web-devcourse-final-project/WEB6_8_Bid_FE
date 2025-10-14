@@ -4,29 +4,17 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { productApi } from '@/lib/api'
 import { Product } from '@/types'
-import {
-  Award,
-  Calendar,
-  Eye,
-  Package,
-  Shield,
-  Star,
-  Users,
-} from 'lucide-react'
+import { Calendar, Eye, Package, Shield, Star, Users } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 interface SellerDetailClientProps {
   seller: {
     id: string
-    name: string
-    email: string
-    phone: string
+    nickname: string
     profileImage?: string
-    trustScore: number
+    creditScore: number
     reviewCount: number
-    joinDate: string
-    isVerified: boolean
   }
   products?: Product[]
 }
@@ -78,7 +66,6 @@ export function SellerDetailClient({
 
   // 판매자 상품 조회
   const fetchSellerProducts = async () => {
-    console.log('🏪 판매자 상품 조회 시작:', { sellerId: seller.id })
     setIsLoading(true)
     setApiError('')
     try {
@@ -96,35 +83,29 @@ export function SellerDetailClient({
 
         // API 응답을 Product 타입으로 매핑
         const mappedProducts = productsData.map((product: any) => ({
-          id: product.productId || product.id,
-          title: product.name || product.title,
-          description: product.description || '',
+          productId: product.productId,
+          name: product.name,
+          description: product.description,
           category: product.category,
-          startingPrice: product.initialPrice || product.startingPrice,
+          initialPrice: product.initialPrice,
           currentPrice: product.currentPrice,
-          endTime: product.auctionEndTime || product.endTime,
+          auctionEndTime: product.auctionEndTime,
           status: mapApiStatusToKorean(product.status || 'BIDDING'),
           images: product.thumbnailUrl
             ? [product.thumbnailUrl]
             : product.images || [],
-          thumbnailUrl: product.thumbnailUrl || '',
+          thumbnailUrl: product.thumbnailUrl,
           seller: {
-            id: String(product.seller?.id || product.sellerId || '1'),
-            email: product.seller?.email || '',
-            name: product.seller?.nickname || product.seller?.name || '판매자',
-            phone: product.seller?.phone || '',
+            id: String(product.seller?.id),
+            nickname: product.seller?.nickname || '판매자',
             profileImage:
               product.seller?.profileImageUrl || product.seller?.profileImage,
-            trustScore:
-              product.seller?.creditScore || product.seller?.trustScore || 0,
+            creditScore: product.seller?.creditScore || 0,
             reviewCount: product.seller?.reviewCount || 0,
-            joinDate: product.seller?.joinDate || '',
-            isVerified: product.seller?.isVerified || false,
           },
-          location: product.location || '',
-          createdAt: product.createdAt || '',
-          bidCount: product.bidderCount || product.bidCount || 0,
-          isLiked: product.isLiked || false,
+          location: product.location,
+          createDate: product.createDate,
+          bidderCount: product.bidderCount,
         }))
 
         setProducts(mappedProducts)
@@ -181,13 +162,13 @@ export function SellerDetailClient({
     return value
   }
 
-  const getTrustScoreColor = (score: number) => {
+  const getCreditScoreColor = (score: number) => {
     if (score >= 80) return 'text-emerald-600'
     if (score >= 60) return 'text-amber-600'
     return 'text-red-500'
   }
 
-  const getTrustScoreBadgeColor = (score: number) => {
+  const getCreditScoreBadgeColor = (score: number) => {
     if (score >= 80) return 'bg-emerald-100 text-emerald-800 border-emerald-200'
     if (score >= 60) return 'bg-amber-100 text-amber-800 border-amber-200'
     return 'bg-red-100 text-red-800 border-red-200'
@@ -229,17 +210,15 @@ export function SellerDetailClient({
                   <div className="h-32 w-32 overflow-hidden rounded-full bg-white/20 shadow-2xl ring-4 ring-white/30 backdrop-blur-sm">
                     <div className="flex h-32 w-32 items-center justify-center">
                       <span className="text-4xl font-bold text-white">
-                        {formatDisplayValue(seller.name, 'S')
+                        {formatDisplayValue(seller.nickname, 'S')
                           .charAt(0)
                           .toUpperCase()}
                       </span>
                     </div>
                   </div>
-                  {seller.isVerified && (
-                    <div className="absolute -right-2 -bottom-2 rounded-full bg-emerald-500 p-3 shadow-lg ring-4 ring-white">
-                      <Shield className="h-5 w-5 text-white" />
-                    </div>
-                  )}
+                  <div className="absolute -right-2 -bottom-2 rounded-full bg-emerald-500 p-3 shadow-lg ring-4 ring-white">
+                    <Shield className="h-5 w-5 text-white" />
+                  </div>
                 </div>
               </div>
 
@@ -247,12 +226,8 @@ export function SellerDetailClient({
               <div className="min-w-0 flex-1 text-center lg:text-left">
                 <div className="mb-8">
                   <h1 className="mb-4 text-5xl font-bold text-white drop-shadow-lg">
-                    {formatDisplayValue(seller.name, '판매자')}
+                    {formatDisplayValue(seller.nickname, '판매자')}
                   </h1>
-                  <div className="inline-flex items-center rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white shadow-lg backdrop-blur-sm">
-                    <Award className="mr-2 h-4 w-4" />
-                    {seller.isVerified ? '인증된 판매자' : '판매자'}
-                  </div>
                 </div>
 
                 {/* 판매자 통계 */}
@@ -271,7 +246,7 @@ export function SellerDetailClient({
                   <div className="rounded-2xl bg-white/15 p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-white/20">
                     <div className="text-center">
                       <div className="mb-2 text-3xl font-bold text-white">
-                        {seller.trustScore}
+                        {seller.creditScore}
                       </div>
                       <div className="flex items-center justify-center text-sm text-white/90">
                         <Star className="mr-1 h-4 w-4" />
@@ -352,7 +327,7 @@ export function SellerDetailClient({
                               product.thumbnailUrl ||
                               getImageUrl(product.images[0])
                             }
-                            alt={product.title}
+                            alt={product.name}
                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
                         ) : (
@@ -386,7 +361,7 @@ export function SellerDetailClient({
                       {/* 상품 정보 */}
                       <div className="space-y-4 p-6">
                         <h3 className="line-clamp-2 text-lg font-bold text-gray-900 transition-colors duration-300 group-hover:text-indigo-600">
-                          {formatDisplayValue(product.title, '상품명 없음')}
+                          {formatDisplayValue(product.name, '상품명 없음')}
                         </h3>
 
                         <div className="space-y-3">
@@ -397,18 +372,18 @@ export function SellerDetailClient({
                             <div className="flex items-center space-x-1 text-sm text-gray-500">
                               <Users className="h-4 w-4" />
                               <span>
-                                {formatDisplayValue(product.bidCount, '0')}명
+                                {formatDisplayValue(product.bidderCount, '0')}명
                               </span>
                             </div>
                           </div>
 
-                          {formatDate(product.createdAt) && (
+                          {formatDate(product.createDate) && (
                             <div className="flex items-center justify-between text-sm text-gray-500">
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-4 w-4" />
                                 <span>등록일</span>
                               </div>
-                              <span>{formatDate(product.createdAt)}</span>
+                              <span>{formatDate(product.createDate)}</span>
                             </div>
                           )}
                         </div>

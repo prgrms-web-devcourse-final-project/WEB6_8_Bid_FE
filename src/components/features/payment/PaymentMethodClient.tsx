@@ -226,34 +226,6 @@ export function PaymentMethodClient() {
         isDefault: editFormData.isDefault,
       }
 
-      // CARD 타입의 경우 필수 필드들 추가 (type 필드로 확인)
-      if (
-        originalPaymentMethod.type === 'CARD' ||
-        originalPaymentMethod.methodType === 'CARD'
-      ) {
-        updateData.brand = originalPaymentMethod.brand
-        updateData.last4 = originalPaymentMethod.last4
-
-        // expMonth와 expYear가 undefined인 경우 기본값 설정
-        updateData.expMonth =
-          originalPaymentMethod.expMonth ||
-          originalPaymentMethod.expireMonth ||
-          12
-        updateData.expYear =
-          originalPaymentMethod.expYear ||
-          originalPaymentMethod.expireYear ||
-          2025
-      }
-
-      // BANK_ACCOUNT 타입의 경우 필수 필드들 추가 (type 필드로 확인)
-      if (
-        originalPaymentMethod.type === 'BANK' ||
-        originalPaymentMethod.methodType === 'BANK_ACCOUNT'
-      ) {
-        updateData.bankCode = originalPaymentMethod.bankCode
-        updateData.bankName = originalPaymentMethod.bankName
-      }
-
       const response = await paymentMethodApi.updatePaymentMethod(
         editingId,
         updateData,

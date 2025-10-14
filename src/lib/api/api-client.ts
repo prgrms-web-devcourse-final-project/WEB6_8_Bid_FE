@@ -70,7 +70,6 @@ class ApiClient {
     // 응답 인터셉터 설정
     this.axiosInstance.interceptors.response.use(
       (response) => {
-        console.log('📄 응답 데이터:', JSON.stringify(response.data, null, 2))
         return response
       },
       async (error) => {

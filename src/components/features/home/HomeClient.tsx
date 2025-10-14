@@ -192,35 +192,36 @@ export function HomeClient({ stats }: HomeClientProps) {
 
           console.log('🔍 파싱된 productsData:', productsData)
 
-          // API 응답 필드명을 컴포넌트에서 사용하는 필드명으로 매핑
           const mappedProducts = productsData.map((product: any) => ({
-            productId: product.productId || product.id,
-            title: product.name || product.title,
+            productId: product.productId,
+            name: product.name,
             description: product.description || '',
             category: product.category,
-            startingPrice: product.initialPrice || product.startingPrice,
+            initialPrice: product.initialPrice,
             currentPrice: product.currentPrice,
-            endTime:
-              product.endTime ||
-              new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 기본값 설정
+            auctionStartTime: product.auctionStartTime,
+            auctionEndTime:
+              product.auctionEndTime ||
+              new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
             status: mapApiStatusToKorean(product.status || 'BIDDING'),
             images: product.thumbnailUrl
               ? [product.thumbnailUrl]
               : product.images || [],
-            thumbnailUrl: product.thumbnailUrl, // 원본 thumbnailUrl도 유지
+            thumbnailUrl: product.thumbnailUrl,
             seller: {
-              name: product.seller?.nickname || '판매자',
-              trustScore:
-                product.seller?.trustScore || product.sellerTrustScore || 0,
-              location:
-                product.location ||
-                product.seller?.location ||
-                product.sellerLocation ||
-                '서울',
+              id: String(product.seller?.id),
+              nickname: product.seller?.nickname || '판매자',
+              profileImage: product.seller?.profileImage || null,
+              creditScore: product.seller?.creditScore || 0,
+              reviewCount: product.seller?.reviewCount || 0,
             },
+            location: product.location || product.seller?.location || '서울',
+            createDate: product.createDate,
+            modifyDate: product.modifyDate,
+            bidderCount: product.bidderCount,
+            deliveryMethod: product.deliveryMethod,
           }))
 
-          console.log('🏠 처리된 상품 목록:', mappedProducts)
           setProducts(mappedProducts)
         } else {
           console.log('❌ 홈페이지 상품 로드 실패:', response)
@@ -241,9 +242,9 @@ export function HomeClient({ stats }: HomeClientProps) {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
   }
 
-  const formatTimeLeft = (endTime: string) => {
+  const formatTimeLeft = (auctionEndTime: string) => {
     const now = new Date().getTime()
-    const end = new Date(endTime).getTime()
+    const end = new Date(auctionEndTime).getTime()
     const diff = end - now
 
     if (diff <= 0) return '종료됨'
@@ -260,6 +261,31 @@ export function HomeClient({ stats }: HomeClientProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* 메인 히어로 섹션 */}
+      <div className="from-primary-500 to-primary-600 mb-12 rounded-2xl bg-gradient-to-r p-8 text-white">
+        <div className="mx-auto max-w-4xl text-center">
+          <h1 className="mb-4 text-4xl font-bold sm:text-5xl lg:text-6xl">
+            실시간 경매 플랫폼
+          </h1>
+          <p className="mb-8 text-lg opacity-90 sm:text-xl">
+            지금 바로 시작되는 흥미진진한 경매에 참여해보세요
+          </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
+            <button
+              onClick={() => router.push('/register-product')}
+              className="text-primary-600 rounded-lg bg-white px-8 py-3 font-semibold transition-colors hover:bg-gray-100"
+            >
+              상품 등록하기
+            </button>
+            <button
+              onClick={() => router.push('/my-bids')}
+              className="hover:text-primary-600 rounded-lg border-2 border-white px-8 py-3 font-semibold text-white transition-colors hover:bg-white"
+            >
+              내 입찰 현황
+            </button>
+          </div>
+        </div>
+      </div>
       {/* 통계 카드 */}
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card variant="outlined">
@@ -624,7 +650,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                                 ? product.images[0]
                                 : product.images?.[0]?.imageUrl)
                             }
-                            alt={product.title || '상품'}
+                            alt={product.name || '상품'}
                             className="h-32 w-32 rounded-xl object-cover"
                           />
                         ) : (
@@ -660,7 +686,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                     {/* 상품 제목과 설명 */}
                     <div>
                       <h3 className="mb-2 line-clamp-1 text-xl font-bold text-neutral-900">
-                        {product.title}
+                        {product.name}
                       </h3>
                       <p className="line-clamp-2 text-sm text-neutral-600">
                         {product.description}
@@ -683,7 +709,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                             시작가
                           </div>
                           <div className="text-sm font-medium text-neutral-700">
-                            {formatPrice(product.startingPrice || 0)}
+                            {formatPrice(product.initialPrice || 0)}
                           </div>
                         </div>
                       </div>
@@ -695,7 +721,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                         <Clock className="text-warning-500 h-4 w-4" />
                         <span className="text-sm font-medium text-neutral-700">
                           {formatTimeLeft(
-                            product.endTime ||
+                            product.auctionEndTime ||
                               new Date(
                                 Date.now() + 24 * 60 * 60 * 1000,
                               ).toISOString(),
@@ -706,7 +732,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                         <div className="flex items-center space-x-1">
                           <User className="text-primary-500 h-4 w-4" />
                           <span className="text-sm font-medium text-neutral-700">
-                            {product.seller?.name || '판매자'}
+                            {product.seller?.nickname || '판매자'}
                           </span>
                         </div>
                         <div className="flex items-center space-x-1">

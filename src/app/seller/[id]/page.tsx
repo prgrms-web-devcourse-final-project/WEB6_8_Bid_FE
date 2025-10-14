@@ -52,73 +52,53 @@ export default async function SellerDetailPage({
 
     // 상품 데이터를 Product 타입으로 매핑
     const mappedProducts = sellerProducts.map((product: any) => ({
-      productId: product.productId || product.id,
-      title: product.name || product.title,
+      productId: product.productId,
+      name: product.name,
       description: product.description || '',
       category: product.category,
-      startingPrice: product.initialPrice || product.startingPrice,
+      initialPrice: product.initialPrice,
       currentPrice: product.currentPrice,
-      endTime: product.auctionEndTime || product.endTime,
-      status: product.status || 'BIDDING',
+      auctionEndTime: product.auctionEndTime,
+      status: product.status || '경매 중',
       images: product.thumbnailUrl
         ? [product.thumbnailUrl]
         : product.images || [],
       thumbnailUrl: product.thumbnailUrl || '',
       seller: {
-        id: String(product.seller?.id || product.sellerId || '1'),
-        email: product.seller?.email || '',
-        name: product.seller?.nickname || product.seller?.name || '판매자',
-        phone: product.seller?.phone || '',
+        id: String(product.seller?.id || '1'),
+        nickname: product.seller?.nickname || '판매자',
         profileImage:
           product.seller?.profileImageUrl || product.seller?.profileImage,
-        trustScore:
-          product.seller?.creditScore || product.seller?.trustScore || 0,
+        creditScore: product.seller?.creditScore || 0,
         reviewCount: product.seller?.reviewCount || 0,
-        joinDate: product.seller?.joinDate || '',
-        isVerified: product.seller?.isVerified || false,
       },
       location: product.location || '',
-      createdAt: product.createdAt || '',
-      bidCount: product.bidderCount || product.bidCount || 0,
-      isLiked: product.isLiked || false,
+      createDate: product.createDate || '',
+      modifyDate: product.modifyDate || '',
+      bidderCount: product.bidderCount,
     }))
 
-    // 판매자 정보 추출 - 더 나은 기본값 설정
     const sellerInfo = sellerProducts[0]?.seller
       ? {
           id: String(sellerProducts[0].seller.id || sellerId),
-          name:
-            sellerProducts[0].seller.nickname ||
-            sellerProducts[0].seller.name ||
-            '판매자',
-          email: sellerProducts[0].seller.email || '',
-          phone: sellerProducts[0].seller.phone || '',
+          nickname: sellerProducts[0].seller.nickname || '판매자',
           profileImage:
             sellerProducts[0].seller.profileImageUrl ||
             sellerProducts[0].seller.profileImage ||
             null,
-          trustScore:
+          creditScore:
             sellerProducts[0].seller.creditScore ||
-            sellerProducts[0].seller.trustScore ||
+            sellerProducts[0].seller.creditScore ||
             75, // 기본 신뢰도 점수
           reviewCount: sellerProducts[0].seller.reviewCount || 0,
-          joinDate: sellerProducts[0].seller.joinDate || '',
-          isVerified: sellerProducts[0].seller.isVerified || false,
         }
       : {
           id: String(sellerId),
-          name: '판매자',
-          email: '',
-          phone: '',
+          nickname: '판매자',
           profileImage: null,
-          trustScore: 75, // 기본 신뢰도 점수
+          creditScore: 0,
           reviewCount: 0,
-          joinDate: '',
-          isVerified: false,
         }
-
-    console.log('🔍 매핑된 상품 데이터:', mappedProducts)
-    console.log('🔍 판매자 정보:', sellerInfo)
 
     return (
       <HomeLayout isLoggedIn={!!accessToken}>

@@ -18,7 +18,42 @@ import { useEffect, useState } from 'react'
 export function MyBidNotifications() {
   const { user } = useAuth()
   const router = useRouter()
-  const { myBidUpdates, isSubscribed } = useWebSocketMyBids(user?.id || null)
+  const { myBidUpdates, isSubscribed, error } = useWebSocketMyBids(
+    user?.id || null,
+  )
+
+  // 디버깅을 위한 로그
+  useEffect(() => {
+    console.log('🎯 MyBidNotifications 상태:', {
+      userId: user?.id,
+      isSubscribed,
+      myBidUpdatesCount: myBidUpdates.length,
+      error,
+    })
+  }, [user?.id, isSubscribed, myBidUpdates.length, error])
+
+  // userId가 변경될 때 구독 상태 확인
+  useEffect(() => {
+    if (user?.id) {
+      console.log('🎯 사용자 ID 변경됨, 구독 상태 확인:', user.id)
+    }
+  }, [user?.id])
+
+  // 페이지 이동 시 구독 상태 확인
+  useEffect(() => {
+    const handlePageShow = () => {
+      console.log('🎯 페이지 표시됨, 구독 상태 확인:', {
+        userId: user?.id,
+        isSubscribed,
+        myBidUpdatesCount: myBidUpdates.length,
+      })
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow)
+    }
+  }, [user?.id, isSubscribed, myBidUpdates.length])
   const [dismissedNotifications, setDismissedNotifications] = useState<
     Set<number>
   >(new Set())
@@ -94,8 +129,38 @@ export function MyBidNotifications() {
     (update) => !dismissedNotifications.has(update.productId),
   )
 
+  // 에러가 있으면 에러 표시
+  if (error) {
+    return (
+      <div className="fixed right-4 bottom-4 z-50">
+        <Card className="animate-slide-in border-red-200 bg-red-50 shadow-lg">
+          <CardContent className="p-3">
+            <div className="flex items-center space-x-2 text-red-600">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm">입찰 알림 연결 오류</span>
+            </div>
+            <p className="mt-1 text-xs text-red-500">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   // 알림이 없거나 숨김 상태면 표시하지 않음
   if (!isSubscribed || visibleNotifications.length === 0) {
+    // 디버깅을 위해 구독 상태만 표시
+    if (isSubscribed && visibleNotifications.length === 0) {
+      return (
+        <div className="fixed right-4 bottom-4 z-50">
+          <div className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
+            <div className="flex items-center space-x-2">
+              <Zap className="h-4 w-4 animate-pulse" />
+              <span>입찰 모니터링 중 (알림 없음)</span>
+            </div>
+          </div>
+        </div>
+      )
+    }
     return null
   }
 
@@ -142,9 +207,9 @@ export function MyBidNotifications() {
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  {/* 상품 제목 */}
+                  {/* 상품 제목 - 백엔드 가이드에 맞춰 productName 우선 사용 */}
                   <h4 className="mb-1 line-clamp-2 text-sm font-semibold text-gray-900">
-                    {update.productTitle}
+                    {update.productTitle || `상품 ${update.productId}`}
                   </h4>
 
                   {/* 상태 정보 */}

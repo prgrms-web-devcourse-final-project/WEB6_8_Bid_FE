@@ -50,8 +50,8 @@ export default async function ProductDetailPage({
     console.log('📦 서버에서 가져온 상품 데이터:', data)
 
     const mappedProduct = {
-      productId: data.productId || data.id || productId,
-      title: data.name || data.title || '상품명 없음',
+      productId: data.productId || productId,
+      name: data.name || '상품명 없음',
       description: data.description || '상품 설명이 없습니다.',
       category: data.category || '기타',
       images: data.images
@@ -59,53 +59,28 @@ export default async function ProductDetailPage({
             typeof img === 'string' ? img : img.imageUrl || img.url || img,
           )
         : [],
-      startingPrice: Number(data.initialPrice || data.startingPrice || 0),
-      currentPrice: Number(
-        data.currentPrice || data.initialPrice || data.startingPrice || 0,
-      ),
+      initialPrice: Number(data.initialPrice || 0),
+      currentPrice: Number(data.currentPrice || data.initialPrice || 0),
       seller: {
         id: data.seller?.id || '1',
         email: data.seller?.email || '',
-        name: data.seller?.nickname || '판매자',
-        phone: data.seller?.phone || '',
+        nickname: data.seller?.nickname || '판매자',
         profileImage: data.seller?.profileImage || null,
-        trustScore: Number(
-          data.seller?.trustScore || data.sellerTrustScore || 0,
-        ),
+        creditScore: Number(data.seller?.creditScore || 0),
         reviewCount: Number(data.seller?.reviewCount || 0),
-        joinDate: data.seller?.joinDate || '',
-        isVerified: data.seller?.isVerified || false,
       },
-      status: data.status || 'BIDDING',
+      status: data.status || '경매 중',
       location: data.location || data.seller?.location || '위치 정보 없음',
-      createdAt: data.createdAt || new Date().toISOString(),
-      endTime:
-        data.auctionEndTime ||
-        data.endTime ||
-        data.endDate ||
-        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7일 후
-      bidCount: Number(data.bidderCount || data.bidCount || 0),
-      isLiked: data.isLiked || false,
-      deliveryMethod: data.deliveryMethod || '직접거래',
+      createDate: data.createDate || new Date().toISOString(),
+      modifyDate: data.modifyDate || new Date().toISOString(),
       auctionStartTime: data.auctionStartTime,
-      auctionEndTime: data.auctionEndTime,
-      auctionDuration: data.auctionDuration,
+      auctionEndTime:
+        data.auctionEndTime ||
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7일 후
+      bidderCount: Number(data.bidderCount || 0),
+      deliveryMethod: data.deliveryMethod || '직접거래',
       thumbnailUrl: data.thumbnailUrl || '',
-      bidder: data.bidder || '',
-      review: data.review
-        ? {
-            reviewerNickname: data.review.reviewerNickname || '',
-            productName: data.review.productName || '',
-            comment: data.review.comment || '',
-            isSatisfied: data.review.isSatisfied || false,
-          }
-        : undefined,
     }
-
-    console.log('🎯 ProductDetailClient에 전달할 props:', {
-      product: mappedProduct,
-      initialBidStatus: bidStatus,
-    })
 
     return (
       <HomeLayout isLoggedIn={!!accessToken}>

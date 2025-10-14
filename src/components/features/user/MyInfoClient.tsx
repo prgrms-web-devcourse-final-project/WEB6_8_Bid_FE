@@ -100,7 +100,7 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
     }
   }
 
-  const getTrustScoreColor = (score: number) => {
+  const getCreditScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600'
     if (score >= 60) return 'text-yellow-600'
     return 'text-red-600'
@@ -228,7 +228,7 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
                   <div>
                     <div className="text-xs text-neutral-500">신뢰도</div>
                     <div
-                      className={`font-medium ${getTrustScoreColor(userInfo.creditScore)}`}
+                      className={`font-medium ${getCreditScoreColor(userInfo.creditScore)}`}
                     >
                       {userInfo.creditScore}점
                     </div>

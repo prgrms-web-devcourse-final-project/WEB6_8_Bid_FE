@@ -378,7 +378,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                         {product.thumbnailUrl ? (
                           <img
                             src={product.thumbnailUrl}
-                            alt={product.title}
+                            alt={product.name}
                             className="h-24 w-24 rounded-xl object-cover transition-transform duration-200 hover:scale-105"
                           />
                         ) : (
@@ -406,7 +406,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                       </div>
 
                       <h3 className="mb-3 line-clamp-2 text-xl font-bold text-neutral-900">
-                        {product.title}
+                        {product.name}
                       </h3>
 
                       <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
@@ -423,7 +423,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                             참여자
                           </div>
                           <div className="text-lg font-semibold text-neutral-900">
-                            {product.bidCount || 0}명
+                            {product.bidderCount || 0}명
                           </div>
                         </div>
                       </div>
@@ -444,10 +444,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                             />
                           </svg>
                           <span>
-                            종료:{' '}
-                            {formatDate(
-                              product.auctionEndTime || product.endTime,
-                            )}
+                            종료: {formatDate(product.auctionEndTime)}
                           </span>
                         </div>
                       </div>

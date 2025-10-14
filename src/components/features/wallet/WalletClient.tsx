@@ -711,32 +711,6 @@ export function WalletClient() {
         isDefault: editFormData.isDefault,
       }
 
-      console.log('🔍 원래 결제수단 데이터:', originalPaymentMethod)
-      console.log('🔍 methodType:', originalPaymentMethod.methodType)
-      console.log('🔍 type:', originalPaymentMethod.type)
-
-      // CARD 타입의 경우 필수 필드들 추가 (type 필드로 확인)
-      if (
-        originalPaymentMethod.type === 'CARD' ||
-        originalPaymentMethod.methodType === 'CARD'
-      ) {
-        updateData.brand = originalPaymentMethod.brand
-        updateData.last4 = originalPaymentMethod.last4
-
-        updateData.expMonth =
-          originalPaymentMethod.expMonth || originalPaymentMethod.expireMonth
-        updateData.expYear =
-          originalPaymentMethod.expYear || originalPaymentMethod.expireYear
-      }
-
-      if (
-        originalPaymentMethod.type === 'BANK' ||
-        originalPaymentMethod.methodType === 'BANK_ACCOUNT'
-      ) {
-        updateData.bankCode = originalPaymentMethod.bankCode
-        updateData.bankName = originalPaymentMethod.bankName
-      }
-
       const response = await paymentMethodApi.updatePaymentMethod(
         editingId,
         updateData,
