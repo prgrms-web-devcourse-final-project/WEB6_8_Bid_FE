@@ -44,8 +44,8 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
               ...product,
               currentPrice: update.currentPrice,
               bidCount: update.bidCount,
-              status: update.status,
-            }
+              status: mapApiStatusToKorean(update.status),
+            } as any
           }
           return product
         })
@@ -455,7 +455,11 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                       {product.status === '낙찰' && product.bidder && (
                         <div className="mb-4 rounded-lg bg-neutral-50 p-3">
                           <div className="mb-2 text-sm font-medium text-neutral-900">
-                            낙찰자: {product.bidder}
+                            낙찰자:{' '}
+                            {typeof product.bidder === 'object'
+                              ? (product.bidder as any).nickname ||
+                                (product.bidder as any).id
+                              : product.bidder}
                           </div>
                           <p className="text-sm text-neutral-600">
                             거래를 위해 연락처를 확인하세요.

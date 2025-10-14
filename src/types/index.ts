@@ -39,12 +39,6 @@ export interface Product {
   isLiked: boolean
   thumbnailUrl: string
   bidder?: string
-  review?: {
-    reviewerNickname: string
-    productName: string
-    comment: string
-    isSatisfied: boolean
-  }
 }
 
 export type ProductCategory =

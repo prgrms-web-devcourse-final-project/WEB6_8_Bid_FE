@@ -8,18 +8,9 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useWebSocketAuctionTimer } from '@/hooks/useWebSocketAuctionTimer'
 import { useWebSocketBid } from '@/hooks/useWebSocketBid'
-import { bidApi, productApi, reviewApi } from '@/lib/api'
+import { bidApi, productApi } from '@/lib/api'
 import { Product } from '@/types'
-import {
-  Clock,
-  Edit,
-  Heart,
-  MapPin,
-  MessageSquare,
-  Star,
-  User,
-  Zap,
-} from 'lucide-react'
+import { Clock, Edit, Heart, MapPin, User, Zap } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -39,7 +30,6 @@ export function ProductDetailClient({
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
   const [bidStatus, setBidStatus] = useState<any>(initialBidStatus || null)
-  const [reviews, setReviews] = useState<any[]>([])
   const [isPriceUpdated, setIsPriceUpdated] = useState(false)
   const [isBidCountUpdated, setIsBidCountUpdated] = useState(false)
   const [showBidNotification, setShowBidNotification] = useState(false)
@@ -152,26 +142,6 @@ export function ProductDetailClient({
     }
   }
 
-  // 리뷰 조회
-  const fetchReviews = async () => {
-    try {
-      const response = await reviewApi.getReviewsByProduct(safeProductId)
-      if (response.success && response.data) {
-        const reviewsData = Array.isArray(response.data)
-          ? response.data
-          : response.data.content || []
-        setReviews(reviewsData)
-        console.log('✅ 리뷰 조회 성공:', reviewsData.length, '개')
-      } else {
-        console.log('❌ 리뷰 조회 실패:', response.msg)
-        setReviews([])
-      }
-    } catch (error) {
-      console.error('❌ 리뷰 조회 실패:', error)
-      setReviews([])
-    }
-  }
-
   // 실시간 입찰 정보 업데이트
   useEffect(() => {
     if (bidUpdate) {
@@ -234,11 +204,6 @@ export function ProductDetailClient({
     // 서버에서 입찰 현황을 가져오지 못한 경우에만 클라이언트에서 조회
     if (!initialBidStatus && accessToken) {
       fetchBidStatus()
-    }
-
-    // 리뷰 데이터 가져오기 (토큰이 있을 때만)
-    if (accessToken) {
-      fetchReviews()
     }
   }, [])
 
@@ -353,12 +318,14 @@ export function ProductDetailClient({
 
     const amount = parseInt(bidAmount.replace(/,/g, ''))
 
-    if (
-      !amount ||
-      amount <= (productData.currentPrice || productData.startingPrice)
-    ) {
-      console.log('🎯 입찰 금액이 현재가보다 낮음')
-      setApiError('현재가보다 높은 금액을 입력해주세요.')
+    const currentPrice = productData.currentPrice || productData.startingPrice
+    const minBidAmount = currentPrice + 100
+
+    if (!amount || amount < minBidAmount) {
+      console.log('🎯 입찰 금액이 최소 입찰가보다 낮음')
+      setApiError(
+        `최소 입찰가 ${formatPrice(minBidAmount)}원 이상 입력해주세요.`,
+      )
       return
     }
 
@@ -738,10 +705,6 @@ export function ProductDetailClient({
                   <MapPin className="h-4 w-4 text-neutral-400" />
                   <span>{productData.location || '위치 정보 없음'}</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <MessageSquare className="h-4 w-4 text-neutral-400" />
-                  <span>리뷰 {productData.seller?.reviewCount || 0}개</span>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -780,7 +743,7 @@ export function ProductDetailClient({
                       최소 입찰가:{' '}
                       {formatPrice(
                         (productData.currentPrice ||
-                          productData.startingPrice) + 1000,
+                          productData.startingPrice) + 100,
                       )}
                     </p>
                   </div>
@@ -933,72 +896,6 @@ export function ProductDetailClient({
               <p className="text-neutral-500">상품 설명이 없습니다.</p>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* 리뷰 섹션 */}
-      <Card variant="outlined" className="mt-6">
-        <CardContent className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="flex items-center text-lg font-semibold text-neutral-900">
-              <MessageSquare className="mr-2 h-5 w-5" />
-              리뷰
-            </h3>
-            {isLoggedIn && !isOwner && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  router.push(`/review?productId=${product.productId}`)
-                }
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                리뷰 작성
-              </Button>
-            )}
-          </div>
-
-          {product.review ? (
-            <div className="rounded-lg bg-neutral-50 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium text-neutral-900">
-                    {product.review.reviewerNickname}
-                  </span>
-                  <div className="flex items-center">
-                    <Star
-                      className={`h-4 w-4 ${
-                        product.review.isSatisfied
-                          ? 'fill-current text-yellow-400'
-                          : 'text-neutral-300'
-                      }`}
-                    />
-                    <span className="ml-1 text-sm text-neutral-600">
-                      {product.review.isSatisfied ? '만족' : '불만족'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-neutral-700">{product.review.comment}</p>
-            </div>
-          ) : (
-            <div className="py-8 text-center">
-              <MessageSquare className="mx-auto mb-4 h-12 w-12 text-neutral-400" />
-              <p className="mb-4 text-neutral-600">
-                아직 작성된 리뷰가 없습니다.
-              </p>
-              {isLoggedIn && !isOwner && (
-                <Button
-                  onClick={() =>
-                    router.push(`/review?productId=${product.productId}`)
-                  }
-                  className="bg-primary-600 hover:bg-primary-700"
-                >
-                  리뷰 작성하기
-                </Button>
-              )}
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
