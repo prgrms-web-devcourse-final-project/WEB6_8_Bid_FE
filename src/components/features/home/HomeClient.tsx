@@ -190,8 +190,6 @@ export function HomeClient({ stats }: HomeClientProps) {
             productsData = response.data.products
           }
 
-          console.log('🔍 파싱된 productsData:', productsData)
-
           const mappedProducts = productsData.map((product: any) => ({
             productId: product.productId,
             name: product.name,
@@ -736,10 +734,18 @@ export function HomeClient({ stats }: HomeClientProps) {
                           </span>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <MapPin className="h-4 w-4 text-neutral-400" />
-                          <span className="text-sm text-neutral-600">
-                            {product?.location || '서울'}
-                          </span>
+                          {product.location ? (
+                            <>
+                              <MapPin className="h-4 w-4 text-neutral-400" />
+                              <span className="text-sm text-neutral-600">
+                                {product.location}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-sm text-neutral-600">
+                              배송만 가능
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
