@@ -49,7 +49,7 @@ export function BottomNavigation({
   ]
 
   return (
-    <nav className="fixed right-0 bottom-0 left-0 z-50 border-t border-neutral-200 bg-white md:hidden">
+    <nav className="fixed right-0 bottom-0 left-0 z-50 border-t border-neutral-200/50 bg-white/95 shadow-lg shadow-neutral-200/50 backdrop-blur-md md:hidden">
       <div className="flex h-16 items-center justify-around px-4">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -59,16 +59,31 @@ export function BottomNavigation({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center space-y-1 rounded-lg px-3 py-2 transition-colors ${
+              className={`group flex flex-col items-center justify-center space-y-1 rounded-xl px-3 py-2 transition-all duration-200 ${
                 isActive
-                  ? 'text-primary-500'
-                  : 'text-neutral-500 hover:text-neutral-700'
+                  ? 'text-primary-600 bg-primary-50 scale-105'
+                  : 'hover:text-primary-600 hover:bg-primary-50/50 text-neutral-500 hover:scale-105'
               }`}
             >
               <div className="relative">
-                <Icon className="h-5 w-5" />
+                <Icon
+                  className={`h-5 w-5 transition-all duration-200 ${
+                    isActive ? 'scale-110' : 'group-hover:scale-110'
+                  }`}
+                />
+                {item.badge && item.badge > 0 && (
+                  <span className="from-error-500 to-secondary-500 absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-r text-xs font-bold text-white shadow-sm">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
               </div>
-              <span className="text-xs font-medium">{item.label}</span>
+              <span
+                className={`text-xs font-medium transition-all duration-200 ${
+                  isActive ? 'font-semibold' : 'group-hover:font-medium'
+                }`}
+              >
+                {item.label}
+              </span>
             </Link>
           )
         })}

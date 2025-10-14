@@ -12,7 +12,7 @@ import { useState } from 'react'
 
 interface MyInfoEditClientProps {
   initialProfile?: {
-    name?: string
+    nickname?: string
     phoneNumber?: string
     address?: string
   }
@@ -25,7 +25,7 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
   const [formData, setFormData] = useState({
-    nickname: user?.nickname || initialProfile?.name || '',
+    nickname: user?.nickname || initialProfile?.nickname || '',
     phoneNumber: user?.phoneNumber || initialProfile?.phoneNumber || '',
     address: (user as any)?.address || initialProfile?.address || '',
   })
@@ -103,7 +103,7 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
 
   const handleCancel = () => {
     setFormData({
-      nickname: user?.nickname || initialProfile?.name || '',
+      nickname: user?.nickname || initialProfile?.nickname || '',
       phoneNumber: user?.phoneNumber || initialProfile?.phoneNumber || '',
       address: (user as any)?.address || initialProfile?.address || '',
     })

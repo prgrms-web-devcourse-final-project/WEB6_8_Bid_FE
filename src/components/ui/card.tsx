@@ -2,21 +2,37 @@ import { cn } from '@/lib/utils'
 import { HTMLAttributes, forwardRef } from 'react'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'outlined' | 'elevated'
+  variant?: 'default' | 'outlined' | 'elevated' | 'glass' | 'gradient'
+  hover?: boolean
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = 'default', children, ...props }, ref) => {
+  (
+    { className, variant = 'default', hover = false, children, ...props },
+    ref,
+  ) => {
     const variants = {
-      default: 'bg-white',
-      outlined: 'bg-white border border-neutral-200',
-      elevated: 'bg-white shadow-md',
+      default: 'bg-white/90 backdrop-blur-sm',
+      outlined: 'bg-white/90 backdrop-blur-sm border border-neutral-200/50',
+      elevated: 'bg-white/95 backdrop-blur-sm shadow-lg shadow-neutral-200/50',
+      glass: 'bg-white/10 backdrop-blur-md border border-white/20 shadow-xl',
+      gradient:
+        'bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm border border-white/30',
     }
+
+    const hoverClasses = hover
+      ? 'transition-all duration-300 hover:shadow-xl hover:shadow-neutral-200/60 hover:-translate-y-1 hover:scale-[1.02]'
+      : ''
 
     return (
       <div
         ref={ref}
-        className={cn('rounded-lg', variants[variant], className)}
+        className={cn(
+          'animate-fade-in rounded-2xl transition-all duration-200',
+          variants[variant],
+          hoverClasses,
+          className,
+        )}
         {...props}
       >
         {children}
@@ -27,14 +43,22 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
 
 Card.displayName = 'Card'
 
-interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {}
+interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
+  gradient?: boolean
+}
 
 export const CardHeader = forwardRef<HTMLDivElement, CardHeaderProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, gradient = false, children, ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={cn('border-b border-neutral-200 px-6 py-4', className)}
+        className={cn(
+          'px-6 py-5',
+          gradient
+            ? 'from-primary-50 to-secondary-50 border-primary-100/50 border-b bg-gradient-to-r'
+            : 'border-b border-neutral-200/50',
+          className,
+        )}
         {...props}
       >
         {children}
@@ -45,15 +69,20 @@ export const CardHeader = forwardRef<HTMLDivElement, CardHeaderProps>(
 
 CardHeader.displayName = 'CardHeader'
 
-interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {}
+interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
+  gradient?: boolean
+}
 
 export const CardTitle = forwardRef<HTMLHeadingElement, CardTitleProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, gradient = false, children, ...props }, ref) => {
     return (
       <h3
         ref={ref}
         className={cn(
-          'text-lg leading-none font-semibold tracking-tight',
+          'text-xl font-bold tracking-tight',
+          gradient
+            ? 'from-primary-600 to-secondary-600 bg-gradient-to-r bg-clip-text text-transparent'
+            : 'text-neutral-900',
           className,
         )}
         {...props}
@@ -71,7 +100,7 @@ interface CardContentProps extends HTMLAttributes<HTMLDivElement> {}
 export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
   ({ className, children, ...props }, ref) => {
     return (
-      <div ref={ref} className={cn('px-6 py-4', className)} {...props}>
+      <div ref={ref} className={cn('px-6 py-5', className)} {...props}>
         {children}
       </div>
     )
@@ -80,14 +109,22 @@ export const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
 
 CardContent.displayName = 'CardContent'
 
-interface CardFooterProps extends HTMLAttributes<HTMLDivElement> {}
+interface CardFooterProps extends HTMLAttributes<HTMLDivElement> {
+  gradient?: boolean
+}
 
 export const CardFooter = forwardRef<HTMLDivElement, CardFooterProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, gradient = false, children, ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={cn('border-t border-neutral-200 px-6 py-4', className)}
+        className={cn(
+          'px-6 py-4',
+          gradient
+            ? 'from-primary-50/50 to-secondary-50/50 border-primary-100/50 border-t bg-gradient-to-r'
+            : 'border-t border-neutral-200/50',
+          className,
+        )}
         {...props}
       >
         {children}

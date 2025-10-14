@@ -260,24 +260,27 @@ export function HomeClient({ stats }: HomeClientProps) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* 메인 히어로 섹션 */}
-      <div className="from-primary-500 to-primary-600 mb-12 rounded-2xl bg-gradient-to-r p-8 text-white">
-        <div className="mx-auto max-w-4xl text-center">
-          <h1 className="mb-4 text-4xl font-bold sm:text-5xl lg:text-6xl">
+      <div className="from-primary-500 via-primary-600 to-secondary-500 shadow-primary-500/25 relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-br p-8 text-white shadow-2xl">
+        <div className="from-primary-600/20 to-secondary-500/20 absolute inset-0 bg-gradient-to-r"></div>
+        <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
+        <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
+        <div className="relative mx-auto max-w-4xl text-center">
+          <h1 className="animate-fade-in mb-6 text-4xl font-bold sm:text-5xl lg:text-6xl">
             실시간 경매 플랫폼
           </h1>
-          <p className="mb-8 text-lg opacity-90 sm:text-xl">
+          <p className="animate-fade-in mb-8 text-lg opacity-90 sm:text-xl">
             지금 바로 시작되는 흥미진진한 경매에 참여해보세요
           </p>
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
+          <div className="animate-scale-in flex flex-col gap-4 sm:flex-row sm:justify-center">
             <button
               onClick={() => router.push('/register-product')}
-              className="text-primary-600 rounded-lg bg-white px-8 py-3 font-semibold transition-colors hover:bg-gray-100"
+              className="text-primary-600 rounded-xl bg-white/95 px-8 py-4 font-semibold shadow-lg shadow-white/25 backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-white hover:shadow-xl hover:shadow-white/30"
             >
               상품 등록하기
             </button>
             <button
-              onClick={() => router.push('/my-bids')}
-              className="hover:text-primary-600 rounded-lg border-2 border-white px-8 py-3 font-semibold text-white transition-colors hover:bg-white"
+              onClick={() => router.push('/bid-status')}
+              className="rounded-xl border-2 border-white/50 bg-white/10 px-8 py-4 font-semibold text-white backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:border-white hover:bg-white/20"
             >
               내 입찰 현황
             </button>
@@ -285,76 +288,85 @@ export function HomeClient({ stats }: HomeClientProps) {
         </div>
       </div>
       {/* 통계 카드 */}
-      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Card variant="outlined">
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="text-primary-500 text-2xl font-bold">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card variant="elevated" hover className="animate-fade-in">
+          <CardContent className="p-6 text-center">
+            <div className="mb-2 flex items-center justify-center space-x-2">
+              <div className="from-primary-600 to-primary-700 bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent">
                 {(
                   homeData.totalActiveAuctions || stats.activeAuctions
                 ).toLocaleString()}
               </div>
               {isHomeDataSubscribed && (
-                <Zap className="h-4 w-4 animate-pulse text-green-500" />
+                <Zap className="text-success-500 h-5 w-5 animate-pulse" />
               )}
             </div>
-            <div className="text-sm text-neutral-600">진행중인 경매</div>
+            <div className="text-sm font-medium text-neutral-600">
+              진행중인 경매
+            </div>
           </CardContent>
         </Card>
 
-        <Card variant="outlined">
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="text-warning-500 text-2xl font-bold">
+        <Card variant="elevated" hover className="animate-fade-in">
+          <CardContent className="p-6 text-center">
+            <div className="mb-2 flex items-center justify-center space-x-2">
+              <div className="from-warning-600 to-warning-700 bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent">
                 {homeData.endingSoonProducts?.length || stats.endingToday}
               </div>
               {isHomeDataSubscribed && (
-                <Zap className="h-4 w-4 animate-pulse text-green-500" />
+                <Zap className="text-success-500 h-5 w-5 animate-pulse" />
               )}
             </div>
-            <div className="text-sm text-neutral-600">마감 임박</div>
+            <div className="text-sm font-medium text-neutral-600">
+              마감 임박
+            </div>
           </CardContent>
         </Card>
 
-        <Card variant="outlined">
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="text-success-500 text-2xl font-bold">
+        <Card variant="elevated" hover className="animate-fade-in">
+          <CardContent className="p-6 text-center">
+            <div className="mb-2 flex items-center justify-center space-x-2">
+              <div className="from-success-600 to-success-700 bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent">
                 {homeData.totalBidsToday || stats.totalParticipants}
               </div>
               {isHomeDataSubscribed && (
-                <Zap className="h-4 w-4 animate-pulse text-green-500" />
+                <Zap className="text-success-500 h-5 w-5 animate-pulse" />
               )}
             </div>
-            <div className="text-sm text-neutral-600">오늘 입찰</div>
+            <div className="text-sm font-medium text-neutral-600">
+              오늘 입찰
+            </div>
           </CardContent>
         </Card>
 
-        <Card variant="outlined">
-          <CardContent className="p-4 text-center">
-            <div className="text-lg font-bold text-neutral-900">
-              {stats.successRate}%
+        <Card variant="elevated" hover className="animate-fade-in">
+          <CardContent className="p-6 text-center">
+            <div className="mb-2 flex items-center justify-center space-x-2">
+              <div className="from-secondary-600 to-secondary-700 bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent">
+                {stats.successRate}%
+              </div>
             </div>
-            <div className="text-sm text-neutral-600">성공률</div>
+            <div className="text-sm font-medium text-neutral-600">성공률</div>
           </CardContent>
         </Card>
       </div>
 
       {/* 검색 및 필터 */}
-      <div className="mb-6">
-        <div className="mb-4 flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+      <div className="mb-8">
+        <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
           <div className="relative flex-1">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+            <Search className="absolute top-1/2 left-4 z-10 h-5 w-5 -translate-y-1/2 text-neutral-600" />
             <Input
               placeholder="상품명을 검색하세요"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="h-12 pl-12"
             />
           </div>
           <Button
             variant="outline"
-            className="flex items-center space-x-2"
+            size="lg"
+            className="flex h-12 items-center space-x-2 px-6"
             onClick={() => setShowFilters(!showFilters)}
           >
             <Filter className="h-4 w-4" />
@@ -364,14 +376,17 @@ export function HomeClient({ stats }: HomeClientProps) {
 
         {/* 필터 패널 */}
         {showFilters && (
-          <Card variant="outlined" className="mb-6">
-            <CardContent className="p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold">필터</h3>
+          <Card variant="elevated" className="animate-scale-in mb-6">
+            <CardContent className="p-6">
+              <div className="mb-6 flex items-center justify-between">
+                <h3 className="from-primary-600 to-secondary-600 bg-gradient-to-r bg-clip-text text-xl font-bold text-transparent">
+                  필터
+                </h3>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowFilters(false)}
+                  className="rounded-full p-2 hover:bg-neutral-100"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -393,10 +408,10 @@ export function HomeClient({ stats }: HomeClientProps) {
                               : [...prev.location, location],
                           }))
                         }}
-                        className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                        className={`rounded-full border-2 px-4 py-2 text-sm font-medium transition-all duration-200 ${
                           filters.location.includes(location)
-                            ? 'bg-primary-500 border-primary-500 text-white'
-                            : 'hover:border-primary-300 border-neutral-300 bg-white text-neutral-700'
+                            ? 'from-primary-500 to-primary-600 border-primary-500 shadow-primary-500/25 bg-gradient-to-r text-white shadow-lg'
+                            : 'hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 border-neutral-200 bg-white/80 text-neutral-700 backdrop-blur-sm'
                         }`}
                       >
                         {location}
@@ -468,7 +483,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                           | 'SUCCESSFUL',
                       }))
                     }
-                    className="w-full rounded-md border border-neutral-300 p-2"
+                    className="focus:border-primary-300 focus:ring-primary-200 w-full rounded-xl border border-neutral-200/50 bg-white/80 p-3 backdrop-blur-sm"
                   >
                     {statusOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -494,7 +509,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                           | 'POPULAR',
                       }))
                     }
-                    className="w-full rounded-md border border-neutral-300 p-2"
+                    className="focus:border-primary-300 focus:ring-primary-200 w-full rounded-xl border border-neutral-200/50 bg-white/80 p-3 backdrop-blur-sm"
                   >
                     {sortOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -525,15 +540,15 @@ export function HomeClient({ stats }: HomeClientProps) {
         )}
 
         {/* 카테고리 탭 */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {categories.map((category) => (
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 ${
                 selectedCategory === category.id
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                  ? 'from-primary-500 to-primary-600 shadow-primary-500/25 bg-gradient-to-r text-white shadow-lg'
+                  : 'hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 border border-neutral-200/50 bg-white/80 text-neutral-700 backdrop-blur-sm'
               }`}
             >
               {category.label}
@@ -545,20 +560,18 @@ export function HomeClient({ stats }: HomeClientProps) {
       {/* 로그인 상태에 따른 메인 CTA */}
       {!isLoggedIn && (
         <div className="mb-8">
-          <Card
-            variant="outlined"
-            className="from-primary-50 to-primary-100 bg-gradient-to-r"
-          >
-            <CardContent className="p-6 text-center">
-              <h2 className="mb-4 text-2xl font-bold text-neutral-900">
+          <Card variant="gradient" className="animate-fade-in">
+            <CardContent className="p-8 text-center">
+              <h2 className="from-primary-600 to-secondary-600 mb-4 bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent">
                 비드에 오신 것을 환영합니다!
               </h2>
-              <p className="mb-6 text-neutral-600">
+              <p className="mb-8 text-lg text-neutral-600">
                 안전하고 투명한 경매 플랫폼에서 원하는 상품을 찾아보세요.
               </p>
-              <div className="flex flex-col space-y-3 sm:flex-row sm:justify-center sm:space-y-0 sm:space-x-4">
+              <div className="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0 sm:space-x-4">
                 <Button
                   size="lg"
+                  variant="gradient"
                   onClick={() => (window.location.href = '/login')}
                 >
                   로그인
@@ -628,18 +641,20 @@ export function HomeClient({ stats }: HomeClientProps) {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
-            {products.map((product) => (
+          <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+            {products.map((product, index) => (
               <Card
                 key={product.productId}
-                variant="outlined"
-                className="transition-shadow duration-200 hover:shadow-lg"
+                variant="elevated"
+                hover
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
                 <CardContent className="p-6">
                   <div className="flex flex-col space-y-4">
                     {/* 상품 이미지와 카테고리 */}
-                    <div className="flex items-start justify-between">
-                      <div className="relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-200">
+                    <div className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+                      <div className="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-100 to-neutral-200 shadow-lg sm:h-36 sm:w-36">
                         {product.thumbnailUrl || product.images?.[0] ? (
                           <img
                             src={
@@ -649,13 +664,13 @@ export function HomeClient({ stats }: HomeClientProps) {
                                 : product.images?.[0]?.imageUrl)
                             }
                             alt={product.name || '상품'}
-                            className="h-32 w-32 rounded-xl object-cover"
+                            className="h-32 w-full rounded-2xl object-cover transition-transform duration-300 hover:scale-105 sm:h-36 sm:w-36"
                           />
                         ) : (
                           <div className="flex h-full w-full flex-col items-center justify-center">
-                            <div className="from-primary-200 to-primary-300 mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br">
+                            <div className="from-primary-200 to-secondary-200 mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br shadow-lg">
                               <svg
-                                className="text-primary-600 h-6 w-6"
+                                className="text-primary-600 h-8 w-8"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -668,14 +683,14 @@ export function HomeClient({ stats }: HomeClientProps) {
                                 />
                               </svg>
                             </div>
-                            <span className="text-xs font-medium text-neutral-500">
+                            <span className="text-sm font-medium text-neutral-500">
                               이미지 준비중
                             </span>
                           </div>
                         )}
                       </div>
-                      <div className="flex flex-col space-y-2">
-                        <Badge variant="primary" className="w-fit">
+                      <div className="flex flex-col space-y-2 sm:items-end">
+                        <Badge className="from-primary-500 to-primary-600 shadow-primary-500/25 w-fit bg-gradient-to-r text-white shadow-lg">
                           {product.category}
                         </Badge>
                       </div>
@@ -692,21 +707,21 @@ export function HomeClient({ stats }: HomeClientProps) {
                     </div>
 
                     {/* 가격 정보 */}
-                    <div className="from-primary-50 to-primary-100 rounded-lg bg-gradient-to-r p-4">
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="from-primary-50 to-secondary-50 shadow-primary-500/10 rounded-2xl bg-gradient-to-br p-4 shadow-lg sm:p-6">
+                      <div className="grid grid-cols-2 gap-4 sm:gap-6">
                         <div>
-                          <div className="mb-1 text-xs text-neutral-500">
+                          <div className="mb-2 text-sm font-medium text-neutral-600">
                             현재가
                           </div>
-                          <div className="text-primary-600 text-lg font-bold">
+                          <div className="from-primary-600 to-primary-700 bg-gradient-to-r bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
                             {formatPrice(product.currentPrice || 0)}
                           </div>
                         </div>
                         <div>
-                          <div className="mb-1 text-xs text-neutral-500">
+                          <div className="mb-2 text-sm font-medium text-neutral-600">
                             시작가
                           </div>
-                          <div className="text-sm font-medium text-neutral-700">
+                          <div className="text-base font-semibold text-neutral-700 sm:text-lg">
                             {formatPrice(product.initialPrice || 0)}
                           </div>
                         </div>
@@ -714,7 +729,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                     </div>
 
                     {/* 남은 시간, 판매자, 장소 */}
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <div className="flex items-center space-x-2">
                         <Clock className="text-warning-500 h-4 w-4" />
                         <span className="text-sm font-medium text-neutral-700">
@@ -726,7 +741,7 @@ export function HomeClient({ stats }: HomeClientProps) {
                           )}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                         <div className="flex items-center space-x-1">
                           <User className="text-primary-500 h-4 w-4" />
                           <span className="text-sm font-medium text-neutral-700">
@@ -751,10 +766,11 @@ export function HomeClient({ stats }: HomeClientProps) {
                     </div>
 
                     {/* 액션 버튼 */}
-                    <div className="flex space-x-3 pt-2">
+                    <div className="flex space-x-3 pt-4">
                       <Button
-                        size="sm"
-                        className="flex-1"
+                        size="md"
+                        variant="gradient"
+                        className="sm:size-lg flex-1"
                         onClick={() =>
                           router.push(`/products/${product.productId}`)
                         }

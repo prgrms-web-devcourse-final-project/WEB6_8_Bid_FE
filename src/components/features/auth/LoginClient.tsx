@@ -230,7 +230,7 @@ export function LoginClient() {
   }
 
   return (
-    <div className="flex items-center h-full justify-center px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex h-full items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         {/* 앱 로고 및 제목 */}
         <div className="text-center">
@@ -290,16 +290,27 @@ export function LoginClient() {
                 />
               )}
 
-              <Input
-                label="이메일"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="이메일을 입력하세요"
-                leftIcon={<Mail className="h-5 w-5" />}
-                error={errors.email}
-              />
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-neutral-700">
+                  이메일
+                </label>
+                <div className="relative">
+                  <Mail className="absolute top-1/2 left-4 z-10 h-5 w-5 -translate-y-1/2 text-neutral-600" />
+                  <input
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="이메일을 입력하세요"
+                    className="focus:border-primary-300 focus:ring-primary-200 block w-full rounded-xl border border-neutral-200/50 bg-white/80 px-4 py-3 pl-12 text-sm font-medium placeholder-neutral-400 shadow-sm transition-all duration-200 focus:ring-2 focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-500"
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-error-600 animate-fade-in text-sm font-medium">
+                    {errors.email}
+                  </p>
+                )}
+              </div>
 
               {!isLogin && (
                 <Input
@@ -323,19 +334,24 @@ export function LoginClient() {
                 />
               )}
 
-              <Input
-                label="비밀번호"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="비밀번호를 입력하세요"
-                leftIcon={<Lock className="h-5 w-5" />}
-                rightIcon={
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-neutral-700">
+                  비밀번호
+                </label>
+                <div className="relative">
+                  <Lock className="absolute top-1/2 left-4 z-10 h-5 w-5 -translate-y-1/2 text-neutral-600" />
+                  <input
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="비밀번호를 입력하세요"
+                    className="focus:border-primary-300 focus:ring-primary-200 block w-full rounded-xl border border-neutral-200/50 bg-white/80 px-4 py-3 pr-12 pl-12 text-sm font-medium placeholder-neutral-400 shadow-sm transition-all duration-200 focus:ring-2 focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-500"
+                  />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-neutral-400 hover:text-neutral-600"
+                    className="absolute top-1/2 right-4 z-10 -translate-y-1/2 text-neutral-600 hover:text-neutral-800"
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -343,24 +359,33 @@ export function LoginClient() {
                       <Eye className="h-5 w-5" />
                     )}
                   </button>
-                }
-                error={errors.password}
-              />
+                </div>
+                {errors.password && (
+                  <p className="text-error-600 animate-fade-in text-sm font-medium">
+                    {errors.password}
+                  </p>
+                )}
+              </div>
 
               {!isLogin && (
-                <Input
-                  label="비밀번호 확인"
-                  name="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  placeholder="비밀번호를 다시 입력하세요"
-                  leftIcon={<Lock className="h-5 w-5" />}
-                  rightIcon={
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-neutral-700">
+                    비밀번호 확인
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute top-1/2 left-4 z-10 h-5 w-5 -translate-y-1/2 text-neutral-600" />
+                    <input
+                      name="confirmPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="비밀번호를 다시 입력하세요"
+                      className="focus:border-primary-300 focus:ring-primary-200 block w-full rounded-xl border border-neutral-200/50 bg-white/80 px-4 py-3 pr-12 pl-12 text-sm font-medium placeholder-neutral-400 shadow-sm transition-all duration-200 focus:ring-2 focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-500"
+                    />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="text-neutral-400 hover:text-neutral-600"
+                      className="absolute top-1/2 right-4 z-10 -translate-y-1/2 text-neutral-600 hover:text-neutral-800"
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -368,9 +393,13 @@ export function LoginClient() {
                         <Eye className="h-5 w-5" />
                       )}
                     </button>
-                  }
-                  error={errors.confirmPassword}
-                />
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-error-600 animate-fade-in text-sm font-medium">
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </div>
               )}
 
               {/* {isLogin && (

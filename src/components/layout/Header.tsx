@@ -82,51 +82,46 @@ export function Header({
   }, [isLoggedIn])
 
   return (
-    <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white">
+    <header className="sticky top-0 z-50 border-b border-neutral-200/50 bg-white/95 shadow-sm backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* 로고 */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-sm">
-                <span className="text-sm font-bold text-white">B</span>
+            <Link href="/" className="group flex items-center space-x-3">
+              <div className="from-primary-500 via-secondary-500 to-primary-600 shadow-primary-500/25 group-hover:shadow-primary-500/30 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br shadow-lg transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
+                <span className="text-lg font-bold text-white">B</span>
               </div>
-              <span className="text-xl font-bold text-neutral-900">Bid</span>
+              <span className="from-primary-600 to-secondary-600 bg-gradient-to-r bg-clip-text text-2xl font-bold text-transparent">
+                Bid
+              </span>
             </Link>
           </div>
 
           {/* 데스크탑 네비게이션 */}
-          <nav className="hidden items-center space-x-8 md:flex">
+          <nav className="hidden items-center space-x-6 md:flex">
             <Link
               href="/"
-              className="hover:text-primary-500 text-neutral-600 transition-colors"
+              className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition-all duration-200"
             >
               홈
             </Link>
-            {/* <Link
-              href="/posts"
-              className="hover:text-primary-500 text-neutral-600 transition-colors"
-            >
-              게시판
-            </Link> */}
             {isLoggedIn && (
               <>
                 <Link
                   href="/my-products"
-                  className="hover:text-primary-500 text-neutral-600 transition-colors"
+                  className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition-all duration-200"
                 >
                   내 상품
                 </Link>
                 <Link
                   href="/bid-status"
-                  className="hover:text-primary-500 text-neutral-600 transition-colors"
+                  className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition-all duration-200"
                 >
                   입찰 현황
                 </Link>
-
                 <Link
                   href="/wallet"
-                  className="hover:text-primary-500 text-neutral-600 transition-colors"
+                  className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition-all duration-200"
                 >
                   지갑
                 </Link>
@@ -141,7 +136,7 @@ export function Header({
                 {/* 상품 등록 버튼 */}
                 <Link
                   href="/register-product"
-                  className="bg-primary-500 hover:bg-primary-600 hidden items-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors sm:inline-flex"
+                  className="from-primary-500 to-primary-600 shadow-primary-500/25 hover:from-primary-600 hover:to-primary-700 hover:shadow-primary-500/30 hidden items-center rounded-xl bg-gradient-to-r px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl sm:inline-flex"
                 >
                   상품 등록
                 </Link>
@@ -149,11 +144,11 @@ export function Header({
                 {/* 알림 */}
                 <Link
                   href="/notifications"
-                  className="hover:text-primary-500 relative p-2 text-neutral-600 transition-colors"
+                  className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg p-2.5 text-neutral-600 transition-all duration-200"
                 >
                   <Bell className="h-5 w-5" />
                   {unreadNotificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-5 w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-xs font-bold text-white shadow-lg ring-2 ring-white">
+                    <span className="from-error-500 to-secondary-500 shadow-error-500/30 absolute -top-1 -right-1 flex h-5 w-5 animate-pulse items-center justify-center rounded-full bg-gradient-to-r text-xs font-bold text-white shadow-lg ring-2 ring-white">
                       {unreadNotificationCount > 99
                         ? '99+'
                         : unreadNotificationCount > 9
@@ -167,16 +162,16 @@ export function Header({
                 <div className="relative">
                   <button
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center space-x-2 rounded-lg p-2 transition-colors hover:bg-neutral-100"
+                    className="hover:bg-primary-50 flex items-center space-x-3 rounded-xl p-2 transition-all duration-200"
                   >
-                    <div className="bg-primary-100 flex h-8 w-8 items-center justify-center rounded-full">
-                      <span className="text-primary-600 text-sm font-medium">
+                    <div className="from-primary-500 to-secondary-500 shadow-primary-500/25 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br shadow-lg">
+                      <span className="text-sm font-bold text-white">
                         {(user?.nickname || user?.email || 'U')
                           .charAt(0)
                           .toUpperCase()}
                       </span>
                     </div>
-                    <span className="hidden text-sm font-medium text-neutral-900 sm:block">
+                    <span className="hidden text-sm font-semibold text-neutral-900 sm:block">
                       {user?.nickname || user?.email?.split('@')[0] || '사용자'}
                     </span>
                   </button>
@@ -190,28 +185,28 @@ export function Header({
                         onClick={() => setIsProfileOpen(false)}
                       />
                       {/* 드롭다운 메뉴 */}
-                      <div className="fixed top-16 right-4 z-50 w-48 rounded-lg border border-neutral-200 bg-white py-2 shadow-lg md:absolute md:top-full md:right-0 md:mt-2">
+                      <div className="animate-scale-in fixed top-16 right-4 z-50 w-56 rounded-2xl border border-neutral-200/50 bg-white/95 py-3 shadow-xl shadow-neutral-200/50 backdrop-blur-md md:absolute md:top-full md:right-0 md:mt-2">
                         <Link
                           href="/my-info"
-                          className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                          className="hover:bg-primary-50 hover:text-primary-700 block px-4 py-3 text-sm font-medium text-neutral-700 transition-colors"
                           onClick={() => setIsProfileOpen(false)}
                         >
                           내 정보
                         </Link>
                         <Link
                           href="/notifications"
-                          className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                          className="hover:bg-primary-50 hover:text-primary-700 block px-4 py-3 text-sm font-medium text-neutral-700 transition-colors"
                           onClick={() => setIsProfileOpen(false)}
                         >
                           알림
                         </Link>
-                        <hr className="my-2" />
+                        <hr className="my-2 border-neutral-200/50" />
                         <button
                           onClick={() => {
                             setIsProfileOpen(false)
                             logout()
                           }}
-                          className="block w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+                          className="hover:bg-error-50 hover:text-error-700 block w-full px-4 py-3 text-left text-sm font-medium text-neutral-700 transition-colors"
                         >
                           로그아웃
                         </button>
@@ -223,7 +218,7 @@ export function Header({
             ) : (
               <Link
                 href="/login"
-                className="bg-primary-500 hover:bg-primary-600 inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+                className="from-primary-500 to-primary-600 shadow-primary-500/25 hover:from-primary-600 hover:to-primary-700 hover:shadow-primary-500/30 inline-flex items-center rounded-xl bg-gradient-to-r px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl"
               >
                 로그인
               </Link>
