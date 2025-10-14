@@ -218,7 +218,13 @@ export interface ProductListParams {
   category?: number[]
   location?: string[]
   isDelivery?: boolean
-  status?: 'BEFORE_START' | 'BIDDING' | 'SUCCESSFUL' | 'FAILED'
+  status?:
+    | 'BEFORE_START'
+    | 'BIDDING'
+    | 'SUCCESSFUL'
+    | 'FAILED'
+    | 'SELLING'
+    | 'SOLD'
   sort?: 'LATEST' | 'PRICE_HIGH' | 'PRICE_LOW' | 'ENDING_SOON' | 'POPULAR'
 }
 
