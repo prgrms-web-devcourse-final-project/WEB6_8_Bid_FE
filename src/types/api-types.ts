@@ -200,6 +200,7 @@ export type BoardWriteResponse =
 // 리뷰 관련 타입
 export type ReviewWriteRequest = components['schemas']['ReviewRequest']
 export type ReviewUpdateRequest = {
+  productId: number
   comment: string
   isSatisfied: boolean
 }

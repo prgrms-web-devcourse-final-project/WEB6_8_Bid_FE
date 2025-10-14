@@ -1,5 +1,6 @@
 'use client'
 
+import { ReviewSection } from '@/components/features/reviews/ReviewSection'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -887,6 +888,9 @@ export function ProductDetailClient({
           </div>
         </CardContent>
       </Card>
+
+      {/* 리뷰 섹션 */}
+      <ReviewSection productId={getSafeProductId(productData.productId)} />
     </div>
   )
 }

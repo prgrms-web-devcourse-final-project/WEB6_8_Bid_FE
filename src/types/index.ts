@@ -231,3 +231,26 @@ export interface Payment {
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'cancelled'
 
 export type PaymentMethod = 'card' | 'bank' | 'kakao' | 'naver'
+
+// 리뷰 관련 타입
+export interface Review {
+  reviewId: number
+  reviewerNickname: string
+  comment: string
+  isSatisfied: boolean
+  createdAt: string
+}
+
+export interface ReviewRequest {
+  productId: number
+  comment: string
+  isSatisfied: boolean
+}
+
+export interface ReviewResponse {
+  reviewId: number
+  reviewerNickname: string
+  comment: string
+  isSatisfied: boolean
+  createdAt: string
+}

@@ -454,9 +454,13 @@ export const reviewApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // ❌ 제거된 API들 (백엔드에 구현되지 않음)
-  // getReviewsByProduct: async (productId: number) => { ... }
-  // getMyReviews: async () => { ... }
+  // 상품별 리뷰 목록 조회
+  getReviewsByProduct: async (productId: number) => {
+    const response = await apiClient.get<ApiResponse<any>>(
+      `/api/v1/reviews/products/${productId}`,
+    )
+    return normalizeApiResponse(response.data)
+  },
 }
 
 // 알림 관련 API
