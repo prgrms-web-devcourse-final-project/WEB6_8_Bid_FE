@@ -452,21 +452,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                         </div>
                       </div>
 
-                      {product.status === '낙찰' && product.bidder && (
-                        <div className="mb-4 rounded-lg bg-neutral-50 p-3">
-                          <div className="mb-2 text-sm font-medium text-neutral-900">
-                            낙찰자:{' '}
-                            {typeof product.bidder === 'object'
-                              ? (product.bidder as any).nickname ||
-                                (product.bidder as any).id
-                              : product.bidder}
-                          </div>
-                          <p className="text-sm text-neutral-600">
-                            거래를 위해 연락처를 확인하세요.
-                          </p>
-                        </div>
-                      )}
-
                       {/* 액션 버튼들 */}
                       <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-2">
                         {product.status === '경매 시작 전' && (
@@ -495,31 +480,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               상품 삭제
-                            </Button>
-                          </>
-                        )}
-                        {product.status === '낙찰' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                            >
-                              낙찰자 연락처
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                            >
-                              거래 완료 처리
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                            >
-                              리뷰 보기
                             </Button>
                           </>
                         )}
