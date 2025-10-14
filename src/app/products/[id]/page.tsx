@@ -70,7 +70,7 @@ export default async function ProductDetailPage({
         phone: data.seller?.phone || '',
         profileImage: data.seller?.profileImage || null,
         trustScore: Number(
-          data.seller?.trustScore || data.sellerTrustScore || 0,
+          data.seller?.creditScore || data.sellerTrustScore || 0,
         ),
         reviewCount: Number(data.seller?.reviewCount || 0),
         joinDate: data.seller?.joinDate || '',
