@@ -1,256 +1,217 @@
-import * as React from 'react'
+'use client'
+
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
-import { ButtonProps, buttonVariants } from '@/components/ui/button'
-
-// 최적화된 페이징 계산 함수 (백엔드 PageLimitCalculator와 동일한 로직)
-export const calculatePageLimit = (
-  page: number,
-  pageSize: number,
-  movablePageCount: number = 5,
-) => {
-  return ((page - 1) / movablePageCount + 1) * pageSize * movablePageCount + 1
-}
-
-// 현재 구간의 시작 페이지 계산
-export const getCurrentGroupStart = (
-  page: number,
-  movablePageCount: number = 5,
-) => {
-  return Math.floor((page - 1) / movablePageCount) * movablePageCount + 1
-}
-
-// 현재 구간의 끝 페이지 계산
-export const getCurrentGroupEnd = (
-  page: number,
-  movablePageCount: number = 5,
-) => {
-  return (
-    Math.floor((page - 1) / movablePageCount) * movablePageCount +
-    movablePageCount
-  )
-}
-
-// 최적화된 페이징 컴포넌트 Props
-interface OptimizedPaginationProps {
+interface PaginationProps {
   currentPage: number
-  pageSize: number
-  totalCount: number // 백엔드에서 받은 count (limit까지만 세는 값)
-  movablePageCount?: number // 한 화면에서 보여줄 페이지 버튼 개수 (기본값: 5)
+  totalPages: number
   onPageChange: (page: number) => void
+  hasNext?: boolean
+  hasPrevious?: boolean
+  isLoading?: boolean
   className?: string
+  showPageNumbers?: boolean
+  maxVisiblePages?: number
 }
 
-// 최적화된 페이징 컴포넌트
-export const OptimizedPagination = ({
+export function Pagination({
   currentPage,
-  pageSize,
-  totalCount,
-  movablePageCount = 5,
+  totalPages,
   onPageChange,
+  hasNext = true,
+  hasPrevious = true,
+  isLoading = false,
   className,
-}: OptimizedPaginationProps) => {
-  const limit = calculatePageLimit(currentPage, pageSize, movablePageCount)
-  const hasNextGroup = totalCount > limit
+  showPageNumbers = true,
+  maxVisiblePages = 5,
+}: PaginationProps) {
+  // 표시할 페이지 번호들 계산
+  const getVisiblePages = () => {
+    if (totalPages <= maxVisiblePages) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1)
+    }
 
-  const currentGroupStart = getCurrentGroupStart(currentPage, movablePageCount)
-  const currentGroupEnd = getCurrentGroupEnd(currentPage, movablePageCount)
+    const half = Math.floor(maxVisiblePages / 2)
+    let start = Math.max(1, currentPage - half)
+    let end = Math.min(totalPages, start + maxVisiblePages - 1)
 
-  // 현재 구간에서 실제로 표시할 페이지들
-  const pages = []
-  for (let i = currentGroupStart; i <= currentGroupEnd; i++) {
-    // 실제 데이터가 있는 페이지까지만 표시
-    const maxPossiblePage = Math.ceil(totalCount / pageSize)
-    if (i <= maxPossiblePage) {
+    if (end - start + 1 < maxVisiblePages) {
+      start = Math.max(1, end - maxVisiblePages + 1)
+    }
+
+    const pages = []
+    for (let i = start; i <= end; i++) {
       pages.push(i)
     }
+
+    return pages
   }
 
-  const handlePreviousGroup = () => {
-    const prevGroupStart = currentGroupStart - movablePageCount
-    if (prevGroupStart >= 1) {
-      onPageChange(prevGroupStart)
-    }
-  }
+  const visiblePages = getVisiblePages()
 
-  const handleNextGroup = () => {
-    if (hasNextGroup) {
-      onPageChange(currentGroupEnd + 1)
-    }
-  }
-
-  const hasPreviousGroup = currentGroupStart > 1
+  // totalPages가 1이어도 페이지 정보는 표시 (디버깅용)
+  // if (totalPages <= 1) {
+  //   return null
+  // }
 
   return (
-    <nav
-      role="navigation"
-      aria-label="pagination"
-      className={cn('mx-auto flex w-full justify-center', className)}
+    <div
+      className={cn('flex items-center justify-center space-x-2', className)}
     >
-      <ul className="flex flex-row items-center gap-1">
-        {/* 이전 구간 버튼 */}
-        {hasPreviousGroup && (
-          <li>
-            <button
-              onClick={handlePreviousGroup}
-              className={cn(
-                buttonVariants({ variant: 'outline', size: 'default' }),
-                'gap-1 pl-2.5',
-              )}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span>이전</span>
-            </button>
-          </li>
-        )}
+      {/* 이전 버튼 */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={!hasPrevious || isLoading || currentPage <= 1}
+        className="flex items-center space-x-1"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        <span>이전</span>
+      </Button>
 
-        {/* 페이지 번호들 */}
-        {pages.map((page) => (
-          <li key={page}>
-            <button
+      {/* 페이지 번호들 */}
+      {showPageNumbers && (
+        <>
+          {/* 첫 페이지 */}
+          {visiblePages[0] > 1 && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(1)}
+                disabled={isLoading}
+                className="min-w-[40px]"
+              >
+                1
+              </Button>
+              {visiblePages[0] > 2 && (
+                <div className="flex items-center">
+                  <MoreHorizontal className="h-4 w-4 text-neutral-400" />
+                </div>
+              )}
+            </>
+          )}
+
+          {/* 중간 페이지들 */}
+          {visiblePages.map((page) => (
+            <Button
+              key={page}
+              variant={page === currentPage ? 'primary' : 'outline'}
+              size="sm"
               onClick={() => onPageChange(page)}
+              disabled={isLoading}
               className={cn(
-                buttonVariants({
-                  variant: page === currentPage ? 'outline' : 'ghost',
-                  size: 'default',
-                }),
-                'h-9 w-9 p-0',
+                'min-w-[40px]',
+                page === currentPage &&
+                  'bg-primary-600 hover:bg-primary-700 text-white',
               )}
             >
               {page}
-            </button>
-          </li>
-        ))}
+            </Button>
+          ))}
 
-        {/* 다음 구간 버튼 */}
-        {hasNextGroup && (
-          <li>
-            <button
-              onClick={handleNextGroup}
-              className={cn(
-                buttonVariants({ variant: 'outline', size: 'default' }),
-                'gap-1 pr-2.5',
+          {/* 마지막 페이지 */}
+          {visiblePages[visiblePages.length - 1] < totalPages && (
+            <>
+              {visiblePages[visiblePages.length - 1] < totalPages - 1 && (
+                <div className="flex items-center">
+                  <MoreHorizontal className="h-4 w-4 text-neutral-400" />
+                </div>
               )}
-            >
-              <span>다음</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </li>
-        )}
-      </ul>
-    </nav>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(totalPages)}
+                disabled={isLoading}
+                className="min-w-[40px]"
+              >
+                {totalPages}
+              </Button>
+            </>
+          )}
+        </>
+      )}
+
+      {/* 다음 버튼 */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={!hasNext || isLoading || currentPage >= totalPages}
+        className="flex items-center space-x-1"
+      >
+        <span>다음</span>
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
   )
 }
 
-const Pagination = ({ className, ...props }: React.ComponentProps<'nav'>) => (
-  <nav
-    role="navigation"
-    aria-label="pagination"
-    className={cn('mx-auto flex w-full justify-center', className)}
-    {...props}
-  />
-)
-Pagination.displayName = 'Pagination'
+// 페이지 정보 표시 컴포넌트
+interface PaginationInfoProps {
+  currentPage: number
+  totalPages: number
+  totalElements: number
+  pageSize: number
+  className?: string
+}
 
-const PaginationContent = React.forwardRef<
-  HTMLUListElement,
-  React.ComponentProps<'ul'>
->(({ className, ...props }, ref) => (
-  <ul
-    ref={ref}
-    className={cn('flex flex-row items-center gap-1', className)}
-    {...props}
-  />
-))
-PaginationContent.displayName = 'PaginationContent'
-
-const PaginationItem = React.forwardRef<
-  HTMLLIElement,
-  React.ComponentProps<'li'>
->(({ className, ...props }, ref) => (
-  <li ref={ref} className={cn('', className)} {...props} />
-))
-PaginationItem.displayName = 'PaginationItem'
-
-type PaginationLinkProps = {
-  isActive?: boolean
-} & Pick<ButtonProps, 'size'> &
-  React.ComponentProps<'a'>
-
-const PaginationLink = ({
+export function PaginationInfo({
+  currentPage,
+  totalPages,
+  totalElements,
+  pageSize,
   className,
-  isActive,
-  size = 'icon',
-  ...props
-}: PaginationLinkProps) => (
-  <a
-    aria-current={isActive ? 'page' : undefined}
-    className={cn(
-      buttonVariants({
-        variant: isActive ? 'outline' : 'ghost',
-        size,
-      }),
-      className,
-    )}
-    {...props}
-  />
-)
-PaginationLink.displayName = 'PaginationLink'
+}: PaginationInfoProps) {
+  const startItem = (currentPage - 1) * pageSize + 1
+  const endItem = Math.min(currentPage * pageSize, totalElements)
 
-const PaginationPrevious = ({
+  return (
+    <div className={cn('text-sm text-neutral-600', className)}>
+      {totalElements > 0 ? (
+        <>
+          {startItem.toLocaleString()} - {endItem.toLocaleString()} /{' '}
+          {totalElements.toLocaleString()}개<span className="mx-2">•</span>
+          {currentPage} / {totalPages} 페이지
+        </>
+      ) : (
+        '데이터가 없습니다'
+      )}
+    </div>
+  )
+}
+
+// 페이지 크기 선택 컴포넌트
+interface PageSizeSelectorProps {
+  pageSize: number
+  onPageSizeChange: (size: number) => void
+  options?: number[]
+  className?: string
+}
+
+export function PageSizeSelector({
+  pageSize,
+  onPageSizeChange,
+  options = [10, 20, 50, 100],
   className,
-  ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
-  <PaginationLink
-    aria-label="Go to previous page"
-    size="default"
-    className={cn('gap-1 pl-2.5', className)}
-    {...props}
-  >
-    <ChevronLeft className="h-4 w-4" />
-    <span>Previous</span>
-  </PaginationLink>
-)
-PaginationPrevious.displayName = 'PaginationPrevious'
-
-const PaginationNext = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof PaginationLink>) => (
-  <PaginationLink
-    aria-label="Go to next page"
-    size="default"
-    className={cn('gap-1 pr-2.5', className)}
-    {...props}
-  >
-    <span>Next</span>
-    <ChevronRight className="h-4 w-4" />
-  </PaginationLink>
-)
-PaginationNext.displayName = 'PaginationNext'
-
-const PaginationEllipsis = ({
-  className,
-  ...props
-}: React.ComponentProps<'span'>) => (
-  <span
-    aria-hidden
-    className={cn('flex h-9 w-9 items-center justify-center', className)}
-    {...props}
-  >
-    <MoreHorizontal className="h-4 w-4" />
-    <span className="sr-only">More pages</span>
-  </span>
-)
-PaginationEllipsis.displayName = 'PaginationEllipsis'
-
-export {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
+}: PageSizeSelectorProps) {
+  return (
+    <div className={cn('flex items-center space-x-2', className)}>
+      <span className="text-sm text-neutral-600">페이지당</span>
+      <select
+        value={pageSize}
+        onChange={(e) => onPageSizeChange(Number(e.target.value))}
+        className="focus:border-primary-500 focus:ring-primary-500 rounded-md border border-neutral-300 bg-white px-3 py-1 text-sm focus:ring-1 focus:outline-none"
+      >
+        {options.map((size) => (
+          <option key={size} value={size}>
+            {size}개
+          </option>
+        ))}
+      </select>
+    </div>
+  )
 }

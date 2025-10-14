@@ -4,9 +4,15 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ErrorAlert } from '@/components/ui/error-alert'
+import {
+  PageSizeSelector,
+  Pagination,
+  PaginationInfo,
+} from '@/components/ui/pagination'
+import { usePagination } from '@/hooks/usePagination'
 import { notificationApi } from '@/lib/api'
 import { Bell, Check } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 interface Notification {
   id: number
@@ -27,39 +33,59 @@ export function NotificationsClient({
   onUnreadCountChange,
 }: NotificationsClientProps) {
   const [selectedType, setSelectedType] = useState('all')
-  const [notifications, setNotifications] =
-    useState<Notification[]>(initialNotifications)
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
 
-  // 알림 목록 로드
+  // API 호출 함수
+  const fetchNotifications = useCallback(
+    async ({ page, size }: { page: number; size: number }) => {
+      return await notificationApi.getNotifications({
+        page: page - 1, // API는 0-based 페이지네이션 사용
+        size,
+      })
+    },
+    [],
+  )
+
+  // 페이지네이션 훅 사용
+  const {
+    data: notifications,
+    currentPage,
+    pageSize,
+    totalPages,
+    totalElements,
+    hasNext,
+    hasPrevious,
+    isLoading,
+    error: paginationError,
+    goToPage,
+    setPageSize,
+    refresh,
+  } = usePagination(fetchNotifications, {
+    initialPageSize: 5,
+    autoLoad: !initialNotifications || initialNotifications.length === 0,
+    onError: setError,
+  })
+
+  // 초기 데이터가 있으면 설정
   useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        setIsLoading(true)
-        setError('')
-
-        const response = await notificationApi.getNotifications({
-          page: 0,
-          size: 50,
-        })
-
-        if (response.success) {
-          setNotifications(response.data?.content || [])
-        } else {
-          setError('알림을 불러오는데 실패했습니다.')
-        }
-      } catch (err) {
-        console.error('알림 로드 에러:', err)
-        setError('알림을 불러오는데 실패했습니다.')
-      } finally {
-        setIsLoading(false)
-      }
+    if (initialNotifications && initialNotifications.length > 0) {
+      // 초기 데이터를 페이지네이션 상태에 맞게 설정
+      // 이 경우는 서버사이드에서 데이터를 받아온 경우
     }
+  }, [initialNotifications])
 
-    loadNotifications()
-  }, [])
+  // 알림 데이터 변환 함수
+  const transformNotificationData = (
+    notificationsData: any[],
+  ): Notification[] => {
+    return notificationsData || []
+  }
+
+  // 변환된 알림 데이터
+  const transformedNotifications = notifications
+    ? transformNotificationData(notifications)
+    : initialNotifications || []
 
   // 읽지 않은 알림 개수 로드
   useEffect(() => {
@@ -82,13 +108,9 @@ export function NotificationsClient({
     try {
       const response = await notificationApi.markAsRead(notificationId)
       if (response.success) {
-        setNotifications((prev) =>
-          prev.map((notification) =>
-            notification.id === notificationId
-              ? { ...notification, isRead: true }
-              : notification,
-          ),
-        )
+        // 페이지 새로고침으로 최신 데이터 가져오기
+        refresh()
+
         const newCount = Math.max(0, unreadCount - 1)
         setUnreadCount(newCount)
         onUnreadCountChange?.(newCount)
@@ -110,9 +132,9 @@ export function NotificationsClient({
     try {
       const response = await notificationApi.markAllAsRead()
       if (response.success) {
-        setNotifications((prev) =>
-          prev.map((notification) => ({ ...notification, isRead: true })),
-        )
+        // 페이지 새로고침으로 최신 데이터 가져오기
+        refresh()
+
         setUnreadCount(0)
         onUnreadCountChange?.(0)
 
@@ -143,18 +165,21 @@ export function NotificationsClient({
     })
   }
 
-  const filteredNotifications = notifications.filter((notification) => {
-    if (selectedType === 'all') return true
-    if (selectedType === 'unread') return !notification.isRead
-    return false
-  })
+  const filteredNotifications = transformedNotifications.filter(
+    (notification) => {
+      if (selectedType === 'all') return true
+      if (selectedType === 'unread') return !notification.isRead
+      return false
+    },
+  )
 
   const stats = {
-    total: notifications.length,
+    total: totalElements || transformedNotifications.length,
     unread: unreadCount,
-    bid: notifications.filter((n) => n.type === 'bid').length,
-    payment: notifications.filter((n) => n.type === 'payment').length,
-    system: notifications.filter((n) => n.type === 'system').length,
+    bid: transformedNotifications.filter((n) => n.type === 'bid').length,
+    payment: transformedNotifications.filter((n) => n.type === 'payment')
+      .length,
+    system: transformedNotifications.filter((n) => n.type === 'system').length,
   }
 
   const typeTabs = [
@@ -165,11 +190,11 @@ export function NotificationsClient({
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* 에러 메시지 */}
-      {error && (
+      {(error || paginationError) && (
         <div className="mb-6">
           <ErrorAlert
             title="알림 로드 실패"
-            message={error}
+            message={error || paginationError || ''}
             onClose={() => setError('')}
           />
         </div>
@@ -246,62 +271,98 @@ export function NotificationsClient({
             </CardContent>
           </Card>
         ) : (
-          filteredNotifications.map((notification) => {
-            return (
-              <Card
-                key={notification.id}
-                variant="outlined"
-                className={
-                  !notification.isRead ? 'border-primary-200 bg-primary-50' : ''
-                }
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
-                        <Bell className="h-5 w-5 text-neutral-600" />
-                      </div>
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-2 flex items-center space-x-2">
-                        {!notification.isRead && (
-                          <Badge variant="warning">새 알림</Badge>
-                        )}
+          <>
+            {filteredNotifications.map((notification) => {
+              return (
+                <Card
+                  key={notification.id}
+                  variant="outlined"
+                  className={
+                    !notification.isRead
+                      ? 'border-primary-200 bg-primary-50'
+                      : ''
+                  }
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                          <Bell className="h-5 w-5 text-neutral-600" />
+                        </div>
                       </div>
 
-                      <h3 className="mb-2 text-lg font-semibold text-neutral-900">
-                        {notification.title}
-                      </h3>
-
-                      <p className="mb-3 text-sm text-neutral-600">
-                        {notification.message}
-                      </p>
-
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-neutral-500">
-                          {formatDate(notification.createdAt)}
-                        </span>
-
-                        <div className="flex space-x-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center space-x-2">
                           {!notification.isRead && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMarkAsRead(notification.id)}
-                            >
-                              <Check className="mr-1 h-3 w-3" />
-                              읽음
-                            </Button>
+                            <Badge variant="warning">새 알림</Badge>
                           )}
+                        </div>
+
+                        <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+                          {notification.title}
+                        </h3>
+
+                        <p className="mb-3 text-sm text-neutral-600">
+                          {notification.message}
+                        </p>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-neutral-500">
+                            {formatDate(notification.createdAt)}
+                          </span>
+
+                          <div className="flex space-x-2">
+                            {!notification.isRead && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handleMarkAsRead(notification.id)
+                                }
+                              >
+                                <Check className="mr-1 h-3 w-3" />
+                                읽음
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
+                  </CardContent>
+                </Card>
+              )
+            })}
+
+            {/* 페이지네이션 UI */}
+            <div className="mt-8 space-y-4">
+              {/* 페이지 정보 및 페이지 크기 선택 */}
+              <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
+                <PaginationInfo
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalElements={totalElements}
+                  pageSize={pageSize}
+                />
+                <PageSizeSelector
+                  pageSize={pageSize}
+                  onPageSizeChange={setPageSize}
+                  options={[5, 10, 20]}
+                />
+              </div>
+
+              {/* 페이지네이션 컨트롤 */}
+              {totalPages > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={goToPage}
+                  hasNext={hasNext}
+                  hasPrevious={hasPrevious}
+                  isLoading={isLoading}
+                />
+              )}
+            </div>
+          </>
         )}
       </div>
 

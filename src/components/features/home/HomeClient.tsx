@@ -4,13 +4,18 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  PageSizeSelector,
+  Pagination,
+  PaginationInfo,
+} from '@/components/ui/pagination'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePagination } from '@/hooks/usePagination'
 import { useWebSocketHome } from '@/hooks/useWebSocketHome'
 import { productApi } from '@/lib/api'
-import { Product } from '@/types'
 import { Clock, Filter, MapPin, Search, User, X, Zap } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 interface HomeStats {
   activeAuctions: number
@@ -96,8 +101,6 @@ export function HomeClient({ stats }: HomeClientProps) {
   const { isLoggedIn } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [products, setProducts] = useState<Product[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
   // WebSocket 실시간 홈 데이터 구독
@@ -115,126 +118,108 @@ export function HomeClient({ stats }: HomeClientProps) {
     status: 'BIDDING' as 'BIDDING' | 'FAILED' | 'BEFORE_START' | 'SUCCESSFUL',
   })
 
-  // 상품 목록 로드
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setIsLoading(true)
-        setError('')
+  // API 호출 함수
+  const fetchProducts = useCallback(
+    async ({ page, size }: { page: number; size: number }) => {
+      const selectedCategoryData = categories.find(
+        (cat) => cat.id === selectedCategory,
+      )
 
-        const selectedCategoryData = categories.find(
-          (cat) => cat.id === selectedCategory,
-        )
-
-        const requestParams = {
-          page: 1,
-          size: 20,
-          keyword: searchQuery.trim() || undefined,
-          category: selectedCategoryData?.apiId
-            ? [selectedCategoryData.apiId]
-            : undefined,
-          location: filters.location.length > 0 ? filters.location : undefined,
-          isDelivery: filters.isDelivery,
-          sort: filters.sort,
-          status: filters.status,
-        }
-
-        console.log('🔍 검색 파라미터:', requestParams)
-
-        // 검색어가 있으면 Elasticsearch 먼저 시도, 실패하면 일반 DB 조회
-        let response
-        if (searchQuery.trim()) {
-          console.log('🔍 Elasticsearch 검색 시도...')
-          try {
-            response = await productApi.searchProducts(requestParams)
-            console.log('🔍 Elasticsearch 응답:', response)
-
-            // ES 검색 결과가 비어있으면 일반 DB 검색으로 fallback
-            if (response.success && response.data?.content?.length === 0) {
-              console.log('🔍 ES 검색 결과 없음, 일반 DB 검색으로 fallback...')
-              response = await productApi.getProducts(requestParams)
-              console.log('🔍 일반 DB 검색 응답:', response)
-            }
-          } catch (error) {
-            console.log('🔍 ES 검색 실패, 일반 DB 검색으로 fallback...', error)
-            response = await productApi.getProducts(requestParams)
-            console.log('🔍 일반 DB 검색 응답:', response)
-          }
-        } else {
-          console.log('🔍 일반 DB 검색...')
-          response = await productApi.getProducts(requestParams)
-        }
-
-        console.log('🏠 홈페이지 상품 API 응답:', response)
-        console.log(
-          '🔍 최종 사용된 API:',
-          response?.data?.content?.length > 0 ? '검색 성공' : '검색 실패',
-        )
-
-        if (response.success && response.data) {
-          // API 응답 데이터 구조에 맞게 변환
-          let productsData = []
-          console.log('🔍 원본 response.data:', response.data)
-
-          if (Array.isArray(response.data)) {
-            productsData = response.data
-          } else if (
-            response.data.content &&
-            Array.isArray(response.data.content)
-          ) {
-            productsData = response.data.content
-          } else if (
-            response.data.products &&
-            Array.isArray(response.data.products)
-          ) {
-            productsData = response.data.products
-          }
-
-          const mappedProducts = productsData.map((product: any) => ({
-            productId: product.productId,
-            name: product.name,
-            description: product.description || '',
-            category: product.category,
-            initialPrice: product.initialPrice,
-            currentPrice: product.currentPrice,
-            auctionStartTime: product.auctionStartTime,
-            auctionEndTime:
-              product.auctionEndTime ||
-              new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            status: mapApiStatusToKorean(product.status || 'BIDDING'),
-            images: product.thumbnailUrl
-              ? [product.thumbnailUrl]
-              : product.images || [],
-            thumbnailUrl: product.thumbnailUrl,
-            seller: {
-              id: String(product.seller?.id),
-              nickname: product.seller?.nickname || '판매자',
-              profileImage: product.seller?.profileImage || null,
-              creditScore: product.seller?.creditScore || 0,
-              reviewCount: product.seller?.reviewCount || 0,
-            },
-            location: product.location || product.seller?.location || '서울',
-            createDate: product.createDate,
-            modifyDate: product.modifyDate,
-            bidderCount: product.bidderCount,
-            deliveryMethod: product.deliveryMethod,
-          }))
-
-          setProducts(mappedProducts)
-        } else {
-          console.log('❌ 홈페이지 상품 로드 실패:', response)
-          setError('상품을 불러오는데 실패했습니다.')
-        }
-      } catch (err) {
-        console.error('상품 로드 에러:', err)
-        setError('상품을 불러오는데 실패했습니다.')
-      } finally {
-        setIsLoading(false)
+      const requestParams = {
+        page,
+        size,
+        keyword: searchQuery.trim() || undefined,
+        category: selectedCategoryData?.apiId
+          ? [selectedCategoryData.apiId]
+          : undefined,
+        location: filters.location.length > 0 ? filters.location : undefined,
+        isDelivery: filters.isDelivery,
+        sort: filters.sort,
+        status: filters.status,
       }
-    }
 
-    loadProducts()
-  }, [searchQuery, selectedCategory, filters])
+      console.log('🔍 검색 파라미터:', requestParams)
+
+      // 검색어가 있으면 Elasticsearch 먼저 시도, 실패하면 일반 DB 조회
+      if (searchQuery.trim()) {
+        console.log('🔍 Elasticsearch 검색 시도...')
+        try {
+          const response = await productApi.searchProducts(requestParams)
+          console.log('🔍 Elasticsearch 응답:', response)
+
+          // ES 검색 결과가 비어있으면 일반 DB 검색으로 fallback
+          if (response.success && response.data?.content?.length === 0) {
+            console.log('🔍 ES 검색 결과 없음, 일반 DB 검색으로 fallback...')
+            return await productApi.getProducts(requestParams)
+          }
+          return response
+        } catch (error) {
+          console.log('🔍 ES 검색 실패, 일반 DB 검색으로 fallback...', error)
+          return await productApi.getProducts(requestParams)
+        }
+      } else {
+        console.log('🔍 일반 DB 검색...')
+        return await productApi.getProducts(requestParams)
+      }
+    },
+    [selectedCategory, searchQuery, filters],
+  )
+
+  // 페이지네이션 훅 사용
+  const {
+    data: products,
+    currentPage,
+    pageSize,
+    totalPages,
+    totalElements,
+    hasNext,
+    hasPrevious,
+    isLoading,
+    error: paginationError,
+    goToPage,
+    setPageSize,
+    refresh,
+  } = usePagination(fetchProducts, {
+    initialPageSize: 10,
+    autoLoad: true,
+    onError: setError,
+  })
+
+  // 상품 데이터 변환 함수
+  const transformProductData = (productsData: any[]): any[] => {
+    return productsData.map((product: any) => ({
+      productId: product.productId,
+      name: product.name,
+      description: product.description || '',
+      category: product.category,
+      initialPrice: product.initialPrice,
+      currentPrice: product.currentPrice,
+      auctionStartTime: product.auctionStartTime,
+      auctionEndTime:
+        product.auctionEndTime ||
+        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      status: mapApiStatusToKorean(product.status || 'BIDDING'),
+      images: product.thumbnailUrl
+        ? [product.thumbnailUrl]
+        : product.images || [],
+      thumbnailUrl: product.thumbnailUrl,
+      seller: {
+        id: String(product.seller?.id),
+        nickname: product.seller?.nickname || '판매자',
+        profileImage: product.seller?.profileImage || null,
+        creditScore: product.seller?.creditScore || 0,
+        reviewCount: product.seller?.reviewCount || 0,
+      },
+      location: product.location || product.seller?.location || '서울',
+      createDate: product.createDate,
+      modifyDate: product.modifyDate,
+      bidderCount: product.bidderCount,
+      deliveryMethod: product.deliveryMethod as 'TRADE' | 'DELIVERY' | 'BOTH',
+    }))
+  }
+
+  // 변환된 상품 데이터
+  const transformedProducts = products ? transformProductData(products) : []
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
@@ -602,7 +587,7 @@ export function HomeClient({ stats }: HomeClientProps) {
               </div>
             </CardContent>
           </Card>
-        ) : error ? (
+        ) : error || paginationError ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">
@@ -612,17 +597,14 @@ export function HomeClient({ stats }: HomeClientProps) {
                 <h3 className="mb-2 text-lg font-semibold text-neutral-900">
                   오류가 발생했습니다
                 </h3>
-                <p className="text-neutral-600">{error}</p>
-                <Button
-                  onClick={() => window.location.reload()}
-                  className="mt-4"
-                >
+                <p className="text-neutral-600">{error || paginationError}</p>
+                <Button onClick={refresh} className="mt-4">
                   다시 시도
                 </Button>
               </div>
             </CardContent>
           </Card>
-        ) : products.length === 0 ? (
+        ) : transformedProducts.length === 0 ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">
@@ -641,148 +623,180 @@ export function HomeClient({ stats }: HomeClientProps) {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-            {products.map((product, index) => (
-              <Card
-                key={product.productId}
-                variant="elevated"
-                hover
-                className="animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <CardContent className="p-6">
-                  <div className="flex flex-col space-y-4">
-                    {/* 상품 이미지와 카테고리 */}
-                    <div className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
-                      <div className="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-100 to-neutral-200 shadow-lg sm:h-36 sm:w-36">
-                        {product.thumbnailUrl || product.images?.[0] ? (
-                          <img
-                            src={
-                              product.thumbnailUrl ||
-                              (typeof product.images?.[0] === 'string'
-                                ? product.images[0]
-                                : product.images?.[0]?.imageUrl)
-                            }
-                            alt={product.name || '상품'}
-                            className="h-32 w-full rounded-2xl object-cover transition-transform duration-300 hover:scale-105 sm:h-36 sm:w-36"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full flex-col items-center justify-center">
-                            <div className="from-primary-200 to-secondary-200 mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br shadow-lg">
-                              <svg
-                                className="text-primary-600 h-8 w-8"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                />
-                              </svg>
+          <>
+            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {transformedProducts.map((product, index) => (
+                <Card
+                  key={product.productId}
+                  variant="elevated"
+                  hover
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex flex-col space-y-4">
+                      {/* 상품 이미지와 카테고리 */}
+                      <div className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+                        <div className="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-100 to-neutral-200 shadow-lg sm:h-36 sm:w-36">
+                          {product.thumbnailUrl || product.images?.[0] ? (
+                            <img
+                              src={
+                                product.thumbnailUrl ||
+                                (typeof product.images?.[0] === 'string'
+                                  ? product.images[0]
+                                  : product.images?.[0]?.imageUrl)
+                              }
+                              alt={product.name || '상품'}
+                              className="h-32 w-full rounded-2xl object-cover transition-transform duration-300 hover:scale-105 sm:h-36 sm:w-36"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full flex-col items-center justify-center">
+                              <div className="from-primary-200 to-secondary-200 mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br shadow-lg">
+                                <svg
+                                  className="text-primary-600 h-8 w-8"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                  />
+                                </svg>
+                              </div>
+                              <span className="text-sm font-medium text-neutral-500">
+                                이미지 준비중
+                              </span>
                             </div>
-                            <span className="text-sm font-medium text-neutral-500">
-                              이미지 준비중
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col space-y-2 sm:items-end">
-                        <Badge className="from-primary-500 to-primary-600 shadow-primary-500/25 w-fit bg-gradient-to-r text-white shadow-lg">
-                          {product.category}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* 상품 제목과 설명 */}
-                    <div>
-                      <h3 className="mb-2 line-clamp-1 text-xl font-bold text-neutral-900">
-                        {product.name}
-                      </h3>
-                      <p className="line-clamp-2 text-sm text-neutral-600">
-                        {product.description}
-                      </p>
-                    </div>
-
-                    {/* 가격 정보 */}
-                    <div className="from-primary-50 to-secondary-50 shadow-primary-500/10 rounded-2xl bg-gradient-to-br p-4 shadow-lg sm:p-6">
-                      <div className="grid grid-cols-2 gap-4 sm:gap-6">
-                        <div>
-                          <div className="mb-2 text-sm font-medium text-neutral-600">
-                            현재가
-                          </div>
-                          <div className="from-primary-600 to-primary-700 bg-gradient-to-r bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
-                            {formatPrice(product.currentPrice || 0)}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="mb-2 text-sm font-medium text-neutral-600">
-                            시작가
-                          </div>
-                          <div className="text-base font-semibold text-neutral-700 sm:text-lg">
-                            {formatPrice(product.initialPrice || 0)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 남은 시간, 판매자, 장소 */}
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="text-warning-500 h-4 w-4" />
-                        <span className="text-sm font-medium text-neutral-700">
-                          {formatTimeLeft(
-                            product.auctionEndTime ||
-                              new Date(
-                                Date.now() + 24 * 60 * 60 * 1000,
-                              ).toISOString(),
                           )}
-                        </span>
+                        </div>
+                        <div className="flex flex-col space-y-2 sm:items-end">
+                          <Badge className="from-primary-500 to-primary-600 shadow-primary-500/25 w-fit bg-gradient-to-r text-white shadow-lg">
+                            {product.category}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                        <div className="flex items-center space-x-1">
-                          <User className="text-primary-500 h-4 w-4" />
+
+                      {/* 상품 제목과 설명 */}
+                      <div>
+                        <h3 className="mb-2 line-clamp-1 text-xl font-bold text-neutral-900">
+                          {product.name}
+                        </h3>
+                        <p className="line-clamp-2 text-sm text-neutral-600">
+                          {product.description}
+                        </p>
+                      </div>
+
+                      {/* 가격 정보 */}
+                      <div className="from-primary-50 to-secondary-50 shadow-primary-500/10 rounded-2xl bg-gradient-to-br p-4 shadow-lg sm:p-6">
+                        <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                          <div>
+                            <div className="mb-2 text-sm font-medium text-neutral-600">
+                              현재가
+                            </div>
+                            <div className="from-primary-600 to-primary-700 bg-gradient-to-r bg-clip-text text-xl font-bold text-transparent sm:text-2xl">
+                              {formatPrice(product.currentPrice || 0)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-2 text-sm font-medium text-neutral-600">
+                              시작가
+                            </div>
+                            <div className="text-base font-semibold text-neutral-700 sm:text-lg">
+                              {formatPrice(product.initialPrice || 0)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 남은 시간, 판매자, 장소 */}
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <Clock className="text-warning-500 h-4 w-4" />
                           <span className="text-sm font-medium text-neutral-700">
-                            {product.seller?.nickname || '판매자'}
+                            {formatTimeLeft(
+                              product.auctionEndTime ||
+                                new Date(
+                                  Date.now() + 24 * 60 * 60 * 1000,
+                                ).toISOString(),
+                            )}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          {product.location ? (
-                            <>
-                              <MapPin className="h-4 w-4 text-neutral-400" />
-                              <span className="text-sm text-neutral-600">
-                                {product.location}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-sm text-neutral-600">
-                              배송만 가능
+                        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                          <div className="flex items-center space-x-1">
+                            <User className="text-primary-500 h-4 w-4" />
+                            <span className="text-sm font-medium text-neutral-700">
+                              {product.seller?.nickname || '판매자'}
                             </span>
-                          )}
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            {product.location ? (
+                              <>
+                                <MapPin className="h-4 w-4 text-neutral-400" />
+                                <span className="text-sm text-neutral-600">
+                                  {product.location}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-sm text-neutral-600">
+                                배송만 가능
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* 액션 버튼 */}
-                    <div className="flex space-x-3 pt-4">
-                      <Button
-                        size="md"
-                        variant="gradient"
-                        className="sm:size-lg flex-1"
-                        onClick={() =>
-                          router.push(`/products/${product.productId}`)
-                        }
-                      >
-                        상세보기
-                      </Button>
+                      {/* 액션 버튼 */}
+                      <div className="flex space-x-3 pt-4">
+                        <Button
+                          size="md"
+                          variant="gradient"
+                          className="sm:size-lg flex-1"
+                          onClick={() =>
+                            router.push(`/products/${product.productId}`)
+                          }
+                        >
+                          상세보기
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* 페이지네이션 UI */}
+            {totalPages > 1 && (
+              <div className="mt-8 space-y-4">
+                {/* 페이지 정보 및 페이지 크기 선택 */}
+                <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
+                  <PaginationInfo
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalElements={totalElements}
+                    pageSize={pageSize}
+                  />
+                  <PageSizeSelector
+                    pageSize={pageSize}
+                    onPageSizeChange={setPageSize}
+                    options={[10, 20, 50]}
+                  />
+                </div>
+
+                {/* 페이지네이션 컨트롤 */}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={goToPage}
+                  hasNext={hasNext}
+                  hasPrevious={hasPrevious}
+                  isLoading={isLoading}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
