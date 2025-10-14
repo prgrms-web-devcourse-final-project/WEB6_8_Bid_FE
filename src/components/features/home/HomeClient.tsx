@@ -15,7 +15,7 @@ import { useWebSocketHome } from '@/hooks/useWebSocketHome'
 import { productApi } from '@/lib/api'
 import { Clock, Filter, MapPin, Search, User, X, Zap } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 interface HomeStats {
   activeAuctions: number
@@ -179,11 +179,21 @@ export function HomeClient({ stats }: HomeClientProps) {
     goToPage,
     setPageSize,
     refresh,
+    reset,
   } = usePagination(fetchProducts, {
     initialPageSize: 10,
     autoLoad: true,
     onError: setError,
   })
+
+  // 검색어, 카테고리, 필터 변경 시 페이지 리셋 및 새로고침
+  useEffect(() => {
+    if (currentPage > 1) {
+      reset()
+    } else {
+      refresh()
+    }
+  }, [selectedCategory, searchQuery, filters, reset, refresh, currentPage])
 
   // 상품 데이터 변환 함수
   const transformProductData = (productsData: any[]): any[] => {
