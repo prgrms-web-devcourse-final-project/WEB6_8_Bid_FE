@@ -349,13 +349,13 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                     '새로운 상품을 등록해보세요'}
                   {selectedTab === '경매 중' && '새로운 상품을 등록해보세요'}
                   {selectedTab === '낙찰' && '상품을 판매해보세요'}
-                  {selectedTab === '유찰' && '다시 경매에 올려보세요'}
+                  {selectedTab === '유찰' && '상품을 판매해보세요'}
                 </p>
                 <Button onClick={() => router.push('/register-product')}>
                   {selectedTab === '경매 시작 전' && '+ 첫 상품 등록하기'}
                   {selectedTab === '경매 중' && '+ 첫 상품 등록하기'}
                   {selectedTab === '낙찰' && '+ 새 상품 등록하기'}
-                  {selectedTab === '유찰' && '+ 상품 재등록하기'}
+                  {selectedTab === '유찰' && '+ 상품 등록하기'}
                 </Button>
               </div>
             </CardContent>
