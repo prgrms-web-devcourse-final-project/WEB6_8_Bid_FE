@@ -8,26 +8,48 @@ import {
   Pagination,
   PaginationInfo,
 } from '@/components/ui/pagination'
-import { bidApi, cashApi } from '@/lib/api'
+import { bidApi, cashApi, paymentApi } from '@/lib/api'
 import { Bid } from '@/types'
-import { ExternalLink, StarIcon } from 'lucide-react'
+import { CreditCard, ExternalLink, Gavel, StarIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
 interface BidStatusClientProps {
   initialBids?: Bid[]
+  initialPagination?: {
+    currentPage: number
+    totalPages: number
+    totalElements: number
+    pageSize: number
+  }
 }
 
-export function BidStatusClient({ initialBids }: BidStatusClientProps) {
+type TabType = 'bids' | 'payments'
+
+export function BidStatusClient({
+  initialBids,
+  initialPagination,
+}: BidStatusClientProps) {
   const router = useRouter()
   const [apiError, setApiError] = useState('')
   const [payingBidId, setPayingBidId] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<TabType>('bids')
+
+  // 입찰 내역 상태
   const [bids, setBids] = useState<any[]>(initialBids || [])
   const [isLoading, setIsLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
+
+  // 결제 내역 상태
+  const [payments, setPayments] = useState<any[]>([])
+  const [isLoadingPayments, setIsLoadingPayments] = useState(false)
+  const [currentPaymentPage, setCurrentPaymentPage] = useState(1)
+  const [paymentPageSize, setPaymentPageSize] = useState(5)
+  const [paymentTotalPages, setPaymentTotalPages] = useState(0)
+  const [paymentTotalElements, setPaymentTotalElements] = useState(0)
 
   // 입찰 데이터 로드
   const loadBids = useCallback(async (page: number = 1, size: number = 5) => {
@@ -70,6 +92,8 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
         setCurrentPage(pageable.currentPage)
         setTotalPages(pageable.totalPages)
         setTotalElements(pageable.totalElements)
+        // API 응답의 pageSize 대신 요청한 size 사용 (사용자 선택 유지)
+        setPageSize(size)
       } else {
         setApiError(response.msg || '입찰 내역을 불러오는데 실패했습니다.')
       }
@@ -80,6 +104,47 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
       setIsLoading(false)
     }
   }, [])
+
+  // 결제 내역 로드
+  const loadPayments = useCallback(
+    async (page: number = 1, size: number = 5) => {
+      setIsLoadingPayments(true)
+      setApiError('')
+
+      try {
+        const response = await paymentApi.getMyPayments({
+          page: page - 1, // API는 0-based 페이지네이션 사용
+          size,
+        })
+
+        if (response.success && response.data) {
+          const {
+            content,
+            totalElements,
+            totalPages,
+            currentPage,
+            pageSize,
+            hasNext,
+          } = response.data
+
+          setPayments(content || [])
+          setCurrentPaymentPage(currentPage + 1) // 0-based를 1-based로 변환
+          setPaymentTotalPages(totalPages)
+          setPaymentTotalElements(totalElements)
+          // API 응답의 pageSize 대신 요청한 size 사용 (사용자 선택 유지)
+          setPaymentPageSize(size)
+        } else {
+          setApiError(response.msg || '결제 내역을 불러오는데 실패했습니다.')
+        }
+      } catch (error: any) {
+        console.error('결제 내역 로드 실패:', error)
+        setApiError('결제 내역을 불러오는데 실패했습니다.')
+      } finally {
+        setIsLoadingPayments(false)
+      }
+    },
+    [],
+  )
 
   // 초기 로드
   useEffect(() => {
@@ -94,32 +159,69 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
       }))
 
       setBids(transformedInitialBids)
-      setTotalElements(transformedInitialBids.length)
-      setTotalPages(1)
-      setCurrentPage(1)
-    }
-  }, [loadBids, pageSize, initialBids])
 
-  // 페이지 변경
+      // initialPagination이 있으면 사용, 없으면 기본값 설정
+      if (initialPagination) {
+        setCurrentPage(initialPagination.currentPage)
+        setTotalPages(initialPagination.totalPages)
+        setTotalElements(initialPagination.totalElements)
+        setPageSize(initialPagination.pageSize)
+      } else {
+        // fallback: 데이터 길이로 기본값 설정
+        setTotalElements(transformedInitialBids.length)
+        setTotalPages(1)
+        setCurrentPage(1)
+        setPageSize(transformedInitialBids.length)
+      }
+    }
+  }, [loadBids, initialBids, initialPagination])
+
+  // 탭 변경 핸들러
+  const handleTabChange = async (tab: TabType) => {
+    setActiveTab(tab)
+    setApiError('')
+
+    if (tab === 'payments' && payments.length === 0) {
+      await loadPayments(1, paymentPageSize)
+    }
+  }
+
+  // 입찰 내역 페이지네이션
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       loadBids(page, pageSize)
     }
   }
 
-  // 페이지 크기 변경
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
     loadBids(1, newSize)
   }
 
-  // 새로고침
   const refresh = () => {
     loadBids(currentPage, pageSize)
   }
 
+  // 결제 내역 페이지네이션
+  const goToPaymentPage = (page: number) => {
+    if (page >= 1 && page <= paymentTotalPages) {
+      loadPayments(page, paymentPageSize)
+    }
+  }
+
+  const handlePaymentPageSizeChange = (newSize: number) => {
+    setPaymentPageSize(newSize)
+    loadPayments(1, newSize)
+  }
+
+  const refreshPayments = () => {
+    loadPayments(currentPaymentPage, paymentPageSize)
+  }
+
   const hasNext = currentPage < totalPages
   const hasPrevious = currentPage > 1
+  const hasPaymentNext = currentPaymentPage < paymentTotalPages
+  const hasPaymentPrevious = currentPaymentPage > 1
 
   // 변환된 입찰 데이터
   const transformedBids = bids
@@ -235,8 +337,6 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
       const result = await bidApi.payBid(bidId)
 
       if (result.success) {
-        // 결제 성공 처리
-        console.log('결제 완료:', result.data)
         alert(
           `결제가 완료되었습니다!\n금액: ${result.data?.amount?.toLocaleString()}원\n잔액: ${result.data?.balanceAfter?.toLocaleString()}원\n\n거래내역을 확인하시겠습니까?`,
         )
@@ -322,52 +422,366 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-neutral-900">입찰 내역</h1>
         <p className="mt-2 text-neutral-600">
-          총 {totalElements || transformedBids.length}개의 입찰 내역이 있습니다
+          {activeTab === 'bids'
+            ? `총 ${totalElements || transformedBids.length}개의 입찰 내역이 있습니다`
+            : `총 ${paymentTotalElements || 0}개의 입찰 완료 내역이 있습니다`}
         </p>
       </div>
 
-      {/* 입찰 목록 */}
-      <div className="space-y-6">
-        {isLoading ? (
-          <Card variant="outlined" className="w-full">
-            <CardContent className="py-16 text-center">
-              <div className="mb-6">
-                <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
-                <h3 className="text-lg font-semibold text-neutral-900">
-                  입찰 내역을 불러오는 중...
-                </h3>
+      {/* 탭 네비게이션 */}
+      <div className="mb-8">
+        <div className="border-b border-neutral-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => handleTabChange('bids')}
+              className={`border-b-2 px-1 py-2 text-sm font-medium ${
+                activeTab === 'bids'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Gavel className="h-4 w-4" />
+                <span>입찰 내역</span>
+                <span className="ml-2 rounded-full bg-neutral-100 px-2 py-1 text-xs">
+                  {totalElements || transformedBids.length}
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        ) : transformedBids.length === 0 ? (
-          <Card variant="outlined" className="w-full">
-            <CardContent className="py-16 text-center">
-              <div className="mb-6">
-                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100">
-                  <span className="text-3xl">🎯</span>
-                </div>
-                <h3 className="mb-2 text-xl font-semibold text-neutral-900">
-                  입찰 내역이 없습니다
-                </h3>
-                <p className="mb-6 text-neutral-600">
-                  첫 번째 경매에 참여해보세요!
-                </p>
-                <div className="space-x-3">
-                  <Button onClick={() => router.push('/')} size="lg">
-                    경매 둘러보기
-                  </Button>
-                </div>
+            </button>
+            <button
+              onClick={() => handleTabChange('payments')}
+              className={`border-b-2 px-1 py-2 text-sm font-medium ${
+                activeTab === 'payments'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <CreditCard className="h-4 w-4" />
+                <span>입찰 완료 내역</span>
+                <span className="ml-2 rounded-full bg-neutral-100 px-2 py-1 text-xs">
+                  {paymentTotalElements}
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {transformedBids.map((bid: any) => {
-              const statusInfo = getStatusInfo(bid)
+            </button>
+          </nav>
+        </div>
+      </div>
 
-              return (
+      {/* 탭 내용 */}
+      {activeTab === 'bids' && (
+        <div className="space-y-6">
+          {isLoading ? (
+            <Card variant="outlined" className="w-full">
+              <CardContent className="py-16 text-center">
+                <div className="mb-6">
+                  <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
+                  <h3 className="text-lg font-semibold text-neutral-900">
+                    입찰 내역을 불러오는 중...
+                  </h3>
+                </div>
+              </CardContent>
+            </Card>
+          ) : transformedBids.length === 0 ? (
+            <Card variant="outlined" className="w-full">
+              <CardContent className="py-16 text-center">
+                <div className="mb-6">
+                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100">
+                    <span className="text-3xl">🎯</span>
+                  </div>
+                  <h3 className="mb-2 text-xl font-semibold text-neutral-900">
+                    입찰 내역이 없습니다
+                  </h3>
+                  <p className="mb-6 text-neutral-600">
+                    첫 번째 경매에 참여해보세요!
+                  </p>
+                  <div className="space-x-3">
+                    <Button onClick={() => router.push('/')} size="lg">
+                      경매 둘러보기
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {transformedBids.map((bid: any) => {
+                const statusInfo = getStatusInfo(bid)
+
+                return (
+                  <Card
+                    key={bid.bidId}
+                    variant="outlined"
+                    className="transition-shadow hover:shadow-lg"
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-start space-x-6">
+                        {/* 상품 이미지 */}
+                        <div className="flex-shrink-0">
+                          <div
+                            className="h-24 w-24 cursor-pointer rounded-lg bg-neutral-200 transition-transform hover:scale-105"
+                            onClick={() =>
+                              router.push(`/products/${bid.productId}`)
+                            }
+                            title="상품 상세보기"
+                          >
+                            {bid.thumbnailUrl ? (
+                              <img
+                                src={bid.thumbnailUrl}
+                                alt={bid.productName}
+                                className="h-24 w-24 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-neutral-200">
+                                <span className="text-neutral-400">📦</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 입찰 정보 */}
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex items-center space-x-2">
+                            <div
+                              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${statusInfo.bgColor} ${statusInfo.color}`}
+                            >
+                              <span className="mr-1">{statusInfo.icon}</span>
+                              {statusInfo.label}
+                            </div>
+                          </div>
+
+                          <h3
+                            className="mb-2 flex cursor-pointer items-center gap-2 text-lg font-semibold text-neutral-900 transition-colors hover:text-blue-600"
+                            onClick={() =>
+                              router.push(`/products/${bid.productId}`)
+                            }
+                            title="상품 상세보기"
+                          >
+                            {bid.productName}
+                            <ExternalLink className="h-4 w-4" />
+                          </h3>
+
+                          <div className="mb-3 grid grid-cols-1 gap-2 text-sm text-neutral-600 sm:grid-cols-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="w-20 text-neutral-500">
+                                내 입찰가:
+                              </span>
+                              <span className="text-primary-600 font-semibold">
+                                {formatPrice(bid.myBidPrice)}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="w-20 text-neutral-500">
+                                현재가:
+                              </span>
+                              <span>{formatPrice(bid.currentPrice)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="w-20 text-neutral-500">
+                                입찰 시간:
+                              </span>
+                              <span>{formatDate(bid.bidTime)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="w-20 text-neutral-500">
+                                종료 시간:
+                              </span>
+                              <span>{formatDate(bid.endTime)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 sm:col-span-2">
+                              <span className="w-20 text-neutral-500">
+                                상품 상태:
+                              </span>
+                              <span>{bid.productStatus}</span>
+                            </div>
+                          </div>
+
+                          {bid.isWinning &&
+                            bid.status === 'BIDDING' &&
+                            bid.productStatus !== '낙찰' && (
+                              <div className="bg-primary-50 mb-4 rounded-lg p-3">
+                                <div className="text-primary-900 mb-2 text-sm font-medium">
+                                  🏆 현재 최고가 입찰자입니다!
+                                </div>
+                                <p className="text-primary-700 text-sm">
+                                  경매 종료까지 기다려주세요.
+                                </p>
+                              </div>
+                            )}
+
+                          {(bid.productStatus === '낙찰' ||
+                            bid.status === 'SUCCESSFUL') &&
+                            !bid.paidAt && (
+                              <div className="mb-4 rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4">
+                                <div className="mb-2 text-sm font-bold text-yellow-900">
+                                  🎉 낙찰 성공! 결제를 진행해주세요
+                                </div>
+                                <p className="text-sm text-yellow-800">
+                                  {formatPrice(bid.myBidPrice)}을 결제하여
+                                  거래를 완료하세요.
+                                </p>
+                              </div>
+                            )}
+
+                          {(bid.productStatus === '낙찰' ||
+                            bid.status === 'SUCCESSFUL') &&
+                            bid.paidAt && (
+                              <div className="mb-4 rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+                                <div className="mb-2 text-sm font-bold text-blue-900">
+                                  ✅ 결제 완료!
+                                </div>
+                                <p className="text-sm text-blue-800">
+                                  결제가 완료되었습니다. 판매자와 연락하여
+                                  상품을 받아보세요.
+                                </p>
+                              </div>
+                            )}
+
+                          {/* 액션 버튼들 */}
+                          <div className="flex flex-wrap gap-2">
+                            {(bid.productStatus === '낙찰' ||
+                              bid.status === 'SUCCESSFUL') && (
+                              <>
+                                {canPayBid(bid) ? (
+                                  <Button
+                                    size="md"
+                                    onClick={() =>
+                                      completePaymentFlow(
+                                        bid.bidId,
+                                        bid.myBidPrice,
+                                      )
+                                    }
+                                    disabled={payingBidId === bid.bidId}
+                                    className="bg-green-600 font-bold text-white shadow-lg hover:bg-green-700"
+                                  >
+                                    {payingBidId === bid.bidId
+                                      ? '결제 중...'
+                                      : '💳 결제하기'}
+                                  </Button>
+                                ) : bid.paidAt ? (
+                                  <>
+                                    <Button
+                                      size="md"
+                                      variant="outline"
+                                      disabled
+                                      className="font-bold"
+                                    >
+                                      ✅ 결제 완료
+                                    </Button>
+                                    <Button
+                                      size="md"
+                                      onClick={() =>
+                                        router.push(
+                                          `/products/${bid.productId}?tab=reviews&action=write`,
+                                        )
+                                      }
+                                      className="bg-yellow-500 font-bold text-white hover:bg-yellow-600"
+                                    >
+                                      <StarIcon className="mr-1 h-4 w-4" />
+                                      리뷰 작성
+                                    </Button>
+                                  </>
+                                ) : null}
+                              </>
+                            )}
+                            {bid.status === 'BIDDING' &&
+                              bid.productStatus !== '낙찰' && (
+                                <>
+                                  <Button
+                                    size="md"
+                                    onClick={() =>
+                                      router.push(`/products/${bid.productId}`)
+                                    }
+                                  >
+                                    재입찰하기
+                                  </Button>
+                                </>
+                              )}
+                            {bid.status === 'FAILED' && (
+                              <>
+                                <Button size="sm">비슷한 상품 찾기</Button>
+                                <Button size="sm" variant="outline">
+                                  관심 상품 등록
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+
+              {/* 페이지네이션 UI */}
+              <div className="mt-8 space-y-4">
+                {/* 페이지 정보 및 페이지 크기 선택 */}
+                <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
+                  <PaginationInfo
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalElements={totalElements}
+                    pageSize={pageSize}
+                  />
+                  <PageSizeSelector
+                    pageSize={pageSize}
+                    onPageSizeChange={handlePageSizeChange}
+                    options={[5, 10, 20]}
+                  />
+                </div>
+
+                {/* 페이지네이션 컨트롤 */}
+                {totalPages > 0 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={goToPage}
+                    hasNext={hasNext}
+                    hasPrevious={hasPrevious}
+                    isLoading={isLoading}
+                  />
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 결제 내역 탭 */}
+      {activeTab === 'payments' && (
+        <div className="space-y-6">
+          {isLoadingPayments ? (
+            <Card variant="outlined" className="w-full">
+              <CardContent className="py-16 text-center">
+                <div className="mb-6">
+                  <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
+                  <h3 className="text-lg font-semibold text-neutral-900">
+                    결제 내역을 불러오는 중...
+                  </h3>
+                </div>
+              </CardContent>
+            </Card>
+          ) : payments.length === 0 ? (
+            <Card variant="outlined" className="w-full">
+              <CardContent className="py-16 text-center">
+                <div className="mb-6">
+                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100">
+                    <span className="text-3xl">💳</span>
+                  </div>
+                  <h3 className="mb-2 text-xl font-semibold text-neutral-900">
+                    입찰 완료 내역이 없습니다
+                  </h3>
+                  <p className="mb-6 text-neutral-600">
+                    낙찰된 상품을 결제해보세요.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {payments.map((payment: any) => (
                 <Card
-                  key={bid.bidId}
+                  key={payment.paymentId}
                   variant="outlined"
                   className="transition-shadow hover:shadow-lg"
                 >
@@ -378,14 +792,14 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                         <div
                           className="h-24 w-24 cursor-pointer rounded-lg bg-neutral-200 transition-transform hover:scale-105"
                           onClick={() =>
-                            router.push(`/products/${bid.productId}`)
+                            router.push(`/products/${payment.productId}`)
                           }
                           title="상품 상세보기"
                         >
-                          {bid.thumbnailUrl ? (
+                          {payment.thumbnailUrl ? (
                             <img
-                              src={bid.thumbnailUrl}
-                              alt={bid.productName}
+                              src={payment.thumbnailUrl}
+                              alt={payment.productName}
                               className="h-24 w-24 rounded-lg object-cover"
                             />
                           ) : (
@@ -396,212 +810,128 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                         </div>
                       </div>
 
-                      {/* 입찰 정보 */}
+                      {/* 결제 정보 */}
                       <div className="min-w-0 flex-1">
                         <div className="mb-2 flex items-center space-x-2">
-                          <div
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${statusInfo.bgColor} ${statusInfo.color}`}
-                          >
-                            <span className="mr-1">{statusInfo.icon}</span>
-                            {statusInfo.label}
+                          <div className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-600">
+                            <span className="mr-1">✅</span>
+                            결제 완료
                           </div>
                         </div>
 
                         <h3
                           className="mb-2 flex cursor-pointer items-center gap-2 text-lg font-semibold text-neutral-900 transition-colors hover:text-blue-600"
                           onClick={() =>
-                            router.push(`/products/${bid.productId}`)
+                            router.push(`/products/${payment.productId}`)
                           }
                           title="상품 상세보기"
                         >
-                          {bid.productName}
+                          {payment.productName}
                           <ExternalLink className="h-4 w-4" />
                         </h3>
 
                         <div className="mb-3 grid grid-cols-1 gap-2 text-sm text-neutral-600 sm:grid-cols-2">
                           <div className="flex items-center space-x-2">
                             <span className="w-20 text-neutral-500">
-                              내 입찰가:
+                              결제 금액:
                             </span>
-                            <span className="text-primary-600 font-semibold">
-                              {formatPrice(bid.myBidPrice)}
+                            <span className="font-semibold text-green-600">
+                              {formatPrice(payment.amount)}
                             </span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <span className="w-20 text-neutral-500">
-                              현재가:
+                              결제 시간:
                             </span>
-                            <span>{formatPrice(bid.currentPrice)}</span>
+                            <span>{formatDate(payment.paymentDate)}</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <span className="w-20 text-neutral-500">
-                              입찰 시간:
+                              판매자:
                             </span>
-                            <span>{formatDate(bid.bidTime)}</span>
+                            <span>{payment.seller?.nickname || '판매자'}</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <span className="w-20 text-neutral-500">
-                              종료 시간:
+                              결제 방법:
                             </span>
-                            <span>{formatDate(bid.endTime)}</span>
-                          </div>
-                          <div className="flex items-center space-x-2 sm:col-span-2">
-                            <span className="w-20 text-neutral-500">
-                              상품 상태:
-                            </span>
-                            <span>{bid.productStatus}</span>
+                            <span>{payment.paymentMethod || '현금'}</span>
                           </div>
                         </div>
 
-                        {bid.isWinning &&
-                          bid.status === 'BIDDING' &&
-                          bid.productStatus !== '낙찰' && (
-                            <div className="bg-primary-50 mb-4 rounded-lg p-3">
-                              <div className="text-primary-900 mb-2 text-sm font-medium">
-                                🏆 현재 최고가 입찰자입니다!
-                              </div>
-                              <p className="text-primary-700 text-sm">
-                                경매 종료까지 기다려주세요.
-                              </p>
-                            </div>
-                          )}
-
-                        {(bid.productStatus === '낙찰' ||
-                          bid.status === 'SUCCESSFUL') &&
-                          !bid.paidAt && (
-                            <div className="mb-4 rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4">
-                              <div className="mb-2 text-sm font-bold text-yellow-900">
-                                🎉 낙찰 성공! 결제를 진행해주세요
-                              </div>
-                              <p className="text-sm text-yellow-800">
-                                {formatPrice(bid.myBidPrice)}을 결제하여 거래를
-                                완료하세요.
-                              </p>
-                            </div>
-                          )}
-
-                        {(bid.productStatus === '낙찰' ||
-                          bid.status === 'SUCCESSFUL') &&
-                          bid.paidAt && (
-                            <div className="mb-4 rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
-                              <div className="mb-2 text-sm font-bold text-blue-900">
-                                ✅ 결제 완료!
-                              </div>
-                              <p className="text-sm text-blue-800">
-                                결제가 완료되었습니다. 판매자와 연락하여 상품을
-                                받아보세요.
-                              </p>
-                            </div>
-                          )}
+                        <div className="mb-4 rounded-lg border-2 border-green-200 bg-green-50 p-4">
+                          <div className="mb-2 text-sm font-bold text-green-900">
+                            ✅ 결제 완료!
+                          </div>
+                          <p className="text-sm text-green-800">
+                            결제가 완료되었습니다. 판매자와 연락하여 상품을
+                            받아보세요.
+                          </p>
+                        </div>
 
                         {/* 액션 버튼들 */}
                         <div className="flex flex-wrap gap-2">
-                          {(bid.productStatus === '낙찰' ||
-                            bid.status === 'SUCCESSFUL') && (
-                            <>
-                              {canPayBid(bid) ? (
-                                <Button
-                                  size="md"
-                                  onClick={() =>
-                                    completePaymentFlow(
-                                      bid.bidId,
-                                      bid.myBidPrice,
-                                    )
-                                  }
-                                  disabled={payingBidId === bid.bidId}
-                                  className="bg-green-600 font-bold text-white shadow-lg hover:bg-green-700"
-                                >
-                                  {payingBidId === bid.bidId
-                                    ? '결제 중...'
-                                    : '💳 결제하기'}
-                                </Button>
-                              ) : bid.paidAt ? (
-                                <>
-                                  <Button
-                                    size="md"
-                                    variant="outline"
-                                    disabled
-                                    className="font-bold"
-                                  >
-                                    ✅ 결제 완료
-                                  </Button>
-                                  <Button
-                                    size="md"
-                                    onClick={() =>
-                                      router.push(
-                                        `/products/${bid.productId}?tab=reviews&action=write`,
-                                      )
-                                    }
-                                    className="bg-yellow-500 font-bold text-white hover:bg-yellow-600"
-                                  >
-                                    <StarIcon className="mr-1 h-4 w-4" />
-                                    리뷰 작성
-                                  </Button>
-                                </>
-                              ) : null}
-                            </>
-                          )}
-                          {bid.status === 'BIDDING' &&
-                            bid.productStatus !== '낙찰' && (
-                              <>
-                                <Button
-                                  size="md"
-                                  onClick={() =>
-                                    router.push(`/products/${bid.productId}`)
-                                  }
-                                >
-                                  재입찰하기
-                                </Button>
-                              </>
-                            )}
-                          {bid.status === 'FAILED' && (
-                            <>
-                              <Button size="sm">비슷한 상품 찾기</Button>
-                              <Button size="sm" variant="outline">
-                                관심 상품 등록
-                              </Button>
-                            </>
-                          )}
+                          <Button
+                            size="md"
+                            onClick={() =>
+                              router.push(
+                                `/products/${payment.productId}?tab=reviews&action=write`,
+                              )
+                            }
+                            className="bg-yellow-500 font-bold text-white hover:bg-yellow-600"
+                          >
+                            <StarIcon className="mr-1 h-4 w-4" />
+                            리뷰 작성
+                          </Button>
+                          <Button
+                            size="md"
+                            variant="outline"
+                            onClick={() =>
+                              router.push(`/products/${payment.productId}`)
+                            }
+                          >
+                            상품 상세보기
+                          </Button>
                         </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              )
-            })}
+              ))}
 
-            {/* 페이지네이션 UI */}
-            <div className="mt-8 space-y-4">
-              {/* 페이지 정보 및 페이지 크기 선택 */}
-              <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
-                <PaginationInfo
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalElements={totalElements}
-                  pageSize={pageSize}
-                />
-                <PageSizeSelector
-                  pageSize={pageSize}
-                  onPageSizeChange={handlePageSizeChange}
-                  options={[5, 10, 20]}
-                />
+              {/* 결제 내역 페이지네이션 UI */}
+              <div className="mt-8 space-y-4">
+                {/* 페이지 정보 및 페이지 크기 선택 */}
+                <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
+                  <PaginationInfo
+                    currentPage={currentPaymentPage}
+                    totalPages={paymentTotalPages}
+                    totalElements={paymentTotalElements}
+                    pageSize={paymentPageSize}
+                  />
+                  <PageSizeSelector
+                    pageSize={paymentPageSize}
+                    onPageSizeChange={handlePaymentPageSizeChange}
+                    options={[5, 10, 20]}
+                  />
+                </div>
+
+                {/* 페이지네이션 컨트롤 */}
+                {paymentTotalPages > 0 && (
+                  <Pagination
+                    currentPage={currentPaymentPage}
+                    totalPages={paymentTotalPages}
+                    onPageChange={goToPaymentPage}
+                    hasNext={hasPaymentNext}
+                    hasPrevious={hasPaymentPrevious}
+                    isLoading={isLoadingPayments}
+                  />
+                )}
               </div>
-
-              {/* 페이지네이션 컨트롤 */}
-              {totalPages > 0 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={goToPage}
-                  hasNext={hasNext}
-                  hasPrevious={hasPrevious}
-                  isLoading={isLoading}
-                />
-              )}
-            </div>
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
