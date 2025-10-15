@@ -252,10 +252,10 @@ export function BidStatusClient({
         }
       } else {
         return {
-          label: '낙찰 실패',
+          label: '경매 실패',
           color: 'text-gray-600',
           bgColor: 'bg-gray-50',
-          icon: '❌',
+          icon: '😔',
         }
       }
     } else if (
@@ -281,14 +281,14 @@ export function BidStatusClient({
         label: '유찰',
         color: 'text-gray-600',
         bgColor: 'bg-gray-50',
-        icon: '❌',
+        icon: '😢',
       }
     } else if (bid.status === 'CANCELLED') {
       return {
         label: '취소됨',
         color: 'text-red-600',
         bgColor: 'bg-red-50',
-        icon: '🚫',
+        icon: '❌',
       }
     } else {
       return {
