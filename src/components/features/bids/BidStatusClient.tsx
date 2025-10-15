@@ -243,7 +243,7 @@ export function BidStatusClient({
 
   const getStatusInfo = (bid: any) => {
     if (bid.productStatus === '낙찰') {
-      if (bid.status === 'SUCCESSFUL') {
+      if (bid.isWinning === true) {
         return {
           label: bid.paidAt ? '결제 완료' : '낙찰 성공',
           color: bid.paidAt ? 'text-blue-600' : 'text-green-600',
@@ -276,12 +276,19 @@ export function BidStatusClient({
         bgColor: 'bg-blue-50',
         icon: '⏳',
       }
-    } else if (bid.status === 'FAILED') {
+    } else if (bid.status === 'LOSING') {
       return {
         label: '유찰',
         color: 'text-gray-600',
         bgColor: 'bg-gray-50',
         icon: '❌',
+      }
+    } else if (bid.status === 'CANCELLED') {
+      return {
+        label: '취소됨',
+        color: 'text-red-600',
+        bgColor: 'bg-red-50',
+        icon: '🚫',
       }
     } else {
       return {
@@ -297,7 +304,7 @@ export function BidStatusClient({
   const canPayBid = (bid: any) => {
     return (
       bid.productStatus === '낙찰' && // 상품이 낙찰 상태
-      bid.status === 'SUCCESSFUL' && // 내 입찰이 성공 상태
+      bid.isWinning === true && // 내가 낙찰한 경우
       !bid.paidAt // 아직 결제 안함
     )
   }
@@ -619,7 +626,7 @@ export function BidStatusClient({
                             )}
 
                           {bid.productStatus === '낙찰' &&
-                            bid.status === 'SUCCESSFUL' &&
+                            bid.isWinning === true &&
                             !bid.paidAt && (
                               <div className="mb-4 rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4">
                                 <div className="mb-2 text-sm font-bold text-yellow-900">
@@ -633,7 +640,7 @@ export function BidStatusClient({
                             )}
 
                           {bid.productStatus === '낙찰' &&
-                            bid.status === 'SUCCESSFUL' &&
+                            bid.isWinning === true &&
                             bid.paidAt && (
                               <div className="mb-4 rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
                                 <div className="mb-2 text-sm font-bold text-blue-900">
@@ -666,7 +673,7 @@ export function BidStatusClient({
                                       ? '결제 중...'
                                       : '💳 결제하기'}
                                   </Button>
-                                ) : bid.paidAt ? (
+                                ) : bid.isWinning === true && bid.paidAt ? (
                                   <>
                                     <Button
                                       size="md"
@@ -705,7 +712,7 @@ export function BidStatusClient({
                                   </Button>
                                 </>
                               )}
-                            {bid.status === 'FAILED' && (
+                            {bid.status === 'LOSING' && (
                               <>
                                 <Button size="sm">비슷한 상품 찾기</Button>
                                 <Button size="sm" variant="outline">
