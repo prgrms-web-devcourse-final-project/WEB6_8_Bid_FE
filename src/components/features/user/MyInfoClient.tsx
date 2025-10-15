@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import { authApi } from '@/lib/api'
-import { Edit } from 'lucide-react'
+import { AlertTriangle, Edit, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -26,9 +26,11 @@ interface MyInfoClientProps {
 
 export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
   const router = useRouter()
-  const { user: authUser, updateUser } = useAuth()
+  const { user: authUser, updateUser, logout } = useAuth()
   const [userInfo, setUserInfo] = useState(propUser || authUser)
   const [isLoading, setIsLoading] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // 디버깅용 로그 (필요시 주석 해제)
   // console.log('🔍 MyInfoClient 데이터 확인:', {
@@ -61,6 +63,29 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
       refreshUserInfo()
     }
   }, [])
+
+  // 회원탈퇴 처리
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true)
+    try {
+      const response = await authApi.deleteProfile()
+      if (response.success) {
+        // 로그아웃 처리
+        await logout()
+        // 메인 페이지로 리다이렉트
+        router.push('/')
+        alert('회원탈퇴가 완료되었습니다.')
+      } else {
+        alert('회원탈퇴에 실패했습니다. 다시 시도해주세요.')
+      }
+    } catch (error) {
+      console.error('회원탈퇴 실패:', error)
+      alert('회원탈퇴 중 오류가 발생했습니다. 다시 시도해주세요.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
 
   // 실제 사용자 데이터에서 통계 계산 (현재는 0으로 표시, 추후 API 연동)
   const stats = {
@@ -172,13 +197,21 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
           </div>
 
           {/* 수정 버튼 */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 space-y-3">
             <Button
               className="border-white/30 bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"
               onClick={() => router.push('/my-info/edit')}
             >
               <Edit className="mr-2 h-4 w-4" />
               프로필 수정
+            </Button>
+            <Button
+              variant="outline"
+              className="border-red-300/50 bg-red-500/20 text-red-100 backdrop-blur-sm hover:bg-red-500/30"
+              onClick={() => setShowDeleteModal(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              회원탈퇴
             </Button>
           </div>
         </div>
@@ -252,6 +285,71 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* 회원탈퇴 확인 모달 */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-6 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="mb-2 text-xl font-semibold text-neutral-900">
+                회원탈퇴 확인
+              </h3>
+              <p className="text-sm text-neutral-600">
+                정말로 회원탈퇴를 진행하시겠습니까?
+                <br />
+                <span className="font-medium text-red-600">
+                  이 작업은 되돌릴 수 없습니다.
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-lg bg-red-50 p-4">
+                <h4 className="mb-2 text-sm font-medium text-red-800">
+                  회원탈퇴 시 주의사항
+                </h4>
+                <ul className="space-y-1 text-xs text-red-700">
+                  <li>• 모든 입찰 내역이 삭제됩니다</li>
+                  <li>• 등록한 상품이 모두 삭제됩니다</li>
+                  <li>• 작성한 리뷰가 모두 삭제됩니다</li>
+                  <li>• 계정 복구가 불가능합니다</li>
+                </ul>
+              </div>
+
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={isDeleting}
+                >
+                  취소
+                </Button>
+                <Button
+                  className="flex-1 bg-red-600 text-white hover:bg-red-700"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      처리중...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      탈퇴하기
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
