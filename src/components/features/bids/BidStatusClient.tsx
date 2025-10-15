@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/pagination'
 import { bidApi, cashApi } from '@/lib/api'
 import { Bid } from '@/types'
+import { ExternalLink, StarIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -374,7 +375,13 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                     <div className="flex items-start space-x-6">
                       {/* 상품 이미지 */}
                       <div className="flex-shrink-0">
-                        <div className="h-24 w-24 rounded-lg bg-neutral-200">
+                        <div
+                          className="h-24 w-24 cursor-pointer rounded-lg bg-neutral-200 transition-transform hover:scale-105"
+                          onClick={() =>
+                            router.push(`/products/${bid.productId}`)
+                          }
+                          title="상품 상세보기"
+                        >
                           {bid.thumbnailUrl ? (
                             <img
                               src={bid.thumbnailUrl}
@@ -400,8 +407,15 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                           </div>
                         </div>
 
-                        <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+                        <h3
+                          className="mb-2 flex cursor-pointer items-center gap-2 text-lg font-semibold text-neutral-900 transition-colors hover:text-blue-600"
+                          onClick={() =>
+                            router.push(`/products/${bid.productId}`)
+                          }
+                          title="상품 상세보기"
+                        >
                           {bid.productName}
+                          <ExternalLink className="h-4 w-4" />
                         </h3>
 
                         <div className="mb-3 grid grid-cols-1 gap-2 text-sm text-neutral-600 sm:grid-cols-2">
@@ -502,14 +516,28 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                                     : '💳 결제하기'}
                                 </Button>
                               ) : bid.paidAt ? (
-                                <Button
-                                  size="md"
-                                  variant="outline"
-                                  disabled
-                                  className="font-bold"
-                                >
-                                  ✅ 결제 완료
-                                </Button>
+                                <>
+                                  <Button
+                                    size="md"
+                                    variant="outline"
+                                    disabled
+                                    className="font-bold"
+                                  >
+                                    ✅ 결제 완료
+                                  </Button>
+                                  <Button
+                                    size="md"
+                                    onClick={() =>
+                                      router.push(
+                                        `/products/${bid.productId}?tab=reviews&action=write`,
+                                      )
+                                    }
+                                    className="bg-yellow-500 font-bold text-white hover:bg-yellow-600"
+                                  >
+                                    <StarIcon className="mr-1 h-4 w-4" />
+                                    리뷰 작성
+                                  </Button>
+                                </>
                               ) : null}
                             </>
                           )}
