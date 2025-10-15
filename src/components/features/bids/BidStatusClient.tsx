@@ -772,10 +772,10 @@ export function BidStatusClient({
                   <span className="text-3xl">🚧</span>
                 </div>
                 <h3 className="mb-2 text-xl font-semibold text-neutral-900">
-                  입찰완료내역 기능 준비 중
+                  준비 중
                 </h3>
                 <p className="mb-6 text-neutral-600">
-                  입찰완료내역 기능을 준비하고 있습니다.
+                  열심히 개발중입니다.
                   <br />곧 만나보실 수 있습니다!
                 </p>
               </div>
