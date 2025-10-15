@@ -242,12 +242,21 @@ export function BidStatusClient({
   }
 
   const getStatusInfo = (bid: any) => {
-    if (bid.productStatus === '낙찰' || bid.status === 'SUCCESSFUL') {
-      return {
-        label: bid.paidAt ? '결제 완료' : '낙찰',
-        color: bid.paidAt ? 'text-blue-600' : 'text-green-600',
-        bgColor: bid.paidAt ? 'bg-blue-50' : 'bg-green-50',
-        icon: bid.paidAt ? '✅' : '🎉',
+    if (bid.productStatus === '낙찰') {
+      if (bid.status === 'SUCCESSFUL') {
+        return {
+          label: bid.paidAt ? '결제 완료' : '낙찰 성공',
+          color: bid.paidAt ? 'text-blue-600' : 'text-green-600',
+          bgColor: bid.paidAt ? 'bg-blue-50' : 'bg-green-50',
+          icon: bid.paidAt ? '✅' : '🎉',
+        }
+      } else {
+        return {
+          label: '낙찰 (타인)',
+          color: 'text-gray-600',
+          bgColor: 'bg-gray-50',
+          icon: '❌',
+        }
       }
     } else if (
       bid.isWinning &&
@@ -287,7 +296,8 @@ export function BidStatusClient({
   // 결제 가능 여부 확인
   const canPayBid = (bid: any) => {
     return (
-      (bid.productStatus === '낙찰' || bid.status === 'SUCCESSFUL') && // 낙찰 상태
+      bid.productStatus === '낙찰' && // 상품이 낙찰 상태
+      bid.status === 'SUCCESSFUL' && // 내 입찰이 성공 상태
       !bid.paidAt // 아직 결제 안함
     )
   }
@@ -608,8 +618,8 @@ export function BidStatusClient({
                               </div>
                             )}
 
-                          {(bid.productStatus === '낙찰' ||
-                            bid.status === 'SUCCESSFUL') &&
+                          {bid.productStatus === '낙찰' &&
+                            bid.status === 'SUCCESSFUL' &&
                             !bid.paidAt && (
                               <div className="mb-4 rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4">
                                 <div className="mb-2 text-sm font-bold text-yellow-900">
@@ -622,8 +632,8 @@ export function BidStatusClient({
                               </div>
                             )}
 
-                          {(bid.productStatus === '낙찰' ||
-                            bid.status === 'SUCCESSFUL') &&
+                          {bid.productStatus === '낙찰' &&
+                            bid.status === 'SUCCESSFUL' &&
                             bid.paidAt && (
                               <div className="mb-4 rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
                                 <div className="mb-2 text-sm font-bold text-blue-900">
@@ -638,8 +648,7 @@ export function BidStatusClient({
 
                           {/* 액션 버튼들 */}
                           <div className="flex flex-wrap gap-2">
-                            {(bid.productStatus === '낙찰' ||
-                              bid.status === 'SUCCESSFUL') && (
+                            {bid.productStatus === '낙찰' && (
                               <>
                                 {canPayBid(bid) ? (
                                   <Button
