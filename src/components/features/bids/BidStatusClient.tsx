@@ -8,7 +8,6 @@ import {
   Pagination,
   PaginationInfo,
 } from '@/components/ui/pagination'
-import { usePagination } from '@/hooks/usePagination'
 import { bidApi, cashApi } from '@/lib/api'
 import { Bid } from '@/types'
 import { useRouter } from 'next/navigation'
@@ -22,55 +21,107 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
   const router = useRouter()
   const [apiError, setApiError] = useState('')
   const [payingBidId, setPayingBidId] = useState<number | null>(null)
+  const [bids, setBids] = useState<any[]>(initialBids || [])
+  const [isLoading, setIsLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalElements, setTotalElements] = useState(0)
 
-  // API 호출 함수
-  const fetchBids = useCallback(
-    async ({ page, size }: { page: number; size: number }) => {
+  // 입찰 데이터 로드
+  const loadBids = useCallback(async (page: number = 1, size: number = 5) => {
+    setIsLoading(true)
+    setApiError('')
+
+    try {
       const response = await bidApi.getMyBids({
         page: page - 1, // API는 0-based 페이지네이션 사용
         size,
       })
 
-      return response
-    },
-    [],
-  )
+      if (response.success && response.data) {
+        // 입찰 API는 MyBidResponseDto 구조로 고정됨
+        const {
+          content,
+          totalElements,
+          totalPages,
+          currentPage,
+          pageSize,
+          hasNext,
+        } = response.data
 
-  // 페이지네이션 훅 사용
-  const {
-    data: bids,
-    currentPage,
-    pageSize,
-    totalPages,
-    totalElements,
-    hasNext,
-    hasPrevious,
-    isLoading,
-    error: paginationError,
-    goToPage,
-    setPageSize,
-    refresh,
-  } = usePagination(fetchBids, {
-    initialPageSize: 5,
-    autoLoad: !initialBids || initialBids.length === 0,
-    onError: setApiError,
-  })
+        // API 응답의 Seller 필드를 seller로 변환
+        const bidsData = (content || []).map((bid: any) => ({
+          ...bid,
+          seller: bid.Seller || bid.seller, // 대문자 Seller를 소문자 seller로 변환
+        }))
 
-  // 초기 데이터가 있으면 설정
-  useEffect(() => {
-    if (initialBids && initialBids.length > 0) {
-      // 초기 데이터를 페이지네이션 상태에 맞게 설정
-      // 이 경우는 서버사이드에서 데이터를 받아온 경우
+        const pageable = {
+          currentPage: currentPage + 1, // 0-based를 1-based로 변환
+          pageSize: pageSize,
+          totalPages: totalPages,
+          totalElements: totalElements,
+          hasNext: hasNext,
+          hasPrevious: currentPage > 0,
+        }
+
+        setBids(bidsData)
+        setCurrentPage(pageable.currentPage)
+        setTotalPages(pageable.totalPages)
+        setTotalElements(pageable.totalElements)
+      } else {
+        setApiError(response.msg || '입찰 내역을 불러오는데 실패했습니다.')
+      }
+    } catch (error: any) {
+      console.error('입찰 내역 로드 실패:', error)
+      setApiError('입찰 내역을 불러오는데 실패했습니다.')
+    } finally {
+      setIsLoading(false)
     }
-  }, [initialBids])
+  }, [])
 
-  // 입찰 데이터 변환 함수
-  const transformBidData = (bidsData: any[]): any[] => {
-    return bidsData || []
+  // 초기 로드
+  useEffect(() => {
+    if (!initialBids || initialBids.length === 0) {
+      loadBids(1, pageSize)
+    } else {
+      // initialBids가 있을 때도 페이지네이션 정보 설정
+      // initialBids도 Seller 필드 변환
+      const transformedInitialBids = initialBids.map((bid: any) => ({
+        ...bid,
+        seller: bid.Seller || bid.seller, // 대문자 Seller를 소문자 seller로 변환
+      }))
+
+      setBids(transformedInitialBids)
+      setTotalElements(transformedInitialBids.length)
+      setTotalPages(1)
+      setCurrentPage(1)
+    }
+  }, [loadBids, pageSize, initialBids])
+
+  // 페이지 변경
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      loadBids(page, pageSize)
+    }
   }
 
+  // 페이지 크기 변경
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    loadBids(1, newSize)
+  }
+
+  // 새로고침
+  const refresh = () => {
+    loadBids(currentPage, pageSize)
+  }
+
+  const hasNext = currentPage < totalPages
+  const hasPrevious = currentPage > 1
+
   // 변환된 입찰 데이터
-  const transformedBids = bids ? transformBidData(bids) : initialBids || []
+  const transformedBids = bids
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
@@ -258,10 +309,10 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
       {/* API 에러 메시지 */}
-      {(apiError || paginationError) && (
+      {apiError && (
         <ErrorAlert
           title="오류"
-          message={apiError || paginationError || ''}
+          message={apiError}
           onClose={() => setApiError('')}
         />
       )}
@@ -503,7 +554,7 @@ export function BidStatusClient({ initialBids }: BidStatusClientProps) {
                 />
                 <PageSizeSelector
                   pageSize={pageSize}
-                  onPageSizeChange={setPageSize}
+                  onPageSizeChange={handlePageSizeChange}
                   options={[5, 10, 20]}
                 />
               </div>
