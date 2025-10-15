@@ -207,7 +207,7 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
             </Button>
             <Button
               variant="outline"
-              className="border-red-300/50 bg-red-500/20 text-red-100 backdrop-blur-sm hover:bg-red-500/30"
+              className="border-red-300/50 bg-red-500/20 pr-2 text-red-100 backdrop-blur-sm hover:bg-red-500/30"
               onClick={() => setShowDeleteModal(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />

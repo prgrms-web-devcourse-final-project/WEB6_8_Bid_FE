@@ -206,6 +206,10 @@ export function LoginClient() {
               error.response.data?.msg ||
               '이메일 또는 비밀번호가 올바르지 않습니다.'
             setApiError(errorMessage)
+          } else if (error.response?.status === 404) {
+            const errorMessage =
+              error.response.data?.msg || '존재하지 않는 이메일입니다.'
+            setApiError(errorMessage)
           } else {
             setApiError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
           }
