@@ -288,7 +288,6 @@ export function BidStatusClient({
   const canPayBid = (bid: any) => {
     return (
       (bid.productStatus === '낙찰' || bid.status === 'SUCCESSFUL') && // 낙찰 상태
-      bid.isWinning === true && // 최고가 입찰
       !bid.paidAt // 아직 결제 안함
     )
   }
