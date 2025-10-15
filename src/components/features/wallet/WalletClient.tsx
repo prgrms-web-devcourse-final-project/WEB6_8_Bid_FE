@@ -1954,7 +1954,7 @@ export function WalletClient() {
                       {selectedTransaction?.type === 'DEPOSIT' ||
                       selectedTransaction?.type === 'REFUND'
                         ? '+'
-                        : '-'}
+                        : ''}
                       {selectedTransaction &&
                         formatPrice(selectedTransaction.amount)}
                     </p>
