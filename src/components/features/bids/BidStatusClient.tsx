@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/pagination'
 import { bidApi, cashApi, paymentApi } from '@/lib/api'
 import { Bid } from '@/types'
-import { CreditCard, ExternalLink, Gavel, StarIcon } from 'lucide-react'
+import { ExternalLink, StarIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -252,7 +252,7 @@ export function BidStatusClient({
         }
       } else {
         return {
-          label: '낙찰 (타인)',
+          label: '낙찰 실패',
           color: 'text-gray-600',
           bgColor: 'bg-gray-50',
           icon: '❌',
@@ -457,7 +457,7 @@ export function BidStatusClient({
               }`}
             >
               <div className="flex items-center space-x-2">
-                <Gavel className="h-4 w-4" />
+                <span>🎯</span>
                 <span>입찰 내역</span>
                 <span className="ml-2 rounded-full bg-neutral-100 px-2 py-1 text-xs">
                   {totalElements || transformedBids.length}
@@ -473,7 +473,7 @@ export function BidStatusClient({
               }`}
             >
               <div className="flex items-center space-x-2">
-                <CreditCard className="h-4 w-4" />
+                <span>💳</span>
                 <span>입찰 완료 내역</span>
                 <span className="ml-2 rounded-full bg-neutral-100 px-2 py-1 text-xs">
                   {paymentTotalElements}
@@ -762,189 +762,25 @@ export function BidStatusClient({
         </div>
       )}
 
-      {/* 결제 내역 탭 */}
+      {/* 결제 내역 탭 - 임시 비활성화 */}
       {activeTab === 'payments' && (
         <div className="space-y-6">
-          {isLoadingPayments ? (
-            <Card variant="outlined" className="w-full">
-              <CardContent className="py-16 text-center">
-                <div className="mb-6">
-                  <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
-                  <h3 className="text-lg font-semibold text-neutral-900">
-                    결제 내역을 불러오는 중...
-                  </h3>
+          <Card variant="outlined" className="w-full">
+            <CardContent className="py-16 text-center">
+              <div className="mb-6">
+                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100">
+                  <span className="text-3xl">🚧</span>
                 </div>
-              </CardContent>
-            </Card>
-          ) : payments.length === 0 ? (
-            <Card variant="outlined" className="w-full">
-              <CardContent className="py-16 text-center">
-                <div className="mb-6">
-                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100">
-                    <span className="text-3xl">💳</span>
-                  </div>
-                  <h3 className="mb-2 text-xl font-semibold text-neutral-900">
-                    입찰 완료 내역이 없습니다
-                  </h3>
-                  <p className="mb-6 text-neutral-600">
-                    낙찰된 상품을 결제해보세요.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {payments.map((payment: any) => (
-                <Card
-                  key={payment.paymentId}
-                  variant="outlined"
-                  className="transition-shadow hover:shadow-lg"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start space-x-6">
-                      {/* 상품 이미지 */}
-                      <div className="flex-shrink-0">
-                        <div
-                          className="h-24 w-24 cursor-pointer rounded-lg bg-neutral-200 transition-transform hover:scale-105"
-                          onClick={() =>
-                            router.push(`/products/${payment.productId}`)
-                          }
-                          title="상품 상세보기"
-                        >
-                          {payment.thumbnailUrl ? (
-                            <img
-                              src={payment.thumbnailUrl}
-                              alt={payment.productName}
-                              className="h-24 w-24 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-neutral-200">
-                              <span className="text-neutral-400">📦</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 결제 정보 */}
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex items-center space-x-2">
-                          <div className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-600">
-                            <span className="mr-1">✅</span>
-                            결제 완료
-                          </div>
-                        </div>
-
-                        <h3
-                          className="mb-2 flex cursor-pointer items-center gap-2 text-lg font-semibold text-neutral-900 transition-colors hover:text-blue-600"
-                          onClick={() =>
-                            router.push(`/products/${payment.productId}`)
-                          }
-                          title="상품 상세보기"
-                        >
-                          {payment.productName}
-                          <ExternalLink className="h-4 w-4" />
-                        </h3>
-
-                        <div className="mb-3 grid grid-cols-1 gap-2 text-sm text-neutral-600 sm:grid-cols-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="w-20 text-neutral-500">
-                              결제 금액:
-                            </span>
-                            <span className="font-semibold text-green-600">
-                              {formatPrice(payment.amount)}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="w-20 text-neutral-500">
-                              결제 시간:
-                            </span>
-                            <span>{formatDate(payment.paymentDate)}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="w-20 text-neutral-500">
-                              판매자:
-                            </span>
-                            <span>{payment.seller?.nickname || '판매자'}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="w-20 text-neutral-500">
-                              결제 방법:
-                            </span>
-                            <span>{payment.paymentMethod || '현금'}</span>
-                          </div>
-                        </div>
-
-                        <div className="mb-4 rounded-lg border-2 border-green-200 bg-green-50 p-4">
-                          <div className="mb-2 text-sm font-bold text-green-900">
-                            ✅ 결제 완료!
-                          </div>
-                          <p className="text-sm text-green-800">
-                            결제가 완료되었습니다. 판매자와 연락하여 상품을
-                            받아보세요.
-                          </p>
-                        </div>
-
-                        {/* 액션 버튼들 */}
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="md"
-                            onClick={() =>
-                              router.push(
-                                `/products/${payment.productId}?tab=reviews&action=write`,
-                              )
-                            }
-                            className="bg-yellow-500 font-bold text-white hover:bg-yellow-600"
-                          >
-                            <StarIcon className="mr-1 h-4 w-4" />
-                            리뷰 작성
-                          </Button>
-                          <Button
-                            size="md"
-                            variant="outline"
-                            onClick={() =>
-                              router.push(`/products/${payment.productId}`)
-                            }
-                          >
-                            상품 상세보기
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {/* 결제 내역 페이지네이션 UI */}
-              <div className="mt-8 space-y-4">
-                {/* 페이지 정보 및 페이지 크기 선택 */}
-                <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
-                  <PaginationInfo
-                    currentPage={currentPaymentPage}
-                    totalPages={paymentTotalPages}
-                    totalElements={paymentTotalElements}
-                    pageSize={paymentPageSize}
-                  />
-                  <PageSizeSelector
-                    pageSize={paymentPageSize}
-                    onPageSizeChange={handlePaymentPageSizeChange}
-                    options={[5, 10, 20]}
-                  />
-                </div>
-
-                {/* 페이지네이션 컨트롤 */}
-                {paymentTotalPages > 0 && (
-                  <Pagination
-                    currentPage={currentPaymentPage}
-                    totalPages={paymentTotalPages}
-                    onPageChange={goToPaymentPage}
-                    hasNext={hasPaymentNext}
-                    hasPrevious={hasPaymentPrevious}
-                    isLoading={isLoadingPayments}
-                  />
-                )}
+                <h3 className="mb-2 text-xl font-semibold text-neutral-900">
+                  입찰완료내역 기능 준비 중
+                </h3>
+                <p className="mb-6 text-neutral-600">
+                  입찰완료내역 기능을 준비하고 있습니다.
+                  <br />곧 만나보실 수 있습니다!
+                </p>
               </div>
-            </>
-          )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
