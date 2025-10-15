@@ -610,6 +610,31 @@ export function BidStatusClient({
                               </span>
                               <span>{bid.productStatus}</span>
                             </div>
+                            {/* 낙찰된 경우 판매자 정보 표시 */}
+                            {bid.productStatus === '낙찰' &&
+                              bid.isWinning === true &&
+                              bid.seller && (
+                                <div className="flex items-center space-x-2 sm:col-span-2">
+                                  <span className="w-20 text-neutral-500">
+                                    판매자:
+                                  </span>
+                                  <span className="font-medium text-blue-600">
+                                    {bid.seller.nickname ||
+                                      bid.seller.name ||
+                                      '판매자'}
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      router.push(`/seller/${bid.seller.id}`)
+                                    }
+                                    className="ml-2 text-xs"
+                                  >
+                                    판매자 프로필
+                                  </Button>
+                                </div>
+                              )}
                           </div>
 
                           {bid.isWinning &&
