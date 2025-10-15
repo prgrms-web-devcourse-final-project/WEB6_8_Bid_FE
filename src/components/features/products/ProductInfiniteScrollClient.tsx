@@ -97,7 +97,7 @@ export function ProductInfiniteScrollClient({
         creditScore: product.seller?.creditScore || 0,
         reviewCount: product.seller?.reviewCount || 0,
       },
-      location: product.location || product.seller?.location || '서울',
+      location: product.location || product.seller?.location,
       createDate: product.createDate,
       modifyDate: product.modifyDate,
       bidderCount: product.bidderCount,

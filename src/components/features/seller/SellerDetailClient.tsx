@@ -8,6 +8,7 @@ import {
   Calendar,
   CheckCircle,
   Eye,
+  MapPin,
   MessageSquare,
   Package,
   Shield,
@@ -611,6 +612,22 @@ export function SellerDetailClient({
                                       </span>
                                     </div>
                                   )}
+
+                                  <div className="flex items-center justify-between text-sm text-gray-500">
+                                    <div className="flex items-center space-x-1">
+                                      <MapPin className="h-4 w-4" />
+                                      <span>거래지역</span>
+                                    </div>
+                                    {product.location ? (
+                                      <span className="text-sm text-gray-600">
+                                        {product.location}
+                                      </span>
+                                    ) : (
+                                      <span className="text-sm text-gray-600">
+                                        배송만 가능
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
@@ -748,6 +765,22 @@ export function SellerDetailClient({
                                       </span>
                                     </div>
                                   )}
+
+                                  <div className="flex items-center justify-between text-sm text-gray-500">
+                                    <div className="flex items-center space-x-1">
+                                      <MapPin className="h-4 w-4" />
+                                      <span>거래지역</span>
+                                    </div>
+                                    {product.location ? (
+                                      <span className="text-sm text-gray-600">
+                                        {product.location}
+                                      </span>
+                                    ) : (
+                                      <span className="text-sm text-gray-600">
+                                        배송만 가능
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
 
