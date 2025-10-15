@@ -778,7 +778,7 @@ export function HomeClient({ stats }: HomeClientProps) {
             </div>
 
             {/* 페이지네이션 UI */}
-            {totalPages > 1 && (
+            {totalPages > 0 && (
               <div className="mt-8 space-y-4">
                 {/* 페이지 정보 및 페이지 크기 선택 */}
                 <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
